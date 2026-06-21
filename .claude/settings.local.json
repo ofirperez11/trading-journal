@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(open\\('data_export/trades.json'\\)\\); print\\('count:',len\\(d\\)\\); print\\(json.dumps\\(d[0], indent=2, ensure_ascii=False\\)[:1500]\\)\")",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"=== TSC EXIT: $? ===\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s http://localhost:5173/)",
+      "mcp__mcp-registry__list_connectors",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"vite\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git init *)",
+      "Bash(git symbolic-ref *)",
+      "Bash(git config *)",
+      "Bash(git add *)"
+    ]
+  }
+}

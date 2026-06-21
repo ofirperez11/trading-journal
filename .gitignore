@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# build
+dist
+dist-ssr
+*.local
+
+# env — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# editor / os
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.log
+logs
+
+# vite pwa generated
+dev-dist
+
+# bundled demo data (derived from data_export/, replaced by Supabase later)
+public/demo

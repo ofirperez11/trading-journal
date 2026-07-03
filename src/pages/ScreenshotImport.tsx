@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ImagePlus, Loader2, Sparkles, Check, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
@@ -26,6 +26,8 @@ export default function ScreenshotImport() {
   const { active } = useJournals()
   const { addTrade } = useTradeActions()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const presetDate = searchParams.get('date') // YYYY-MM-DD, e.g. from the calendar
 
   const [stage, setStage] = useState<Stage>('idle')
   const [image, setImage] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export default function ScreenshotImport() {
   const [dragging, setDragging] = useState(false)
 
   const [form, setForm] = useState({
-    day: new Date().toISOString().slice(0, 10),
+    day: presetDate ?? new Date().toISOString().slice(0, 10),
     time: '16:30' as (typeof SESSION_TIMES)[number],
     exactTime: '',
     useExact: false,

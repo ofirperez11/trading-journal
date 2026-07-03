@@ -1,32 +1,83 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Plus, Sparkles } from 'lucide-react'
+import { Search, Plus, Sparkles, SlidersHorizontal, X } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
-import { formatMoney, formatR } from '../lib/trades'
+import { formatMoney, formatR, cleanSymbol } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
-import type { TradeStatus } from '../types'
+import type { TradeSide, TradeStatus } from '../types'
 
-type Filter = 'ALL' | TradeStatus
-
-const filters: { key: Filter; label: string }[] = [
-  { key: 'ALL', label: 'הכל' },
-  { key: 'WIN', label: 'רווח' },
-  { key: 'LOSS', label: 'הפסד' },
-  { key: 'WASH', label: 'Wash' },
+const MONTHS_HE = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
 ]
+const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'רווח', LOSS: 'הפסד', WASH: 'Wash' }
+
+const GRID =
+  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_1fr_60px_64px_72px_72px_64px_70px_66px_52px_90px]'
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`num rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+        active ? 'border-accent/50 bg-accent/15 text-accent' : 'border-white/10 text-muted hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
 
 export default function Trades() {
   const { trades, loading } = useTrades()
-  const [filter, setFilter] = useState<Filter>('ALL')
   const [query, setQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [symbolSel, setSymbolSel] = useState<Set<string>>(new Set())
+  const [statusSel, setStatusSel] = useState<Set<TradeStatus>>(new Set())
+  const [sideSel, setSideSel] = useState<Set<TradeSide>>(new Set())
+  const [monthSel, setMonthSel] = useState<Set<string>>(new Set())
+  const [filterYear, setFilterYear] = useState<string | null>(null)
+
+  // Facet options derived from the current journal's trades.
+  const symbols = useMemo(
+    () => [...new Set(trades.map((t) => cleanSymbol(t.symbol)))].sort(),
+    [trades],
+  )
+  const months = useMemo(
+    () => [...new Set(trades.map((t) => t.date.slice(0, 7)))].sort().reverse(),
+    [trades],
+  )
+  const years = useMemo(
+    () => [...new Set(trades.map((t) => t.date.slice(0, 4)))].sort().reverse(),
+    [trades],
+  )
+  const activeYear = filterYear && years.includes(filterYear) ? filterYear : years[0]
+  const monthsForYear = months.filter((m) => m.startsWith(activeYear ?? ''))
+
+  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size
 
   const rows = useMemo(() => {
     return trades.filter((t) => {
-      if (filter !== 'ALL' && t.status !== filter) return false
+      if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
+      if (statusSel.size && !statusSel.has(t.status)) return false
+      if (sideSel.size && !sideSel.has(t.side)) return false
+      if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
       if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
       return true
     })
-  }, [trades, filter, query])
+  }, [trades, symbolSel, statusSel, sideSel, monthSel, query])
+
+  function toggle<T>(setFn: (s: Set<T>) => void, cur: Set<T>, val: T) {
+    const next = new Set(cur)
+    next.has(val) ? next.delete(val) : next.add(val)
+    setFn(next)
+  }
+  function clearAll() {
+    setSymbolSel(new Set())
+    setStatusSel(new Set())
+    setSideSel(new Set())
+    setMonthSel(new Set())
+  }
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-muted">טוען עסקאות…</div>
@@ -51,19 +102,22 @@ export default function Trades() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                filter === f.key ? 'bg-white/[0.08] text-white' : 'text-muted hover:text-white'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowFilters((s) => !s)}
+          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+            showFilters || activeCount > 0
+              ? 'border-accent/50 bg-accent/10 text-accent'
+              : 'border-white/10 bg-white/[0.02] text-muted hover:text-ink'
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          סינון
+          {activeCount > 0 && (
+            <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold text-bg">
+              {activeCount}
+            </span>
+          )}
+        </button>
         <div className="relative">
           <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
@@ -75,63 +129,122 @@ export default function Trades() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="panel overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto] gap-2 border-b border-white/[0.06] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted sm:grid-cols-[100px_1fr_70px_70px_80px_80px_80px_60px_100px]">
-          <span>תאריך</span>
-          <span className="hidden sm:block">סימבול</span>
-          <span className="hidden sm:block">כיוון</span>
-          <span className="hidden sm:block">סטטוס</span>
-          <span className="hidden text-left sm:block">כניסה</span>
-          <span className="hidden text-left sm:block">יציאה</span>
-          <span className="hidden text-left sm:block">יציאה 2</span>
-          <span className="hidden text-left sm:block">R</span>
-          <span className="text-left">P&amp;L</span>
-        </div>
-        <div className="divide-y divide-white/[0.04]">
-          {rows.map((t) => {
-            const win = t.return_amount > 0
-            return (
-              <Link
-                key={t.id}
-                to={`/app/trades/${t.id}`}
-                className="group grid grid-cols-[1fr_auto] items-center gap-2 px-4 py-3 text-sm transition-colors hover:bg-white/[0.03] sm:grid-cols-[100px_1fr_70px_70px_80px_80px_80px_60px_100px]"
-              >
-                <span className="text-muted">
-                  {new Date(t.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                </span>
-                <span className="hidden font-medium sm:block">{t.symbol}</span>
-                <span className="hidden sm:block">
-                  <SideIndicator side={t.side} />
-                </span>
-                <span className={`hidden text-xs font-medium sm:block ${t.status === 'WIN' ? 'text-win' : t.status === 'LOSS' ? 'text-loss' : 'text-muted'}`}>
-                  {t.status}
-                </span>
-                <span className="hidden text-left num text-muted sm:block">{t.entry}</span>
-                <span className="hidden text-left num text-muted sm:block">{t.exits?.[0] ?? '—'}</span>
-                <span className="hidden text-left num sm:block">
-                  {t.exits && t.exits.length > 1 ? (
-                    <span className="text-accent-2">{t.exits[1]}</span>
-                  ) : (
-                    <span className="text-muted/40">—</span>
-                  )}
-                </span>
-                <span className="hidden text-left num sm:block">
-                  {t.r_multiple != null ? formatR(t.r_multiple).replace('R', '') : '—'}
-                </span>
-                <span className={`text-left font-semibold num ${win ? 'text-win' : t.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
-                  {formatMoney(t.return_amount)}
-                </span>
-              </Link>
-            )
-          })}
-          {rows.length === 0 && (
-            <div className="px-4 py-12 text-center text-muted">
-              {trades.length === 0 ? 'היומן הזה עדיין ריק.' : 'לא נמצאו עסקאות שתואמות לסינון.'}
-            </div>
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="card space-y-4">
+          <FacetGroup label="סימבול">
+            {symbols.map((s) => (
+              <Chip key={s} active={symbolSel.has(s)} onClick={() => toggle(setSymbolSel, symbolSel, s)}>{s}</Chip>
+            ))}
+          </FacetGroup>
+          <FacetGroup label="סטטוס">
+            {(['WIN', 'LOSS', 'WASH'] as TradeStatus[]).map((s) => (
+              <Chip key={s} active={statusSel.has(s)} onClick={() => toggle(setStatusSel, statusSel, s)}>{STATUS_LABEL[s]}</Chip>
+            ))}
+          </FacetGroup>
+          <FacetGroup label="כיוון">
+            {(['LONG', 'SHORT'] as TradeSide[]).map((s) => (
+              <Chip key={s} active={sideSel.has(s)} onClick={() => toggle(setSideSel, sideSel, s)}>{s === 'LONG' ? 'Long' : 'Short'}</Chip>
+            ))}
+          </FacetGroup>
+          <FacetGroup label="שנה">
+            {years.map((y) => (
+              <Chip key={y} active={activeYear === y} onClick={() => setFilterYear(y)}>{y}</Chip>
+            ))}
+          </FacetGroup>
+          <FacetGroup label="חודש">
+            {monthsForYear.map((m) => (
+              <Chip key={m} active={monthSel.has(m)} onClick={() => toggle(setMonthSel, monthSel, m)}>
+                {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
+              </Chip>
+            ))}
+          </FacetGroup>
+          {activeCount > 0 && (
+            <button onClick={clearAll} className="inline-flex items-center gap-1 text-sm text-muted hover:text-loss">
+              <X className="h-4 w-4" /> נקה סינון ({activeCount})
+            </button>
           )}
         </div>
+      )}
+
+      {/* Table */}
+      <div className="panel overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="sm:min-w-[880px]">
+            <div className={`${GRID} border-b border-white/[0.06] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted`}>
+              <span>תאריך</span>
+              <span className="hidden sm:block">סימבול</span>
+              <span className="hidden sm:block">כיוון</span>
+              <span className="hidden sm:block">סטטוס</span>
+              <span className="hidden text-left sm:block">כניסה</span>
+              <span className="hidden text-left sm:block">יציאה</span>
+              <span className="hidden text-left sm:block">יציאה 2</span>
+              <span className="hidden text-left sm:block">Lookback</span>
+              <span className="hidden text-left sm:block">שיא</span>
+              <span className="hidden text-left sm:block">R</span>
+              <span className="text-left">P&amp;L</span>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {rows.map((t) => {
+                const win = t.return_amount > 0
+                return (
+                  <Link
+                    key={t.id}
+                    to={`/app/trades/${t.id}`}
+                    className={`${GRID} group items-center px-4 py-3 text-sm transition-colors hover:bg-white/[0.03]`}
+                  >
+                    <span className="text-muted">
+                      {new Date(t.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </span>
+                    <span className="hidden font-medium sm:block">{t.symbol}</span>
+                    <span className="hidden sm:block">
+                      <SideIndicator side={t.side} />
+                    </span>
+                    <span className={`hidden text-xs font-medium sm:block ${t.status === 'WIN' ? 'text-win' : t.status === 'LOSS' ? 'text-loss' : 'text-muted'}`}>
+                      {t.status}
+                    </span>
+                    <span className="hidden text-left num text-muted sm:block">{t.entry}</span>
+                    <span className="hidden text-left num text-muted sm:block">{t.exits?.[0] ?? '—'}</span>
+                    <span className="hidden text-left num sm:block">
+                      {t.exits && t.exits.length > 1 ? (
+                        <span className="text-accent-2">{t.exits[1]}</span>
+                      ) : (
+                        <span className="text-muted/40">—</span>
+                      )}
+                    </span>
+                    <span className="hidden text-left num text-muted sm:block" dir="ltr">
+                      {t.lookback ?? <span className="text-muted/40">—</span>}
+                    </span>
+                    <span className="hidden text-left num text-muted sm:block">
+                      {t.peak_price ?? <span className="text-muted/40">—</span>}
+                    </span>
+                    <span className="hidden text-left num sm:block">
+                      {t.r_multiple != null ? formatR(t.r_multiple).replace('R', '') : '—'}
+                    </span>
+                    <span className={`text-left font-semibold num ${win ? 'text-win' : t.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
+                      {formatMoney(t.return_amount)}
+                    </span>
+                  </Link>
+                )
+              })}
+              {rows.length === 0 && (
+                <div className="px-4 py-12 text-center text-muted">
+                  {trades.length === 0 ? 'היומן הזה עדיין ריק.' : 'לא נמצאו עסקאות שתואמות לסינון.'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+  )
+}
+
+function FacetGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="field-label mb-2">{label}</div>
+      <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   )
 }

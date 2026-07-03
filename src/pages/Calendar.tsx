@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Sparkles } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { formatMoney, cleanSymbol } from '../lib/trades'
 import type { Trade } from '../types'
@@ -240,6 +240,7 @@ export default function Calendar() {
           onClose={() => setSelected(null)}
           onOpenTrade={(id) => navigate(`/app/trades/${id}`)}
           onAddTrade={() => navigate(`/app/trades/new?date=${selected}`)}
+          onAddImage={() => navigate(`/app/trades/from-image?date=${selected}`)}
         />
       )}
     </div>
@@ -252,12 +253,14 @@ function DayPanel({
   onClose,
   onOpenTrade,
   onAddTrade,
+  onAddImage,
 }: {
   dateKey: string
   trades: Trade[]
   onClose: () => void
   onOpenTrade: (id: string) => void
   onAddTrade: () => void
+  onAddImage: () => void
 }) {
   const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date))
   const net = trades.reduce((s, t) => s + t.return_amount, 0)
@@ -322,12 +325,20 @@ function DayPanel({
           </div>
         )}
 
-        <button
-          onClick={onAddTrade}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent/15 py-2.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/25"
-        >
-          <Plus className="h-4 w-4" /> עסקה חדשה ביום זה
-        </button>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={onAddTrade}
+            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-white/[0.07]"
+          >
+            <Plus className="h-4 w-4" /> עסקה חדשה
+          </button>
+          <button
+            onClick={onAddImage}
+            className="flex items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent/15 py-2.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/25"
+          >
+            <Sparkles className="h-4 w-4" /> מתמונה
+          </button>
+        </div>
       </div>
     </div>
   )

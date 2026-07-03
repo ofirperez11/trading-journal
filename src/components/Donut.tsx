@@ -69,12 +69,12 @@ export function Donut({
     <div className={`${legendBelow ? 'w-full' : 'flex-1'} space-y-2`}>
       {segments.map((s) => (
         <div key={s.label} className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+            <span className="text-muted">{s.label}</span>
+          </span>
           <span className={s.sub ? 'text-xs text-muted' : 'num text-xs text-muted'}>
             {s.sub ?? `${s.value} · ${Math.round((s.value / total) * 100)}%`}
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="text-muted">{s.label}</span>
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
           </span>
         </div>
       ))}
@@ -87,7 +87,7 @@ export function Donut({
       {legend}
     </div>
   ) : (
-    <div className="flex items-center gap-5">
+    <div className="flex flex-row-reverse items-center gap-5">
       {donut}
       {legend}
     </div>

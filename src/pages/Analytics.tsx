@@ -350,8 +350,8 @@ export default function Analytics() {
           <HBars items={a.bySide} format={(v) => formatMoney(v)} />
         </ChartCard>
         <ChartCard
-          title="לפי מכשיר"
-          desc="הרווח/הפסד הכולל בכל מכשיר שנסחר (למשל MNQ מול MES), עם מספר העסקאות ואחוז ההצלחה בכל אחד. עוזר לזהות באיזה מכשיר אתה הכי רווחי."
+          title="לפי נכס"
+          desc="הרווח/הפסד הכולל בכל נכס שנסחר (למשל MNQ מול MES), עם מספר העסקאות ואחוז ההצלחה בכל אחד. עוזר לזהות באיזה נכס אתה הכי רווחי."
         >
           <HBars items={a.bySymbol} format={(v) => formatMoney(v)} />
         </ChartCard>
@@ -378,13 +378,13 @@ export default function Analytics() {
               {a.mfe.bySymbol.map((s) => (
                 <div key={s.label} className="rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
                   <div className="mb-3 flex items-baseline justify-between">
-                    <span className="num text-2xl font-bold text-accent">
-                      {s.captureRatio != null ? formatPct(s.captureRatio) : '—'}
-                      <span className="mr-1 text-xs font-medium text-muted"> מיצוי</span>
-                    </span>
                     <span className="flex items-baseline gap-2">
                       <span className="font-semibold">{s.label}</span>
                       <span className="num text-xs text-muted">{s.count} עסקאות</span>
+                    </span>
+                    <span className="num text-2xl font-bold text-accent">
+                      {s.captureRatio != null ? formatPct(s.captureRatio) : '—'}
+                      <span className="mr-1 text-xs font-medium text-muted"> מיצוי</span>
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
@@ -437,14 +437,6 @@ export default function Analytics() {
           desc="הרווח/הפסד נטו בכל חודש קלנדרי. עוזר לזהות מגמות לאורך זמן ולראות אם אתה משתפר מחודש לחודש. ירוק = חודש רווחי, אדום = חודש מפסיד. אם יש הרבה חודשים אפשר לגלול את הגרף הצידה."
         >
           <BarChart items={a.byMonth} format={(v) => formatMoney(v)} height={150} />
-        </ChartCard>
-
-        <ChartCard
-          title="התפלגות R-Multiple"
-          desc="כמה עסקאות נפלו בכל טווח של R (יחס הרווח ביחס לסיכון שלקחת). R שלילי = הפסד (אדום), R חיובי = רווח (ירוק). ככל שיש יותר עמודות גבוהות בצד הימני (חיובי), הרווחים שלך גדולים יותר מההפסדים."
-          hint="מספר עסקאות"
-        >
-          <BarChart items={a.rDistribution} format={(v) => String(v)} height={150} />
         </ChartCard>
 
         <ChartCard

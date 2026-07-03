@@ -25,7 +25,6 @@ export function HBars({ items, format }: { items: Bucket[]; format: (v: number) 
         return (
           <div key={it.label}>
             <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-              <span className={`num font-semibold ${textCls[tone]}`}>{format(it.value)}</span>
               <span className="flex items-baseline gap-2">
                 <span className="font-semibold text-ink">{it.label}</span>
                 <span className="num text-xs text-muted">
@@ -33,11 +32,12 @@ export function HBars({ items, format }: { items: Bucket[]; format: (v: number) 
                   {it.winRate != null ? ` · ${Math.round(it.winRate * 100)}%` : ''}
                 </span>
               </span>
+              <span className={`num font-semibold ${textCls[tone]}`}>{format(it.value)}</span>
             </div>
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/[0.04]">
               <div
                 className="bar-grow-x h-full rounded-full"
-                style={{ width: `${w}%`, background: barColor[tone], ['--i' as string]: i, marginInlineStart: 'auto' }}
+                style={{ width: `${w}%`, background: barColor[tone], ['--i' as string]: i }}
               />
             </div>
           </div>

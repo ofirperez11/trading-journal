@@ -173,11 +173,11 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
         ? tone === 'win'
           ? 'border-win/50 bg-win/15 text-win'
           : 'border-loss/50 bg-loss/15 text-loss'
-        : 'border-white/10 text-muted hover:text-ink'
+        : 'border-black/[0.12] text-muted hover:text-ink'
     }`
   const timeBtn = (active: boolean) =>
     `flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-      active ? 'border-accent/50 bg-accent/15 text-accent' : 'border-white/10 text-muted hover:text-ink'
+      active ? 'border-accent/50 bg-accent/15 text-accent' : 'border-black/[0.12] text-muted hover:text-ink'
     }`
 
   return (
@@ -290,7 +290,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
               <span className="field-label mb-0">תוצאה (מחושב אוטומטית)</span>
               <span className="num text-[11px] text-muted">ערך נקודה ל-{form.symbol}: ${pv}</span>
             </div>
-            <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="grid grid-cols-3 gap-3 rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
               <div>
                 <div className="stat-label">P&amp;L</div>
                 <div className={`num mt-1 text-lg font-bold ${pnl == null ? 'text-muted' : pnl >= 0 ? 'text-win' : 'text-loss'}`}>
@@ -314,7 +314,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
             <span className="field-label">צילומי מסך</span>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {images.map((src, i) => (
-                <div key={i} className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/20">
+                <div key={i} className="group relative overflow-hidden rounded-xl border border-black/[0.08] bg-black/20">
                   <img src={imageUrl(src)} alt="" className="h-24 w-full object-cover" />
                   <button
                     type="button"
@@ -326,7 +326,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                   </button>
                 </div>
               ))}
-              <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/15 text-xs text-muted transition-colors hover:border-accent/50 hover:text-ink">
+              <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-black/[0.15] text-xs text-muted transition-colors hover:border-accent/50 hover:text-ink">
                 {uploading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
@@ -348,7 +348,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
 
         {error && <p className="text-sm text-loss">{error}</p>}
 
-        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-black/[0.08] pt-4">
           <Link to={editing && trade ? `/app/trades/${trade.id}` : '/app/trades'} className="btn-ghost">
             ביטול
           </Link>

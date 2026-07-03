@@ -106,7 +106,7 @@ export default function TradeDetail() {
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {fields.map((f) => (
-            <div key={f.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div key={f.label} className="rounded-2xl border border-black/[0.08] bg-black/[0.02] p-3">
               <div className="stat-label">{f.label}</div>
               <div className="mt-1 text-lg font-bold num">{f.value}</div>
             </div>
@@ -128,13 +128,13 @@ export default function TradeDetail() {
           <h2 className="mb-3 font-semibold">Executions</h2>
           <div className="space-y-1 text-sm">
             {trade.executions.map((e, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-white/[0.03]">
+              <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-black/[0.03]">
                 <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${e.action === 'BUY' ? 'bg-win/10 text-win' : 'bg-loss/10 text-loss'}`}>
                   {e.action}
                 </span>
                 <div className="flex items-center gap-4 text-muted">
                   <span className="num">qty {String(e.qty)}</span>
-                  <span className="num text-white">@ {String(e.price)}</span>
+                  <span className="num text-ink">@ {String(e.price)}</span>
                 </div>
               </div>
             ))}
@@ -152,7 +152,7 @@ export default function TradeDetail() {
                 key={img}
                 type="button"
                 onClick={() => setLightbox(imageUrl(img))}
-                className="group block cursor-zoom-in overflow-hidden rounded-2xl border border-white/[0.06] bg-black/20"
+                className="group block cursor-zoom-in overflow-hidden rounded-2xl border border-black/[0.08] bg-black/20"
               >
                 <img
                   src={imageUrl(img)}

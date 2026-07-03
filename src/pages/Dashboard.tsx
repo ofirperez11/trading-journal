@@ -119,7 +119,7 @@ export default function Dashboard() {
               <Link
                 key={t.id}
                 to={`/app/trades/${t.id}`}
-                className="group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-white/[0.03]"
+                className="group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.03]"
               >
                 <span className={`font-semibold num ${win ? 'text-win' : 'text-loss'}`}>
                   {formatMoney(t.return_amount)}
@@ -127,7 +127,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3 text-muted">
                   {t.r_multiple != null && <span className="num">{formatR(t.r_multiple)}</span>}
                   <SideIndicator side={t.side} />
-                  <span className="font-medium text-white">{t.symbol}</span>
+                  <span className="font-medium text-ink">{t.symbol}</span>
                   <span className="hidden w-24 text-left sm:block">
                     {new Date(t.date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}
                   </span>

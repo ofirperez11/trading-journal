@@ -52,7 +52,7 @@ export function WeeklySummary() {
 
   const head = 'whitespace-nowrap px-4 py-3 text-center font-mono text-[11px] font-semibold uppercase tracking-wider'
   const cell = 'whitespace-nowrap px-4 py-3.5 text-center text-[15px]'
-  const monthAgg = 'whitespace-nowrap border-r border-white/[0.06] bg-white/[0.03] px-4 py-3.5 text-center align-middle font-bold'
+  const monthAgg = 'whitespace-nowrap border-r border-black/[0.08] bg-black/[0.03] px-4 py-3.5 text-center align-middle font-bold'
 
   return (
     <div className="card">
@@ -76,7 +76,7 @@ export function WeeklySummary() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] border-collapse">
           <thead>
-            <tr className="border-b border-white/[0.06] text-muted">
+            <tr className="border-b border-black/[0.08] text-muted">
               <th className={head}>חודש</th>
               <th className={`${head} text-right`}>תאריך</th>
               <th className={head}>שבוע</th>
@@ -90,13 +90,13 @@ export function WeeklySummary() {
               ))}
               <th className={head}>הצלחה שבועי</th>
               <th className={head}>R שבועי</th>
-              <th className={`${head} border-r border-white/[0.06] bg-white/[0.03]`}>הצלחה חודשי</th>
+              <th className={`${head} border-r border-black/[0.08] bg-black/[0.03]`}>הצלחה חודשי</th>
               {families.map((f) => (
-                <th key={`m-${f}`} className={`${head} bg-white/[0.03]`}>
+                <th key={`m-${f}`} className={`${head} bg-black/[0.03]`}>
                   {f} חודשי
                 </th>
               ))}
-              <th className={`${head} bg-white/[0.03]`}>R חודשי</th>
+              <th className={`${head} bg-black/[0.03]`}>R חודשי</th>
               <th className={`${head} text-right`}>הערות</th>
             </tr>
           </thead>
@@ -109,14 +109,14 @@ export function WeeklySummary() {
                   key={r.key}
                   className={
                     i === 0
-                      ? 'border-t-2 border-white/[0.09] hover:bg-white/[0.02]'
-                      : 'border-t border-white/[0.03] hover:bg-white/[0.02]'
+                      ? 'border-t-2 border-black/[0.10] hover:bg-black/[0.02]'
+                      : 'border-t border-black/[0.05] hover:bg-black/[0.02]'
                   }
                 >
                   {i === 0 && (
                     <td
                       rowSpan={m.weeks.length}
-                      className="whitespace-nowrap border-l border-white/[0.06] bg-white/[0.02] px-4 text-center align-middle text-lg font-bold"
+                      className="whitespace-nowrap border-l border-black/[0.08] bg-black/[0.02] px-4 text-center align-middle text-lg font-bold"
                     >
                       {monthName}
                     </td>
@@ -155,7 +155,7 @@ export function WeeklySummary() {
                       value={notes[`${active.id}::${r.key}`] ?? ''}
                       onChange={(e) => setNote(r.key, e.target.value)}
                       placeholder="הערה…"
-                      className="w-full min-w-[10rem] rounded-md bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted/40 focus:bg-white/[0.04]"
+                      className="w-full min-w-[10rem] rounded-md bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted/40 focus:bg-black/[0.04]"
                     />
                   </td>
                 </tr>

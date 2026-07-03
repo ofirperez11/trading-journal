@@ -4,24 +4,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Amber-terminal palette — deep cool graphite, warm phosphor ink.
-        bg: '#0A0C10',
-        surface: '#12151B',
-        'surface-2': '#181C24',
-        border: '#222732',
-        ink: '#ECEAE3',
-        muted: '#8B8A82',
-        // Brand = the terminal's amber phosphor. (accent/accent-2 kept as names.)
-        accent: '#F4A93C',
-        'accent-2': '#FFC661',
-        // Trading semantics — the real protagonists.
-        win: '#3FCF8E',
-        loss: '#F26D6D',
+        // Apple-inspired light palette — white/parchment canvas, near-black ink,
+        // a single Action Blue accent. (Win/loss kept for trading semantics.)
+        bg: '#ffffff', // canvas
+        surface: '#f5f5f7', // parchment
+        'surface-2': '#fafafc', // pearl
+        border: '#d2d2d7', // hairline
+        ink: '#1d1d1f',
+        muted: '#6e6e73',
+        // The single interactive color.
+        accent: '#0066cc',
+        'accent-2': '#0071e3',
+        // Trading semantics (Apple system green / red).
+        win: '#34c759',
+        loss: '#ff3b30',
+        // Near-black tile surface for the rare dark section.
+        tile: '#1d1d1f',
       },
       fontFamily: {
-        display: ['"Frank Ruhl Libre"', 'Georgia', 'serif'],
-        sans: ['"IBM Plex Sans Hebrew"', 'system-ui', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        // SF Pro on Apple devices (incl. Hebrew) via system-ui; Heebo as the
+        // open fallback elsewhere.
+        display: ['system-ui', '-apple-system', '"Heebo"', '"Segoe UI"', 'sans-serif'],
+        sans: ['system-ui', '-apple-system', '"Heebo"', '"Segoe UI"', 'sans-serif'],
+        mono: ['system-ui', '-apple-system', '"Heebo"', 'sans-serif'],
       },
       borderRadius: {
         '4xl': '2rem',

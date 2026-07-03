@@ -12,15 +12,8 @@ import Summary from './pages/Summary'
 import Calendar from './pages/Calendar'
 import ScreenshotImport from './pages/ScreenshotImport'
 import ImportHistory from './pages/ImportHistory'
-
-function Placeholder({ title, note }: { title: string; note: string }) {
-  return (
-    <div className="space-y-2">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <div className="card text-muted">{note}</div>
-    </div>
-  )
-}
+import Journal from './pages/Journal'
+import Settings from './pages/Settings'
 
 /** Gate for the in-app area: redirect to landing if not signed in. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -66,9 +59,9 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="summary" element={<Summary />} />
         <Route path="calendar" element={<Calendar />} />
-        <Route path="journal" element={<Placeholder title="Journal" note="יומן רגשי ומשמעת — שלב 7." />} />
+        <Route path="journal" element={<Journal />} />
         <Route path="import" element={<ImportHistory />} />
-        <Route path="settings" element={<Placeholder title="Settings" note="הגדרות ופרופיל." />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* Fallback */}

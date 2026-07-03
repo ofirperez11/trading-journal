@@ -227,7 +227,7 @@ function Progress({ label, value, total }: { label: string; value: number; total
         <span className="text-muted">{label}</span>
         <span className="num">{value} / {total}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+      <div className="h-2 overflow-hidden rounded-full bg-black/[0.05]">
         <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${total ? (value / total) * 100 : 0}%` }} />
       </div>
     </div>

@@ -48,19 +48,19 @@ export default function AppShell() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
       isActive
-        ? 'border border-white/[0.06] bg-gradient-to-l from-accent/20 to-accent-2/10 text-ink'
-        : 'text-muted hover:bg-white/[0.04] hover:text-ink'
+        ? 'border border-black/[0.08] bg-gradient-to-l from-accent/20 to-accent-2/10 text-ink'
+        : 'text-muted hover:bg-black/[0.04] hover:text-ink'
     }`
 
   return (
     <div className="min-h-full">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-white/[0.06] bg-bg/80 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-black/[0.08] bg-bg/80 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setNavOpen(true)}
             aria-label="פתח תפריט"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-ink transition-colors hover:bg-white/[0.07]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.12] bg-black/[0.03] text-ink transition-colors hover:bg-black/[0.06]"
           >
             <Menu className="h-5 w-5" strokeWidth={1.75} />
           </button>
@@ -88,7 +88,7 @@ export default function AppShell() {
       {/* Slide-out nav drawer (from the right, RTL start) */}
       <aside
         aria-hidden={!navOpen}
-        className={`fixed inset-y-0 right-0 z-50 flex w-72 max-w-[82vw] flex-col border-l border-white/[0.06] bg-surface/95 p-4 backdrop-blur-xl transition-transform duration-300 ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-72 max-w-[82vw] flex-col border-l border-black/[0.08] bg-surface/95 p-4 backdrop-blur-xl transition-transform duration-300 ${
           navOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ transitionTimingFunction: 'var(--ease-out-expo)' }}
@@ -103,7 +103,7 @@ export default function AppShell() {
           <button
             onClick={() => setNavOpen(false)}
             aria-label="סגור תפריט"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-ink"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.05] hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -118,7 +118,7 @@ export default function AppShell() {
           ))}
         </nav>
 
-        <div className="mt-4 border-t border-white/[0.06] pt-4">
+        <div className="mt-4 border-t border-black/[0.08] pt-4">
           <div className="flex items-center gap-3 px-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-sm font-semibold uppercase text-bg">
               {name.slice(0, 1)}

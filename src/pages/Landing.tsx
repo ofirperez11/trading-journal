@@ -36,7 +36,7 @@ function DashboardPreview() {
   return (
     <div className="panel overflow-hidden text-right">
       {/* Terminal status bar */}
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
+      <div className="flex items-center justify-between border-b border-black/[0.08] px-4 py-2.5">
         <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-win" />
           live · MNQ
@@ -53,13 +53,13 @@ function DashboardPreview() {
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           {tiles.map((t) => (
-            <div key={t.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div key={t.label} className="rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
               <div className="stat-label">{t.label}</div>
               <div className={`num mt-1 text-lg font-bold ${t.cls}`}>{t.value}</div>
             </div>
           ))}
         </div>
-        <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+        <div className="mt-4 rounded-xl border border-black/[0.08] bg-black/[0.02] p-2">
           <EquityCurve data={sampleEquity} height={160} draw />
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function Landing() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <LogoWordmark />
         <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-muted hover:text-white">
+          <Link to="/login" className="text-sm font-medium text-muted hover:text-ink">
             התחברות
           </Link>
           <Link to="/signup" className="btn-primary">
@@ -125,7 +125,7 @@ export default function Landing() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (
             <div key={f.title} className="card text-right transition-transform hover:-translate-y-1">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-accent/25 to-accent-2/15 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-accent/25 to-accent-2/15 text-accent">
                 <f.icon className="h-5 w-5" strokeWidth={1.75} />
               </div>
               <h3 className="mt-4 font-semibold">{f.title}</h3>
@@ -150,7 +150,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.06] py-8 text-center text-sm text-muted">
+      <footer className="border-t border-black/[0.08] py-8 text-center text-sm text-muted">
         Trading Journal · נבנה עבור סוחרים, באהבה.
       </footer>
     </div>

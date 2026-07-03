@@ -50,7 +50,7 @@ export function BarChart({
     <div ref={rootRef} className="relative">
       {h && tip && (
         <div
-          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-center shadow-panel"
+          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full rounded-lg border border-black/[0.12] bg-surface-2 px-3 py-2 text-center shadow-panel"
           style={{ left: tipLeft, top: tip.y - 12 }}
         >
           <div className="font-mono text-[10px] uppercase tracking-wider text-muted">{h.label}</div>
@@ -67,7 +67,7 @@ export function BarChart({
         <div style={{ minWidth: items.length * minBarWidth }}>
           <div className="relative" style={{ height }}>
             <div
-              className="absolute inset-x-0 border-t border-dashed border-white/10"
+              className="absolute inset-x-0 border-t border-dashed border-black/[0.12]"
               style={{ top: `${zeroTop}%` }}
             />
             <div className="flex h-full items-stretch gap-2">

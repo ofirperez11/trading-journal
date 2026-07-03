@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -14,41 +14,33 @@
     height: 100%;
   }
   body {
-    @apply bg-bg text-ink antialiased;
-    font-family: 'IBM Plex Sans Hebrew', system-ui, sans-serif;
+    @apply text-ink antialiased;
+    background-color: #f5f5f7; /* parchment canvas */
+    font-family: system-ui, -apple-system, 'Heebo', 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
-    /* Amber phosphor glow + faint chart-paper grid behind everything. */
-    background-image:
-      radial-gradient(48rem 30rem at 88% -8%, rgba(244, 169, 60, 0.1), transparent 60%),
-      radial-gradient(40rem 30rem at 0% 110%, rgba(63, 207, 142, 0.05), transparent 55%),
-      linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
-    background-size:
-      100% 100%,
-      100% 100%,
-      34px 34px,
-      34px 34px;
-    background-attachment: fixed;
+    letter-spacing: -0.01em;
   }
-  /* Headlines speak in the Hebrew record-serif; data speaks in mono. */
+  /* Headlines: SF Pro Display cadence — weight 600, "Apple tight" tracking. */
   h1,
   h2 {
-    @apply font-display;
+    @apply font-display font-semibold;
+    letter-spacing: -0.022em;
   }
   ::selection {
-    @apply bg-accent/30 text-ink;
+    @apply bg-accent/20 text-ink;
   }
   :focus-visible {
-    outline: 2px solid #f4a93c;
+    outline: 2px solid #0071e3;
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 8px;
   }
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-border;
+    border-radius: 9999px;
+    background: #c7c7cc;
   }
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -62,79 +54,67 @@
 }
 
 @layer components {
-  /* Instrument panel */
+  /* Card — white surface, 1px hairline, no shadow (Apple elevation = surface + hairline). */
   .panel {
-    @apply rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl;
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
-      0 24px 60px -32px rgba(0, 0, 0, 0.85);
+    @apply rounded-[18px] border border-black/[0.08] bg-white;
   }
   .card {
-    @apply panel p-5;
+    @apply panel p-6;
   }
 
-  /* Field labels read like terminal tags; values like readouts. */
+  /* Labels + numeric readouts. */
   .stat-label {
-    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.1em];
-    color: #b9b7ad;
+    @apply text-[13px] font-medium text-muted;
   }
   .stat-value {
-    @apply mt-1.5 font-mono text-2xl font-semibold tabular-nums tracking-tight text-ink;
-    /* numbers/currency are LTR even inside the RTL layout */
+    @apply mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink;
     direction: ltr;
     text-align: right;
   }
   .num {
-    @apply font-mono tabular-nums;
+    @apply tabular-nums;
     direction: ltr;
     unicode-bidi: isolate;
   }
 
-  /* Buttons — amber instrument keys with dark legends. */
+  /* Buttons — the signature Apple blue pill; press = scale(0.96). */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-medium transition-all duration-150 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primary {
-    @apply btn text-bg;
-    background-image: linear-gradient(120deg, #ffc661, #f4a93c 55%, #e89227);
-    box-shadow: 0 8px 24px -8px rgba(244, 169, 60, 0.5);
-  }
-  .btn-primary:hover {
-    @apply -translate-y-px brightness-105;
-    box-shadow: 0 14px 34px -10px rgba(244, 169, 60, 0.6);
+    @apply btn bg-accent text-white hover:bg-accent-2;
   }
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/[0.03] text-ink hover:bg-white/[0.07];
+    @apply btn border border-black/[0.12] bg-white text-ink hover:bg-black/[0.03];
   }
   .btn-secondary {
-    @apply btn border border-accent/40 bg-accent/10 text-accent hover:bg-accent/20;
+    @apply btn border border-accent/50 bg-white text-accent hover:bg-accent/[0.06];
   }
 
   /* Form fields */
   .field-label {
-    @apply mb-1.5 block text-sm font-medium text-muted;
+    @apply mb-1.5 block text-[13px] font-medium text-muted;
   }
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-ink placeholder:text-muted/60 outline-none transition-all focus:border-accent/60 focus:bg-white/[0.05] focus:ring-4 focus:ring-accent/15;
+    @apply w-full rounded-xl border border-black/[0.12] bg-white px-4 py-2.5 text-[15px] text-ink placeholder:text-muted/70 outline-none transition-all focus:border-accent focus:ring-4 focus:ring-accent/15;
   }
 
-  /* Terminal tag */
+  /* Subtle capsule tag */
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-wider text-muted;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-surface px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted;
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(120deg, #ffd089, #f4a93c 60%, #e2872a);
+    @apply text-accent;
   }
   .glow-amber {
-    text-shadow: 0 0 26px rgba(244, 169, 60, 0.45);
+    text-shadow: none;
   }
 }
 
-/* Equity curve — the amber phosphor line, with an optional draw-in reveal. */
+/* Equity curve — clean Action Blue line, with an optional draw-in reveal. */
 .equity-line {
-  filter: drop-shadow(0 0 6px rgba(244, 169, 60, 0.45));
+  filter: none;
 }
 .equity-line--draw {
   stroke-dasharray: 1;

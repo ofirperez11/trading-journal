@@ -50,7 +50,7 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-ink"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.05] hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -99,7 +99,7 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
               {shares.map((s) => (
                 <li
                   key={s.email}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                  className="flex items-center justify-between rounded-xl border border-black/[0.08] bg-black/[0.02] px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
                     <button

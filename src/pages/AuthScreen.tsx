@@ -59,7 +59,7 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
             {perks.map((p) => (
               <div key={p.text} className="flex items-start justify-end gap-3">
                 <span className="text-muted">{p.text}</span>
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-accent-2">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/[0.05] text-accent-2">
                   <p.icon className="h-4 w-4" strokeWidth={1.75} />
                 </span>
               </div>

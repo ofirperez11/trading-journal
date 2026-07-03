@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, ArrowDownRight, Info } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Info, CalendarRange, ChevronDown } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { computeAnalytics, filterTradesByRange } from '../lib/analytics'
@@ -20,6 +20,25 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: 'mtd', label: 'החודש' },
   { key: 'lastmonth', label: 'חודש קודם' },
 ]
+
+const MONTHS_HE = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+]
+const monthLabel = (ym: string) => `${MONTHS_HE[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+        active ? 'border-accent/50 bg-accent/10 text-accent' : 'border-black/[0.12] text-muted hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
 
 function rangeFor(key: RangeKey): { from: Date | null; to: Date | null } {
   const now = new Date()
@@ -66,7 +85,7 @@ function InfoPopover({ text }: { text: string }) {
         ref={btnRef}
         onClick={toggle}
         aria-label="הסבר על הגרף"
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-white/15 text-muted transition-colors hover:border-white/40 hover:text-ink"
+        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-black/[0.15] text-muted transition-colors hover:border-black/[0.35] hover:text-ink"
       >
         <Info className="h-3 w-3" />
       </button>
@@ -75,7 +94,7 @@ function InfoPopover({ text }: { text: string }) {
           <>
             <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
             <div
-              className="fixed z-[56] w-72 animate-zoom-in rounded-xl border border-white/10 bg-surface-2 p-3.5 text-right text-xs leading-relaxed text-muted shadow-panel"
+              className="fixed z-[56] w-72 animate-zoom-in rounded-xl border border-black/[0.12] bg-surface-2 p-3.5 text-right text-xs leading-relaxed text-muted shadow-panel"
               style={{ top: pos.top, left: pos.left }}
             >
               {text}
@@ -117,47 +136,106 @@ export default function Analytics() {
   const { active } = useJournals()
   const { trades, loading } = useTrades()
   const [range, setRange] = useState<RangeKey>('all')
+  const [customMonths, setCustomMonths] = useState<Set<string>>(new Set())
+  const [showRange, setShowRange] = useState(false)
+  const [custYear, setCustYear] = useState<string | null>(null)
 
-  const { from, to } = rangeFor(range)
-  const filtered = useMemo(() => filterTradesByRange(trades, from, to), [trades, range]) // eslint-disable-line react-hooks/exhaustive-deps
+  const usingCustom = customMonths.size > 0
+  const years = useMemo(
+    () => [...new Set(trades.map((t) => t.date.slice(0, 4)))].sort().reverse(),
+    [trades],
+  )
+  const activeYear = custYear && years.includes(custYear) ? custYear : years[0]
+  const monthsForYear = useMemo(
+    () => [...new Set(trades.map((t) => t.date.slice(0, 7)))].filter((m) => m.startsWith(activeYear ?? '')).sort().reverse(),
+    [trades, activeYear],
+  )
+
+  const { from, to } = usingCustom ? { from: null, to: null } : rangeFor(range)
+  const filtered = useMemo(() => {
+    if (usingCustom) return trades.filter((t) => customMonths.has(t.date.slice(0, 7)))
+    return filterTradesByRange(trades, from, to)
+  }, [trades, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
   const a = useMemo(() => computeAnalytics(filtered), [filtered])
   const prev = useMemo(() => {
-    if (!from || !to) return null
+    if (usingCustom || !from || !to) return null
     const span = to.getTime() - from.getTime()
     const pTrades = filterTradesByRange(trades, new Date(from.getTime() - span), new Date(from.getTime() - 1))
     return pTrades.length ? computeStats(pTrades) : null
-  }, [trades, range]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trades, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const rangeBar = (
-    <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-      {RANGES.map((r) => (
-        <button
-          key={r.key}
-          onClick={() => setRange(r.key)}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-            range === r.key ? 'bg-white/[0.08] text-ink' : 'text-muted hover:text-ink'
-          }`}
-        >
-          {r.label}
-        </button>
-      ))}
-    </div>
-  )
+  const currentLabel = usingCustom
+    ? customMonths.size === 1
+      ? monthLabel([...customMonths][0])
+      : `${customMonths.size} חודשים`
+    : RANGES.find((r) => r.key === range)?.label ?? 'הכל'
+
+  function toggleMonth(m: string) {
+    const next = new Set(customMonths)
+    next.has(m) ? next.delete(m) : next.add(m)
+    setCustomMonths(next)
+  }
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-muted">טוען אנליטיקה…</div>
   }
 
   const header = (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold">אנליטיקה</h1>
-        <p className="text-muted">
-          ניתוח מעמיק · {active.name}
-          {prev && <span className="text-xs"> · השוואה מול התקופה הקודמת</span>}
-        </p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">אנליטיקה</h1>
+          <p className="text-muted">
+            ניתוח מעמיק · {active.name}
+            {prev && <span className="text-xs"> · השוואה מול התקופה הקודמת</span>}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRange((s) => !s)}
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            showRange || usingCustom
+              ? 'border-accent/50 bg-accent/10 text-accent'
+              : 'border-black/[0.12] bg-white text-ink hover:bg-black/[0.03]'
+          }`}
+        >
+          <CalendarRange className="h-4 w-4" />
+          {currentLabel}
+          <ChevronDown className={`h-4 w-4 transition-transform ${showRange ? 'rotate-180' : ''}`} />
+        </button>
       </div>
-      {rangeBar}
+      {showRange && (
+        <div className="card space-y-4">
+          <div>
+            <div className="field-label mb-2">תקופות אחרונות</div>
+            <div className="flex flex-wrap gap-2">
+              {RANGES.map((r) => (
+                <Chip
+                  key={r.key}
+                  active={!usingCustom && range === r.key}
+                  onClick={() => { setRange(r.key); setCustomMonths(new Set()) }}
+                >
+                  {r.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="field-label mb-2">חודשים ספציפיים</div>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {years.map((y) => (
+                <Chip key={y} active={activeYear === y} onClick={() => setCustYear(y)}>{y}</Chip>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-black/[0.06] pt-3">
+              {monthsForYear.map((m) => (
+                <Chip key={m} active={customMonths.has(m)} onClick={() => toggleMonth(m)}>
+                  {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -198,7 +276,7 @@ export default function Analytics() {
     { label: 'תיקו', value: a.washes, color: '#6B7280' },
   ]
 
-  const STOP_COLORS = ['#F4A93C', '#5B8DEF', '#9CA3AF']
+  const STOP_COLORS = ['#0066cc', '#5ac8fa', '#c7c7cc']
   const STOP_DESC: Record<string, string> = {
     MNQ: 'פילוח עסקאות ה-MNQ לפי גודל הסטופ שהשתמשת בו — 15 נקודות מול 20 נקודות. כל פלח בעוגה מראה כמה עסקאות נסגרו עם אותו סטופ, ולצידו אחוז ההצלחה של אותו סטופ. כך תוכל לראות עם איזה גודל סטופ אתה רווחי יותר. במרכז — אחוז ההצלחה הכולל ב-MNQ.',
     MES: 'פילוח עסקאות ה-MES לפי גודל הסטופ — 3 נקודות מול 4 נקודות. כל פלח מראה כמה עסקאות נסגרו עם אותו סטופ ואת אחוז ההצלחה שלו, כדי לזהות איזה גודל סטופ עובד לך טוב יותר. במרכז — אחוז ההצלחה הכולל ב-MES.',
@@ -227,7 +305,7 @@ export default function Analytics() {
       <div className="card">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {secondary.map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div key={s.label} className="rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
               <div className="stat-label">{s.label}</div>
               <div className={`num mt-1 text-lg font-bold ${s.cls}`}>{s.value}</div>
             </div>

@@ -213,11 +213,11 @@ export default function ScreenshotImport() {
         ? tone === 'win'
           ? 'border-win/50 bg-win/15 text-win'
           : 'border-loss/50 bg-loss/15 text-loss'
-        : 'border-white/10 text-muted hover:text-ink'
+        : 'border-black/[0.12] text-muted hover:text-ink'
     }`
   const timeBtn = (on: boolean) =>
     `flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-      on ? 'border-accent/50 bg-accent/15 text-accent' : 'border-white/10 text-muted hover:text-ink'
+      on ? 'border-accent/50 bg-accent/15 text-accent' : 'border-black/[0.12] text-muted hover:text-ink'
     }`
   const outcomeBtn = (on: boolean, tone: 'win' | 'loss' | 'wash') =>
     `flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
@@ -227,7 +227,7 @@ export default function ScreenshotImport() {
           : tone === 'loss'
             ? 'border-loss/50 bg-loss/15 text-loss'
             : 'border-accent/50 bg-accent/15 text-accent'
-        : 'border-white/10 text-muted hover:text-ink'
+        : 'border-black/[0.12] text-muted hover:text-ink'
     }`
   const activeOutcome: 'WIN' | 'LOSS' | 'BE' | null =
     form.exit === ''
@@ -272,7 +272,7 @@ export default function ScreenshotImport() {
 
       {stage === 'extracting' && (
         <div className="card flex flex-col items-center justify-center gap-3 py-16 text-center">
-          {image && <img src={image} alt="" className="mb-2 max-h-48 rounded-xl border border-white/[0.06] object-contain" />}
+          {image && <img src={image} alt="" className="mb-2 max-h-48 rounded-xl border border-black/[0.08] object-contain" />}
           <Loader2 className="h-8 w-8 animate-spin text-accent" />
           <div className="font-semibold">קורא את התמונה…</div>
           <div className="text-sm text-muted">מחלץ סימבול, כיוון, כניסה, סטופ ויעד</div>
@@ -434,7 +434,7 @@ export default function ScreenshotImport() {
             </div>
 
             {/* Auto-computed results */}
-            <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="grid grid-cols-3 gap-3 rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
               <div>
                 <div className="stat-label">P&amp;L</div>
                 <div className={`num mt-1 text-lg font-bold ${pnl == null ? 'text-muted' : pnl >= 0 ? 'text-win' : 'text-loss'}`}>

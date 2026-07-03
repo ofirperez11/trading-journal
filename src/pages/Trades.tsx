@@ -20,7 +20,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       onClick={onClick}
       className={`num rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-        active ? 'border-accent/50 bg-accent/15 text-accent' : 'border-white/10 text-muted hover:text-ink'
+        active ? 'border-accent/50 bg-accent/15 text-accent' : 'border-black/[0.12] text-muted hover:text-ink'
       }`}
     >
       {children}
@@ -107,7 +107,7 @@ export default function Trades() {
           className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
             showFilters || activeCount > 0
               ? 'border-accent/50 bg-accent/10 text-accent'
-              : 'border-white/10 bg-white/[0.02] text-muted hover:text-ink'
+              : 'border-black/[0.12] bg-black/[0.02] text-muted hover:text-ink'
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -171,7 +171,7 @@ export default function Trades() {
       <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
           <div className="sm:min-w-[880px]">
-            <div className={`${GRID} border-b border-white/[0.06] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted`}>
+            <div className={`${GRID} border-b border-black/[0.08] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted`}>
               <span>תאריך</span>
               <span className="hidden sm:block">סימבול</span>
               <span className="hidden sm:block">כיוון</span>
@@ -184,14 +184,14 @@ export default function Trades() {
               <span className="hidden text-left sm:block">R</span>
               <span className="text-left">P&amp;L</span>
             </div>
-            <div className="divide-y divide-white/[0.04]">
+            <div className="divide-y divide-black/[0.06]">
               {rows.map((t) => {
                 const win = t.return_amount > 0
                 return (
                   <Link
                     key={t.id}
                     to={`/app/trades/${t.id}`}
-                    className={`${GRID} group items-center px-4 py-3 text-sm transition-colors hover:bg-white/[0.03]`}
+                    className={`${GRID} group items-center px-4 py-3 text-sm transition-colors hover:bg-black/[0.03]`}
                   >
                     <span className="text-muted">
                       {new Date(t.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })}

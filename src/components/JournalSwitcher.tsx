@@ -20,13 +20,13 @@ export function JournalSwitcher() {
   }
 
   const iconBtn =
-    'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/[0.08] hover:text-ink'
+    'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.06] hover:text-ink'
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm transition-colors hover:bg-white/[0.06]"
+        className="flex w-full items-center justify-between gap-2 rounded-xl border border-black/[0.08] bg-black/[0.03] px-3 py-2 text-sm transition-colors hover:bg-black/[0.05]"
       >
         <span className="flex min-w-0 items-center gap-2">
           <BookMarked className="h-4 w-4 shrink-0 text-accent-2" />
@@ -73,7 +73,7 @@ export function JournalSwitcher() {
                 )
               }
               return (
-                <div key={j.id} className="group flex items-center gap-1 rounded-lg hover:bg-white/[0.05]">
+                <div key={j.id} className="group flex items-center gap-1 rounded-lg hover:bg-black/[0.04]">
                   <button
                     onClick={() => {
                       setActive(j.id)
@@ -111,7 +111,7 @@ export function JournalSwitcher() {
               )
             })}
 
-            <div className="my-1 border-t border-white/[0.06]" />
+            <div className="my-1 border-t border-black/[0.08]" />
             <form onSubmit={handleAdd} className="flex items-center gap-1.5 p-1">
               <input
                 value={name}

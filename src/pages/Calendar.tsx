@@ -122,7 +122,7 @@ export default function Calendar() {
           <button
             onClick={() => shift(-1)}
             aria-label="חודש קודם"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-ink transition-colors hover:bg-white/[0.07]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.12] bg-black/[0.03] text-ink transition-colors hover:bg-black/[0.06]"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -149,7 +149,7 @@ export default function Calendar() {
           <button
             onClick={() => shift(1)}
             aria-label="חודש הבא"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-ink transition-colors hover:bg-white/[0.07]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.12] bg-black/[0.03] text-ink transition-colors hover:bg-black/[0.06]"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -191,7 +191,7 @@ export default function Calendar() {
                       key={key}
                       onClick={() => setSelected(key)}
                       className={`flex h-28 flex-1 flex-col rounded-xl border p-2 text-left transition-colors ${
-                        oc ? cellTint[oc] : 'border-white/[0.06] bg-surface/40 hover:bg-white/[0.03]'
+                        oc ? cellTint[oc] : 'border-black/[0.08] bg-surface/40 hover:bg-black/[0.03]'
                       } ${isToday ? 'ring-1 ring-accent/60' : ''}`}
                     >
                       <span className={`text-sm font-medium ${inMonth ? 'text-ink' : 'text-muted/40'}`}>
@@ -274,7 +274,7 @@ function DayPanel({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.08] bg-surface p-5 shadow-2xl"
+        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-black/[0.08] bg-surface p-5 shadow-2xl"
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -288,7 +288,7 @@ function DayPanel({
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.05] hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>
@@ -305,7 +305,7 @@ function DayPanel({
                 <button
                   key={t.id}
                   onClick={() => onOpenTrade(t.id)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-right transition-colors hover:bg-white/[0.05]"
+                  className="flex w-full items-center gap-3 rounded-xl border border-black/[0.08] bg-black/[0.02] px-3 py-2.5 text-right transition-colors hover:bg-black/[0.04]"
                 >
                   <span className="num text-xs text-muted" dir="ltr">{t.date.slice(11, 16)}</span>
                   <span className="font-mono text-sm font-semibold">{cleanSymbol(t.symbol)}</span>
@@ -328,7 +328,7 @@ function DayPanel({
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             onClick={onAddTrade}
-            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-white/[0.07]"
+            className="flex items-center justify-center gap-2 rounded-xl border border-black/[0.12] bg-black/[0.03] py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.06]"
           >
             <Plus className="h-4 w-4" /> עסקה חדשה
           </button>

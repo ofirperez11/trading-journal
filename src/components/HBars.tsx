@@ -3,7 +3,7 @@ import type { Bucket } from '../lib/analytics'
 const barColor: Record<string, string> = {
   win: '#3FCF8E',
   loss: '#F26D6D',
-  accent: '#F4A93C',
+  accent: '#0066cc',
 }
 const textCls: Record<string, string> = {
   win: 'text-win',
@@ -34,7 +34,7 @@ export function HBars({ items, format }: { items: Bucket[]; format: (v: number) 
                 </span>
               </span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[0.04]">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/[0.04]">
               <div
                 className="bar-grow-x h-full rounded-full"
                 style={{ width: `${w}%`, background: barColor[tone], ['--i' as string]: i, marginInlineStart: 'auto' }}

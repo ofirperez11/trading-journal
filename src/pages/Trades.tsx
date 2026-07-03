@@ -13,7 +13,7 @@ const MONTHS_HE = [
 const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'רווח', LOSS: 'הפסד', WASH: 'Wash' }
 
 const GRID =
-  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_1fr_60px_64px_72px_72px_64px_70px_66px_52px_90px]'
+  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_66px_52px_90px] sm:justify-between'
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -57,14 +57,18 @@ export default function Trades() {
   const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size
 
   const rows = useMemo(() => {
-    return trades.filter((t) => {
-      if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
-      if (statusSel.size && !statusSel.has(t.status)) return false
-      if (sideSel.size && !sideSel.has(t.side)) return false
-      if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
-      if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
-      return true
-    })
+    return trades
+      .filter((t) => {
+        if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
+        if (statusSel.size && !statusSel.has(t.status)) return false
+        if (sideSel.size && !sideSel.has(t.side)) return false
+        if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
+        if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
+        return true
+      })
+      // Newest first. Sort on the raw string (tz-independent) so the order
+      // matches the displayed date exactly.
+      .sort((a, b) => b.date.localeCompare(a.date))
   }, [trades, symbolSel, statusSel, sideSel, monthSel, query])
 
   function toggle<T>(setFn: (s: Set<T>) => void, cur: Set<T>, val: T) {
@@ -194,7 +198,10 @@ export default function Trades() {
                     className={`${GRID} group items-center px-4 py-3 text-sm transition-colors hover:bg-black/[0.03]`}
                   >
                     <span className="text-muted">
-                      {new Date(t.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      <span className="num block">{`${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(2, 4)}`}</span>
+                      {t.date.length >= 16 && (
+                        <span className="num block text-xs text-muted/70">{t.date.slice(11, 16)}</span>
+                      )}
                     </span>
                     <span className="hidden font-medium sm:block">{t.symbol}</span>
                     <span className="hidden sm:block">

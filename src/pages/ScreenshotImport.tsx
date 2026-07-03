@@ -424,8 +424,8 @@ export default function ScreenshotImport() {
                 <Flag name="stoploss" />
               </label>
               <label className={field}>
-                <span className="field-label mb-0">שיא הרווח — מחיר שיא (אופציונלי)</span>
-                <input type="number" step="any" dir="ltr" className="input" value={form.peak} onChange={(e) => set('peak', e.target.value)} placeholder="המחיר המקסימלי לטובתך" />
+                <span className="field-label mb-0">שיא פוטנציאל — נקודות מהכניסה (אופציונלי)</span>
+                <input type="number" step="any" dir="ltr" className="input" value={form.peak} onChange={(e) => set('peak', e.target.value)} placeholder="נקודות מהכניסה" />
               </label>
               <label className={`${field} sm:col-span-2`}>
                 <span className="field-label mb-0">הערות</span>

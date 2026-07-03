@@ -202,6 +202,25 @@ export function formatPct(v: number): string {
   return `${(v * 100).toFixed(0)}%`
 }
 
+const MONTHS_HE_FULL = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+]
+
+/**
+ * Format a stored trade datetime EXACTLY as entered — no timezone conversion.
+ * The `date` column is a timestamptz, but the wall-clock (e.g. 16:30) IS the
+ * meaningful value, so we read the string parts directly instead of `new Date`.
+ */
+export function formatTradeDateTime(iso: string): string {
+  const mo = Number(iso.slice(5, 7))
+  const day = Number(iso.slice(8, 10))
+  const year = iso.slice(0, 4)
+  const time = iso.slice(11, 16)
+  const date = `${day} ב${MONTHS_HE_FULL[mo - 1] ?? ''} ${year}`
+  return time ? `${date} · ${time}` : date
+}
+
 /** R-multiple, rounded to 2 decimals, signed (e.g. "+3.05R", "-1R"). */
 export function formatR(r: number | null): string {
   if (r == null) return '—'

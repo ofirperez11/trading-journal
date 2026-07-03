@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, X, Pencil, Trash2 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
-import { formatMoney, imageUrl, formatR } from '../lib/trades'
+import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
 
 export default function TradeDetail() {
@@ -45,7 +45,7 @@ export default function TradeDetail() {
     { label: 'כמות', value: String(trade.qty) },
     { label: 'יעד', value: trade.target != null ? String(trade.target) : '—' },
     { label: 'סטופ', value: trade.stoploss != null ? String(trade.stoploss) : '—' },
-    ...(trade.peak_price != null ? [{ label: 'שיא רווח', value: String(trade.peak_price) }] : []),
+    ...(trade.peak_price != null ? [{ label: 'שיא (נק׳)', value: String(trade.peak_price) }] : []),
     ...(trade.lookback ? [{ label: 'Lookback', value: trade.lookback }] : []),
     { label: 'R-Multiple', value: formatR(trade.r_multiple) },
   ]
@@ -99,7 +99,7 @@ export default function TradeDetail() {
               {formatMoney(trade.return_amount)}
             </div>
             <div className="text-sm text-muted">
-              {new Date(trade.date).toLocaleString('he-IL', { dateStyle: 'long', timeStyle: 'short' })}
+              {formatTradeDateTime(trade.date)}
             </div>
           </div>
         </div>

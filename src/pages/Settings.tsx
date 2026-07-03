@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Loader2, LogOut, User, ShieldCheck } from 'lucide-react'
+import { Check, Loader2, LogOut, User, ShieldCheck, Download } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -13,6 +13,35 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  async function exportBackup() {
+    if (!isSupabaseConfigured || !user) return
+    setExporting(true)
+    try {
+      const [t, a, j] = await Promise.all([
+        supabase.from('trades').select('*'),
+        supabase.from('accounts').select('*'),
+        supabase.from('journal_entries').select('*'),
+      ])
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        user: user.email,
+        trades: t.data ?? [],
+        accounts: a.data ?? [],
+        journal_entries: j.data ?? [],
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const href = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = href
+      link.download = `trading-journal-backup-${new Date().toISOString().slice(0, 10)}.json`
+      link.click()
+      URL.revokeObjectURL(href)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function saveProfile() {
     setError(null)
@@ -67,6 +96,21 @@ export default function Settings() {
           </button>
           {saved && <span className="text-sm text-win">נשמר ✓</span>}
         </div>
+      </div>
+
+      {/* Backup */}
+      <div className="card space-y-4">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Download className="h-4 w-4 text-muted" /> גיבוי נתונים
+        </div>
+        <p className="text-sm text-muted">
+          הורד קובץ עם כל העסקאות, היומנים והרשומות שלך — נקודת שחזור מקומית. מומלץ מדי פעם.
+          (בנוסף מתבצע גיבוי אוטומטי יומי בענן.)
+        </p>
+        <button onClick={exportBackup} disabled={exporting} className="btn-ghost">
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          ייצוא גיבוי (JSON)
+        </button>
       </div>
 
       {/* Account */}

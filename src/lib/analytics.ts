@@ -46,6 +46,22 @@ export interface Analytics extends Stats {
   bySide: Bucket[]
   byMonth: Bucket[]
   rDistribution: Bucket[]
+  byLookback: Bucket[] // performance per entry-model (lookback)
+  mfe: {
+    count: number
+    avgPeakPts: number
+    avgCapturedPts: number
+    avgLeftPts: number
+    captureRatio: number | null // 0-1, captured ÷ potential
+    bySymbol: {
+      label: string
+      count: number
+      captureRatio: number | null
+      avgCaptured: number
+      avgPeak: number
+      avgLeft: number
+    }[] // full capture breakdown per instrument (MNQ, MES, …)
+  }
   // day-level
   tradingDays: number
   winningDays: number
@@ -132,8 +148,10 @@ export function computeAnalytics(trades: Trade[]): Analytics {
       tone: pnlTone(g.pnl),
     }))
 
-  // By weekday (Sun–Sat).
-  const wd = groupPnl(trades, (t) => String(new Date(t.date).getDay()))
+  // By weekday (Sun–Sat) — from the stored calendar day, no timezone shift.
+  const wd = groupPnl(trades, (t) =>
+    String(new Date(Number(t.date.slice(0, 4)), Number(t.date.slice(5, 7)) - 1, Number(t.date.slice(8, 10))).getDay()),
+  )
   const byWeekday: Bucket[] = HE_WEEKDAYS.map((label, i) => {
     const g = wd.get(String(i))
     return {
@@ -145,8 +163,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     }
   })
 
-  // By hour (only hours that have trades).
-  const hr = groupPnl(trades, (t) => String(new Date(t.date).getHours()))
+  // By hour (only hours that have trades) — the stored wall-clock hour, no tz shift.
+  const hr = groupPnl(trades, (t) => String(Number(t.date.slice(11, 13))))
   const byHour: Bucket[] = [...hr.entries()]
     .map(([h, g]) => ({
       label: `${String(h).padStart(2, '0')}`,
@@ -238,6 +256,69 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     }
   }
 
+  // Performance per entry-model (lookback) — bar = avg R, sublabel = win rate.
+  const lb = new Map<string, { count: number; wins: number; losses: number; rSum: number }>()
+  for (const t of trades) {
+    if (!t.lookback) continue
+    const g = lb.get(t.lookback) ?? { count: 0, wins: 0, losses: 0, rSum: 0 }
+    g.count++
+    if (t.return_amount > 0) g.wins++
+    else if (t.return_amount < 0) g.losses++
+    g.rSum += t.r_multiple ?? (t.return_amount < 0 ? -1 : 0)
+    lb.set(t.lookback, g)
+  }
+  const byLookback: Bucket[] = [...lb.entries()]
+    .map(([label, g]) => {
+      const avgR = g.count ? g.rSum / g.count : 0
+      return {
+        label,
+        value: Math.round(avgR * 100) / 100,
+        count: g.count,
+        winRate: g.wins + g.losses > 0 ? g.wins / (g.wins + g.losses) : undefined,
+        tone: (avgR >= 0 ? 'win' : 'loss') as 'win' | 'loss',
+      }
+    })
+    .sort((a, b) => b.value - a.value)
+
+  // Maximum-favorable-excursion / capture analysis (from peak_price).
+  let mCount = 0
+  let sumPeak = 0
+  let sumCap = 0
+  const mfeSym = new Map<string, { peak: number; cap: number; count: number }>()
+  for (const t of trades) {
+    if (t.peak_price == null || t.entry == null || t.exit == null) continue
+    const dir = t.side === 'LONG' ? 1 : -1
+    // peak_price holds the peak favourable excursion in POINTS from entry.
+    const peakPts = Math.max(0, t.peak_price)
+    const capPts = (t.exit - t.entry) * dir
+    mCount++
+    sumPeak += peakPts
+    sumCap += capPts
+    const sym = cleanSymbol(t.symbol)
+    const g = mfeSym.get(sym) ?? { peak: 0, cap: 0, count: 0 }
+    g.peak += peakPts
+    g.cap += capPts
+    g.count++
+    mfeSym.set(sym, g)
+  }
+  const mfe = {
+    count: mCount,
+    avgPeakPts: mCount ? sumPeak / mCount : 0,
+    avgCapturedPts: mCount ? sumCap / mCount : 0,
+    avgLeftPts: mCount ? (sumPeak - sumCap) / mCount : 0,
+    captureRatio: sumPeak > 0 ? sumCap / sumPeak : null,
+    bySymbol: [...mfeSym.entries()]
+      .map(([label, g]) => ({
+        label,
+        count: g.count,
+        captureRatio: g.peak > 0 ? g.cap / g.peak : null,
+        avgCaptured: g.count ? g.cap / g.count : 0,
+        avgPeak: g.count ? g.peak / g.count : 0,
+        avgLeft: g.count ? (g.peak - g.cap) / g.count : 0,
+      }))
+      .sort((a, b) => b.count - a.count),
+  }
+
   return {
     ...stats,
     stopByAsset,
@@ -253,6 +334,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     bySide,
     byMonth,
     rDistribution,
+    byLookback,
+    mfe,
     tradingDays,
     winningDays,
     losingDays,

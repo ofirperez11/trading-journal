@@ -21,17 +21,22 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmSent, setConfirmSent] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
-    const { error } = isSignup
+    const result = isSignup
       ? await signUp(email, password, name || email.split('@')[0])
       : await signIn(email, password)
     setSubmitting(false)
-    if (error) {
-      setError(error)
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    if ('needsConfirmation' in result && result.needsConfirmation) {
+      setConfirmSent(true)
       return
     }
     navigate('/app')
@@ -62,7 +67,7 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
           </div>
         </div>
         <div className="panel relative p-3">
-          <EquityCurve data={sampleEquity} height={120} />
+          <EquityCurve data={sampleEquity} height={120} draw />
         </div>
       </div>
 
@@ -85,6 +90,17 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
               </div>
             )}
 
+            {confirmSent ? (
+              <div className="mt-6 space-y-4 text-center">
+                <div className="rounded-xl border border-win/30 bg-win/10 px-4 py-4 text-sm leading-relaxed text-win">
+                  שלחנו קישור אימות אל <span className="font-semibold" dir="ltr">{email}</span>.<br />
+                  פתח את המייל, לחץ על הקישור כדי להפעיל את החשבון, ואז חזור להתחבר.
+                </div>
+                <Link to="/login" className="inline-block text-sm text-accent-2 hover:underline">
+                  חזרה להתחברות ←
+                </Link>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-right">
               {isSignup && (
                 <div>
@@ -139,6 +155,7 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
                 {submitting ? 'רגע...' : isSignup ? 'צור חשבון' : 'התחבר'}
               </button>
             </form>
+            )}
 
             <p className="mt-6 text-center text-sm text-muted">
               {isSignup ? 'כבר יש לך חשבון?' : 'עוד אין לך חשבון?'}{' '}

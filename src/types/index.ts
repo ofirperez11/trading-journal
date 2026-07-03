@@ -39,6 +39,8 @@ export interface Trade {
   r_multiple: number | null
   hold_time: number | null // seconds
   confidence: number | null // 0-5
+  lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
+  peak_price: number | null // best price the trade reached in favor (MFE) — for capture analysis
   tags: string[] | null
   notes: string | null
   mood: string | null
@@ -49,6 +51,13 @@ export interface Trade {
   updated_at?: string
 }
 
+export type ShareRole = 'viewer' | 'editor'
+
+export interface JournalShare {
+  email: string
+  role: ShareRole
+}
+
 export interface Account {
   id: string
   user_id: string
@@ -57,6 +66,7 @@ export interface Account {
   currency: string // e.g. 'USD'
   starting_balance: number | null
   is_default: boolean
+  shares?: JournalShare[]
   created_at?: string
 }
 

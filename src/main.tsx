@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './lib/auth'
 import { JournalsProvider } from './lib/journals'
+import { TradesProvider } from './lib/useTrades'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -11,7 +12,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <JournalsProvider>
-          <App />
+          <TradesProvider>
+            <App />
+          </TradesProvider>
         </JournalsProvider>
       </AuthProvider>
     </BrowserRouter>

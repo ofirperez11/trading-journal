@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Plus, Sparkles } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { formatMoney, formatR } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
@@ -34,9 +34,19 @@ export default function Trades() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">עסקאות</h1>
-        <p className="text-muted">{rows.length} מתוך {trades.length} עסקאות</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">עסקאות</h1>
+          <p className="text-muted">{rows.length} מתוך {trades.length} עסקאות</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/app/trades/from-image" className="btn-secondary">
+            <Sparkles className="h-4 w-4" /> מתמונה
+          </Link>
+          <Link to="/app/trades/new" className="btn-primary">
+            <Plus className="h-4 w-4" /> עסקה חדשה
+          </Link>
+        </div>
       </div>
 
       {/* Controls */}
@@ -97,19 +107,19 @@ export default function Trades() {
                 <span className={`hidden text-xs font-medium sm:block ${t.status === 'WIN' ? 'text-win' : t.status === 'LOSS' ? 'text-loss' : 'text-muted'}`}>
                   {t.status}
                 </span>
-                <span className="hidden text-left tabular-nums text-muted sm:block">{t.entry}</span>
-                <span className="hidden text-left tabular-nums text-muted sm:block">{t.exits?.[0] ?? '—'}</span>
-                <span className="hidden text-left tabular-nums sm:block">
+                <span className="hidden text-left num text-muted sm:block">{t.entry}</span>
+                <span className="hidden text-left num text-muted sm:block">{t.exits?.[0] ?? '—'}</span>
+                <span className="hidden text-left num sm:block">
                   {t.exits && t.exits.length > 1 ? (
                     <span className="text-accent-2">{t.exits[1]}</span>
                   ) : (
                     <span className="text-muted/40">—</span>
                   )}
                 </span>
-                <span className="hidden text-left tabular-nums sm:block">
+                <span className="hidden text-left num sm:block">
                   {t.r_multiple != null ? formatR(t.r_multiple).replace('R', '') : '—'}
                 </span>
-                <span className={`text-left font-semibold tabular-nums ${win ? 'text-win' : t.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
+                <span className={`text-left font-semibold num ${win ? 'text-win' : t.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
                   {formatMoney(t.return_amount)}
                 </span>
               </Link>

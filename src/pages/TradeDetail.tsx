@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, X } from 'lucide-react'
-import { useTrade } from '../lib/useTrades'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowRight, X, Pencil, Trash2 } from 'lucide-react'
+import { useTrade, useTradeActions } from '../lib/useTrades'
 import { formatMoney, imageUrl, formatR } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
 
 export default function TradeDetail() {
   const { id } = useParams()
   const { trade, loading } = useTrade(id)
+  const { deleteTrade } = useTradeActions()
+  const navigate = useNavigate()
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   // Close the lightbox on Escape.
   useEffect(() => {
@@ -42,14 +45,44 @@ export default function TradeDetail() {
     { label: 'כמות', value: String(trade.qty) },
     { label: 'יעד', value: trade.target != null ? String(trade.target) : '—' },
     { label: 'סטופ', value: trade.stoploss != null ? String(trade.stoploss) : '—' },
+    ...(trade.peak_price != null ? [{ label: 'שיא רווח', value: String(trade.peak_price) }] : []),
+    ...(trade.lookback ? [{ label: 'Lookback', value: trade.lookback }] : []),
     { label: 'R-Multiple', value: formatR(trade.r_multiple) },
   ]
 
   return (
     <div className="space-y-5">
-      <Link to="/app/trades" className="inline-flex items-center gap-1 text-sm text-muted hover:text-white">
-        <ArrowRight className="h-4 w-4" /> חזרה לעסקאות
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/app/trades" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+          <ArrowRight className="h-4 w-4" /> חזרה לעסקאות
+        </Link>
+        {confirming ? (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted">למחוק את העסקה?</span>
+            <button
+              onClick={() => {
+                deleteTrade(trade.id)
+                navigate('/app/trades')
+              }}
+              className="rounded-lg bg-loss/20 px-3 py-1.5 text-xs font-semibold text-loss hover:bg-loss/30"
+            >
+              מחק
+            </button>
+            <button onClick={() => setConfirming(false)} className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-ink">
+              ביטול
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link to={`/app/trades/${trade.id}/edit`} className="btn-ghost px-3 py-2 text-sm">
+              <Pencil className="h-4 w-4" /> ערוך
+            </Link>
+            <button onClick={() => setConfirming(true)} className="btn-ghost px-3 py-2 text-sm text-loss hover:text-loss">
+              <Trash2 className="h-4 w-4" /> מחק
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Header */}
       <div className="card">
@@ -62,7 +95,7 @@ export default function TradeDetail() {
             </span>
           </div>
           <div className="text-left">
-            <div className={`text-3xl font-bold tabular-nums ${win ? 'text-win' : trade.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
+            <div className={`text-3xl font-bold num ${win ? 'text-win' : trade.return_amount < 0 ? 'text-loss' : 'text-muted'}`}>
               {formatMoney(trade.return_amount)}
             </div>
             <div className="text-sm text-muted">
@@ -75,7 +108,7 @@ export default function TradeDetail() {
           {fields.map((f) => (
             <div key={f.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
               <div className="stat-label">{f.label}</div>
-              <div className="mt-1 text-lg font-bold tabular-nums">{f.value}</div>
+              <div className="mt-1 text-lg font-bold num">{f.value}</div>
             </div>
           ))}
         </div>
@@ -100,8 +133,8 @@ export default function TradeDetail() {
                   {e.action}
                 </span>
                 <div className="flex items-center gap-4 text-muted">
-                  <span className="tabular-nums">qty {String(e.qty)}</span>
-                  <span className="tabular-nums text-white">@ {String(e.price)}</span>
+                  <span className="num">qty {String(e.qty)}</span>
+                  <span className="num text-white">@ {String(e.price)}</span>
                 </div>
               </div>
             ))}

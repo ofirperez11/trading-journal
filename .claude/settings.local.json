@@ -16,7 +16,29 @@
       "Bash(git init *)",
       "Bash(git symbolic-ref *)",
       "Bash(git config *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(node .claude/skills/impeccable/scripts/context.mjs)",
+      "Bash(node .claude/skills/impeccable/scripts/detect.mjs --json src index.html)",
+      "Bash(node .claude/skills/impeccable/scripts/detect.mjs src)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(python3 -)"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: runs after Edit/Write/MultiEdit on UI files and surfaces findings as system reminders."
 }

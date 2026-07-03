@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { BarChart3, ScanLine, Zap, Brain, ArrowLeft, TrendingUp } from 'lucide-react'
+import { BarChart3, ScanLine, Zap, Brain, ArrowLeft } from 'lucide-react'
 import { LogoWordmark } from '../components/Logo'
 import { EquityCurve, sampleEquity } from '../components/EquityCurve'
+import { CountUp } from '../components/CountUp'
 
 const features = [
   {
@@ -28,28 +29,39 @@ const features = [
 
 function DashboardPreview() {
   const tiles = [
-    { label: 'Net P&L', value: '+$4,210', cls: 'text-win' },
-    { label: 'Win Rate', value: '61%', cls: 'text-white' },
-    { label: 'Profit Factor', value: '1.94', cls: 'text-white' },
+    { label: 'Win Rate', value: '61%', cls: 'text-ink' },
+    { label: 'Profit Factor', value: '1.94', cls: 'text-ink' },
+    { label: 'Avg R', value: '+1.7', cls: 'text-win' },
   ]
   return (
-    <div className="panel overflow-hidden p-5 text-right">
-      <div className="flex items-center justify-between">
-        <span className="pill border-win/30 bg-win/10 text-win">
-          <TrendingUp className="h-3.5 w-3.5" /> מגמה חיובית
+    <div className="panel overflow-hidden text-right">
+      {/* Terminal status bar */}
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-win" />
+          live · MNQ
         </span>
-        <span className="text-sm font-medium text-muted">Equity Curve · 30 ימים</span>
+        <span className="font-mono text-[11px] uppercase tracking-wider text-muted">בק־טסט · 289 trades</span>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {tiles.map((t) => (
-          <div key={t.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
-            <div className="stat-label">{t.label}</div>
-            <div className={`mt-1 text-lg font-bold tabular-nums ${t.cls}`}>{t.value}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-2">
-        <EquityCurve data={sampleEquity} height={170} />
+
+      <div className="p-5">
+        {/* The thesis: a terminal P&L readout */}
+        <div className="stat-label">Net P&amp;L</div>
+        <div className="mt-1 font-mono text-4xl font-semibold num text-win glow-amber">
+          <CountUp value={137328} format={(n) => `+$${Math.round(n).toLocaleString('en-US')}`} />
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {tiles.map((t) => (
+            <div key={t.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="stat-label">{t.label}</div>
+              <div className={`num mt-1 text-lg font-bold ${t.cls}`}>{t.value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+          <EquityCurve data={sampleEquity} height={160} draw />
+        </div>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { useTrades } from '../lib/useTrades'
 import { computeStats, buildEquityCurve, formatMoney, formatPct, formatR } from '../lib/trades'
 import { EquityCurve } from '../components/EquityCurve'
 import { SideIndicator } from '../components/SideIndicator'
+import { CountUp } from '../components/CountUp'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -49,6 +50,7 @@ export default function Dashboard() {
     {
       label: 'Net P&L',
       value: formatMoney(stats.netPnl),
+      count: stats.netPnl,
       cls: stats.netPnl >= 0 ? 'text-win' : 'text-loss',
       sub: `${stats.totalTrades} עסקאות`,
     },
@@ -83,7 +85,13 @@ export default function Dashboard() {
         {cards.map((c) => (
           <div key={c.label} className="card">
             <div className="stat-label">{c.label}</div>
-            <div className={`stat-value ${c.cls ?? ''}`}>{c.value}</div>
+            <div className={`stat-value ${c.cls ?? ''}`}>
+              {'count' in c && typeof c.count === 'number' ? (
+                <CountUp value={c.count} format={(n) => formatMoney(n)} />
+              ) : (
+                c.value
+              )}
+            </div>
             <div className="mt-1.5 text-xs text-muted">{c.sub}</div>
           </div>
         ))}
@@ -94,7 +102,7 @@ export default function Dashboard() {
           <h2 className="font-semibold">Equity Curve</h2>
           <span className="pill">{stats.totalTrades} עסקאות · P&L מצטבר</span>
         </div>
-        <EquityCurve data={equity} positive={stats.netPnl >= 0} height={280} />
+        <EquityCurve data={equity} positive={stats.netPnl >= 0} height={280} draw />
       </div>
 
       <div className="card">
@@ -113,11 +121,11 @@ export default function Dashboard() {
                 to={`/app/trades/${t.id}`}
                 className="group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-white/[0.03]"
               >
-                <span className={`font-semibold tabular-nums ${win ? 'text-win' : 'text-loss'}`}>
+                <span className={`font-semibold num ${win ? 'text-win' : 'text-loss'}`}>
                   {formatMoney(t.return_amount)}
                 </span>
                 <div className="flex items-center gap-3 text-muted">
-                  {t.r_multiple != null && <span className="tabular-nums">{formatR(t.r_multiple)}</span>}
+                  {t.r_multiple != null && <span className="num">{formatR(t.r_multiple)}</span>}
                   <SideIndicator side={t.side} />
                   <span className="font-medium text-white">{t.symbol}</span>
                   <span className="hidden w-24 text-left sm:block">

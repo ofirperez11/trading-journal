@@ -69,6 +69,8 @@ export function normalizeTrade(raw: Record<string, unknown>): Trade {
     r_multiple: num(raw.r_multiple),
     hold_time: num(raw.hold_time),
     confidence: num(raw.confidence),
+    lookback: raw.lookback ? String(raw.lookback) : null,
+    peak_price: num(raw.peak_price),
     tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : null,
     notes: raw.notes ? String(raw.notes) : null,
     mood: raw.mood ? String(raw.mood) : null,
@@ -209,6 +211,6 @@ export function formatR(r: number | null): string {
 
 /** Resolve a stored image path to a servable URL (demo serves from /demo). */
 export function imageUrl(path: string): string {
-  if (path.startsWith('http')) return path
+  if (path.startsWith('http') || path.startsWith('data:')) return path
   return `/demo/${path}`
 }

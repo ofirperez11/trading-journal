@@ -5,6 +5,8 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   }
   html,
   body,
@@ -12,20 +14,35 @@
     height: 100%;
   }
   body {
-    @apply bg-bg text-white antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-bg text-ink antialiased;
+    font-family: 'IBM Plex Sans Hebrew', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    /* Aurora mesh — soft, slow-moving color fields behind everything */
+    /* Amber phosphor glow + faint chart-paper grid behind everything. */
     background-image:
-      radial-gradient(40rem 40rem at 80% -5%, rgba(124, 92, 255, 0.18), transparent 60%),
-      radial-gradient(36rem 36rem at 10% 0%, rgba(34, 211, 238, 0.12), transparent 55%),
-      radial-gradient(42rem 42rem at 50% 120%, rgba(52, 211, 153, 0.1), transparent 55%);
+      radial-gradient(48rem 30rem at 88% -8%, rgba(244, 169, 60, 0.1), transparent 60%),
+      radial-gradient(40rem 30rem at 0% 110%, rgba(63, 207, 142, 0.05), transparent 55%),
+      linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+    background-size:
+      100% 100%,
+      100% 100%,
+      34px 34px,
+      34px 34px;
     background-attachment: fixed;
   }
-  ::selection {
-    @apply bg-accent/40;
+  /* Headlines speak in the Hebrew record-serif; data speaks in mono. */
+  h1,
+  h2 {
+    @apply font-display;
   }
-  /* Thin, elegant scrollbars */
+  ::selection {
+    @apply bg-accent/30 text-ink;
+  }
+  :focus-visible {
+    outline: 2px solid #f4a93c;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -33,40 +50,64 @@
   ::-webkit-scrollbar-thumb {
     @apply rounded-full bg-border;
   }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
 }
 
 @layer components {
-  /* Glass panel */
+  /* Instrument panel */
   .panel {
-    @apply rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl;
-    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+    @apply rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl;
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+      0 24px 60px -32px rgba(0, 0, 0, 0.85);
   }
   .card {
     @apply panel p-5;
   }
 
+  /* Field labels read like terminal tags; values like readouts. */
   .stat-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
+    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.1em];
+    color: #b9b7ad;
   }
   .stat-value {
-    @apply mt-1.5 text-2xl font-bold tabular-nums tracking-tight;
+    @apply mt-1.5 font-mono text-2xl font-semibold tabular-nums tracking-tight text-ink;
+    /* numbers/currency are LTR even inside the RTL layout */
+    direction: ltr;
+    text-align: right;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
   }
 
-  /* Buttons */
+  /* Buttons — amber instrument keys with dark legends. */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn text-white;
-    background-image: linear-gradient(120deg, #7c5cff, #6366f1 45%, #22d3ee);
-    box-shadow: 0 10px 30px -8px rgba(124, 92, 255, 0.55);
+    @apply btn text-bg;
+    background-image: linear-gradient(120deg, #ffc661, #f4a93c 55%, #e89227);
+    box-shadow: 0 8px 24px -8px rgba(244, 169, 60, 0.5);
   }
   .btn-primary:hover {
-    @apply -translate-y-px brightness-110;
-    box-shadow: 0 16px 40px -10px rgba(124, 92, 255, 0.6);
+    @apply -translate-y-px brightness-105;
+    box-shadow: 0 14px 34px -10px rgba(244, 169, 60, 0.6);
   }
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07];
+    @apply btn border border-white/10 bg-white/[0.03] text-ink hover:bg-white/[0.07];
+  }
+  .btn-secondary {
+    @apply btn border border-accent/40 bg-accent/10 text-accent hover:bg-accent/20;
   }
 
   /* Form fields */
@@ -74,16 +115,85 @@
     @apply mb-1.5 block text-sm font-medium text-muted;
   }
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-muted/60 outline-none transition-all focus:border-accent/60 focus:bg-white/[0.05] focus:ring-4 focus:ring-accent/15;
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-ink placeholder:text-muted/60 outline-none transition-all focus:border-accent/60 focus:bg-white/[0.05] focus:ring-4 focus:ring-accent/15;
   }
 
+  /* Terminal tag */
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-muted;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-wider text-muted;
   }
 
-  /* Gradient text */
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(120deg, #a78bfa, #818cf8 40%, #22d3ee);
+    background-image: linear-gradient(120deg, #ffd089, #f4a93c 60%, #e2872a);
   }
+  .glow-amber {
+    text-shadow: 0 0 26px rgba(244, 169, 60, 0.45);
+  }
+}
+
+/* Equity curve — the amber phosphor line, with an optional draw-in reveal. */
+.equity-line {
+  filter: drop-shadow(0 0 6px rgba(244, 169, 60, 0.45));
+}
+.equity-line--draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: equity-draw 1.15s var(--ease-out-expo) forwards;
+}
+.equity-fill--draw {
+  opacity: 0;
+  animation: equity-fade 1.3s ease forwards;
+}
+@keyframes equity-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes equity-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bar chart grow-in (origin set per-bar so negatives grow downward). */
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.bar-grow {
+  animation: bar-grow 0.6s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* Horizontal bar grow (RTL: fills from the right). */
+@keyframes bar-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.bar-grow-x {
+  transform-origin: right;
+  animation: bar-grow-x 0.7s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+/* Donut segment sweep-in. */
+@keyframes donut-sweep {
+  from {
+    stroke-dashoffset: var(--arc);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.donut-seg {
+  animation: donut-sweep 0.8s var(--ease-out-expo) both;
 }

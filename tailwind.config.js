@@ -4,28 +4,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Obsidian canvas
-        bg: '#07090d',
-        surface: '#0d1117',
-        'surface-2': '#141b24',
-        border: '#1d2530',
-        muted: '#828d9e',
-        // Brand gradient stops
-        accent: '#7c5cff',
-        'accent-2': '#22d3ee',
-        // Trading semantics
-        win: '#34d399',
-        loss: '#f87171',
+        // Amber-terminal palette — deep cool graphite, warm phosphor ink.
+        bg: '#0A0C10',
+        surface: '#12151B',
+        'surface-2': '#181C24',
+        border: '#222732',
+        ink: '#ECEAE3',
+        muted: '#8B8A82',
+        // Brand = the terminal's amber phosphor. (accent/accent-2 kept as names.)
+        accent: '#F4A93C',
+        'accent-2': '#FFC661',
+        // Trading semantics — the real protagonists.
+        win: '#3FCF8E',
+        loss: '#F26D6D',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['"Frank Ruhl Libre"', 'Georgia', 'serif'],
+        sans: ['"IBM Plex Sans Hebrew"', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         '4xl': '2rem',
-      },
-      boxShadow: {
-        glow: '0 0 0 1px rgba(255,255,255,0.04), 0 20px 60px -20px rgba(124,92,255,0.35)',
-        panel: '0 1px 0 0 rgba(255,255,255,0.05) inset, 0 30px 60px -30px rgba(0,0,0,0.7)',
       },
       keyframes: {
         'fade-up': {
@@ -43,6 +42,10 @@ export default {
         'zoom-in': {
           '0%': { opacity: '0', transform: 'scale(0.96)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        flicker: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.82' },
         },
       },
       animation: {

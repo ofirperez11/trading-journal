@@ -74,6 +74,8 @@ create table if not exists public.trades (
   r_multiple numeric,
   hold_time integer,           -- seconds
   confidence smallint,         -- 0-5
+  lookback text,               -- entry-model time marker (e.g. '16:30')
+  peak_price numeric,          -- best price reached in favor (MFE) — for capture analysis
   tags text[],
   notes text,
   mood text,
@@ -158,3 +160,64 @@ create policy "own images - all" on storage.objects
   for all
   using (bucket_id = 'trade-images' and (storage.foldername(name))[1] = auth.uid()::text)
   with check (bucket_id = 'trade-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ===========================================================================
+-- journal_shares — share a journal (account) with another user
+-- An owner invites by email; on accept, shared_with_user_id is linked.
+-- role 'viewer' = read-only, 'editor' = read + write.
+-- ===========================================================================
+create table if not exists public.journal_shares (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  shared_with_email text not null,
+  shared_with_user_id uuid references auth.users (id) on delete cascade,
+  role text not null default 'viewer' check (role in ('viewer', 'editor')),
+  created_at timestamptz not null default now(),
+  unique (account_id, shared_with_email)
+);
+create index if not exists shares_account_idx on public.journal_shares (account_id);
+create index if not exists shares_recipient_idx on public.journal_shares (shared_with_user_id);
+
+alter table public.journal_shares enable row level security;
+
+-- The owner fully manages a journal's shares.
+create policy "owner manages shares" on public.journal_shares
+  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+-- A recipient can see the share rows that point at them.
+create policy "recipient sees own share" on public.journal_shares
+  for select using (auth.uid() = shared_with_user_id);
+
+-- Extend access so shared users can read (and editors write) the journal's
+-- data. RLS policies are permissive and combine with OR, so these sit
+-- alongside the owner-only policies above.
+create policy "shared - account select" on public.accounts
+  for select using (
+    exists (
+      select 1 from public.journal_shares s
+      where s.account_id = accounts.id and s.shared_with_user_id = auth.uid()
+    )
+  );
+create policy "shared - trades select" on public.trades
+  for select using (
+    exists (
+      select 1 from public.journal_shares s
+      where s.account_id = trades.account_id and s.shared_with_user_id = auth.uid()
+    )
+  );
+create policy "shared editor - trades write" on public.trades
+  for all
+  using (
+    exists (
+      select 1 from public.journal_shares s
+      where s.account_id = trades.account_id
+        and s.shared_with_user_id = auth.uid() and s.role = 'editor'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.journal_shares s
+      where s.account_id = trades.account_id
+        and s.shared_with_user_id = auth.uid() and s.role = 'editor'
+    )
+  );

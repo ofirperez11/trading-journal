@@ -7,7 +7,11 @@ interface AuthContextValue {
   loading: boolean
   /** True when running without a configured backend (UI demo only). */
   isDemo: boolean
-  signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+  ) => Promise<{ error: string | null; needsConfirmation?: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -58,12 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u)
       return { error: null }
     }
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { display_name: name } },
     })
-    return { error: error?.message ?? null }
+    // With email confirmation on, no session is returned until the user clicks
+    // the link in their inbox.
+    return { error: error?.message ?? null, needsConfirmation: !error && !data.session }
   }
 
   const signIn: AuthContextValue['signIn'] = async (email, password) => {

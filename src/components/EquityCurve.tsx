@@ -1,19 +1,37 @@
-import { useId } from 'react'
+import { useId, useRef, useState } from 'react'
 
 interface Props {
   data: number[]
-  /** color theme of the line + fill */
+  /** kept for API compatibility; the equity line is the amber phosphor by default */
   positive?: boolean
+  /** animate the line drawing in on mount */
+  draw?: boolean
+  /** line/fill color (default amber phosphor) */
+  color?: string
+  /** format the hovered value (default rounded integer) */
+  format?: (n: number) => string
+  /** optional x labels (e.g. dates) shown in the hover tooltip */
+  labels?: string[]
   className?: string
   height?: number
 }
 
 /**
- * Lightweight SVG area chart for an equity curve. No chart library yet —
- * this renders a smooth gradient area from a series of cumulative values.
+ * SVG area chart with a hover crosshair + tooltip. Used for the equity curve
+ * (amber) and the drawdown (red).
  */
-export function EquityCurve({ data, positive = true, className, height = 220 }: Props) {
+export function EquityCurve({
+  data,
+  draw = false,
+  color = '#F4A93C',
+  format = (n) => String(Math.round(n)),
+  labels,
+  className,
+  height = 220,
+}: Props) {
   const id = useId()
+  const ref = useRef<HTMLDivElement>(null)
+  const [hi, setHi] = useState<number | null>(null)
   const W = 640
   const H = height
   const pad = 6
@@ -29,14 +47,10 @@ export function EquityCurve({ data, positive = true, className, height = 220 }: 
   const min = Math.min(...data)
   const max = Math.max(...data)
   const range = max - min || 1
+  const xOf = (i: number) => (i / (data.length - 1)) * (W - pad * 2) + pad
+  const yOf = (v: number) => H - pad - ((v - min) / range) * (H - pad * 2)
+  const pts = data.map((v, i) => [xOf(i), yOf(v)] as const)
 
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * (W - pad * 2) + pad
-    const y = H - pad - ((v - min) / range) * (H - pad * 2)
-    return [x, y] as const
-  })
-
-  // Smooth path via Catmull-Rom → cubic bezier
   let line = `M ${pts[0][0]} ${pts[0][1]}`
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] ?? pts[i]
@@ -51,24 +65,64 @@ export function EquityCurve({ data, positive = true, className, height = 220 }: 
   }
   const area = `${line} L ${W - pad} ${H} L ${pad} ${H} Z`
 
-  const color = positive ? '#34d399' : '#f87171'
+  function onMove(e: React.MouseEvent) {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const rel = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
+    setHi(Math.round(rel * (data.length - 1)))
+  }
+
+  const hx = hi != null ? (xOf(hi) / W) * 100 : 0
+  const hy = hi != null ? (yOf(data[hi]) / H) * 100 : 0
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      className={className}
-      style={{ width: '100%', height }}
+    <div
+      ref={ref}
+      className={`relative ${className ?? ''}`}
+      style={{ height }}
+      onMouseMove={onMove}
+      onMouseLeave={() => setHi(null)}
     >
-      <defs>
-        <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.28" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#fill-${id})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height }}>
+        <defs>
+          <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#fill-${id})`} className={draw ? 'equity-fill--draw' : undefined} />
+        <path
+          d={line}
+          pathLength={1}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          className={draw ? 'equity-line--draw' : undefined}
+          style={{ filter: `drop-shadow(0 0 6px ${color}73)` }}
+        />
+      </svg>
+
+      {hi != null && (
+        <>
+          <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-white/15" style={{ left: `${hx}%` }} />
+          <div
+            className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-bg"
+            style={{ left: `${hx}%`, top: `${hy}%`, background: color }}
+          />
+          <div
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-white/10 bg-surface-2 px-2.5 py-1.5 text-center shadow-panel"
+            style={{ left: `${Math.min(88, Math.max(12, hx))}%`, top: `${Math.max(14, hy - 6)}%` }}
+          >
+            {labels?.[hi] && <div className="font-mono text-[10px] text-muted">{labels[hi]}</div>}
+            <div className="num text-sm font-bold" style={{ color }}>
+              {format(data[hi])}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 

@@ -23,3 +23,9 @@ dev-dist
 
 # bundled demo data (derived from data_export/, replaced by Supabase later)
 public/demo
+.vercel
+.env*
+
+# supabase CLI temp + local tooling
+supabase/.temp
+.claude/skills

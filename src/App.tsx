@@ -6,6 +6,12 @@ import AuthScreen from './pages/AuthScreen'
 import Dashboard from './pages/Dashboard'
 import Trades from './pages/Trades'
 import TradeDetail from './pages/TradeDetail'
+import TradeForm from './pages/TradeForm'
+import Analytics from './pages/Analytics'
+import Summary from './pages/Summary'
+import Calendar from './pages/Calendar'
+import ScreenshotImport from './pages/ScreenshotImport'
+import ImportHistory from './pages/ImportHistory'
 
 function Placeholder({ title, note }: { title: string; note: string }) {
   return (
@@ -53,11 +59,15 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="trades" element={<Trades />} />
+        <Route path="trades/new" element={<TradeForm />} />
+        <Route path="trades/from-image" element={<ScreenshotImport />} />
         <Route path="trades/:id" element={<TradeDetail />} />
-        <Route path="analytics" element={<Placeholder title="Analytics" note="אנליטיקה מעמיקה — שלב 3." />} />
-        <Route path="calendar" element={<Placeholder title="Calendar" note="לוח שנה P&L — שלב 7." />} />
+        <Route path="trades/:id/edit" element={<TradeForm />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="summary" element={<Summary />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="journal" element={<Placeholder title="Journal" note="יומן רגשי ומשמעת — שלב 7." />} />
-        <Route path="import" element={<Placeholder title="Import" note="ייבוא Tradovate CSV + הנתונים הקיימים — שלב 2/6." />} />
+        <Route path="import" element={<ImportHistory />} />
         <Route path="settings" element={<Placeholder title="Settings" note="הגדרות ופרופיל." />} />
       </Route>
 

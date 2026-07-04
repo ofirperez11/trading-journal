@@ -1,11 +1,23 @@
 import { useState, type FormEvent } from 'react'
 import { ChevronDown, Check, Plus, BookMarked, Share2, Trash2, Users } from 'lucide-react'
 import { useJournals } from '../lib/journals'
+import { useAuth } from '../lib/auth'
 import { ShareDialog } from './ShareDialog'
 
 /** Dropdown to pick the active journal, create one, share it, or delete it. */
 export function JournalSwitcher() {
   const { journals, active, setActive, createJournal, deleteJournal } = useJournals()
+  const { user } = useAuth()
+  const myId = user?.id
+  // Whether the user has at least one journal shared *to* them (owned by someone
+  // else). If so, they may delete their own default journal too — this lets a
+  // partner remove the stray empty journal that used to be auto-created.
+  const hasSharedIn = journals.some((j) => myId != null && j.user_id !== myId)
+  const canDelete = (j: (typeof journals)[number]) => {
+    if (myId == null) return !j.is_default // demo / no auth: original behavior
+    if (j.user_id !== myId) return false // a journal shared to me — not mine to delete
+    return !j.is_default || hasSharedIn
+  }
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -96,7 +108,7 @@ export function JournalSwitcher() {
                     <button onClick={() => setShareId(j.id)} className={iconBtn} aria-label={`שיתוף ${j.name}`} title="שיתוף">
                       <Share2 className="h-4 w-4" />
                     </button>
-                    {!j.is_default && (
+                    {canDelete(j) && (
                       <button
                         onClick={() => setConfirmDelete(j.id)}
                         className={`${iconBtn} hover:bg-loss/10 hover:text-loss`}

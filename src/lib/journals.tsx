@@ -81,7 +81,9 @@ function SupabaseJournals({ children }: { children: ReactNode }) {
     let list = (accts ?? []) as Account[]
 
     // First run: create a default "בק־טסט" journal so the app is never empty.
-    if (list.filter((a) => a.user_id === uid).length === 0) {
+    // Skip this when the user already has ANY accessible journal (including one
+    // shared with them) — otherwise a partner gets a stray empty duplicate.
+    if (list.length === 0) {
       const { data: created } = await supabase
         .from('accounts')
         .insert({ user_id: uid, name: 'בק־טסט', broker: 'Tradovate', currency: 'USD', is_default: true })

@@ -22,7 +22,8 @@
       "Bash(node .claude/skills/impeccable/scripts/detect.mjs --json src index.html)",
       "Bash(node .claude/skills/impeccable/scripts/detect.mjs src)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(node \"/private/tmp/claude-501/-Users-ofirperez11-Desktop-trading-journal/b8b55bd7-85bf-4c32-b915-1abb8ed9900f/scratchpad/do_import.js\")"
     ]
   },
   "hooks": {

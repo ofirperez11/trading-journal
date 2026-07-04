@@ -459,22 +459,29 @@ export function monthlyWeekSummary(trades: Trade[]): WeeklySummaryData {
     }
   })
 
-  const byMonth = new Map<string, W[]>()
-  for (const w of weeks) {
-    if (!byMonth.has(w.monthKey)) byMonth.set(w.monthKey, [])
-    byMonth.get(w.monthKey)!.push(w)
-  }
+  // Show every month that has at least one trade…
+  const monthsWithTrades = [...new Set(weeks.map((w) => w.monthKey))]
 
-  const months = [...byMonth.keys()]
+  const months = monthsWithTrades
     .sort((a, b) => b.localeCompare(a))
     .map((mk) => {
-      const ws = byMonth.get(mk)!.sort((a, b) => a.mondayKey.localeCompare(b.mondayKey))
-      const weekRows = ws.map((w, i) => summaryRow(`${mk}-W${i + 1}`, i + 1, w.label, w.ts))
-      const allTs = ws.flatMap((w) => w.ts)
-      const [year, month] = mk.split('-')
+      const [year, month] = mk.split('-').map(Number)
+      // …and inside it, ALL its Mon–Fri weeks (one per Friday in the month → 4
+      // or 5), padding weeks with no trades so every month has equal-height rows.
+      const daysInMonth = new Date(year, month, 0).getDate()
+      const calWeeks: { mondayKey: string; label: string }[] = []
+      for (let d = 1; d <= daysInMonth; d++) {
+        const fri = new Date(year, month - 1, d)
+        if (fri.getDay() !== 5) continue // Friday only
+        const mon = new Date(year, month - 1, d - 4)
+        const mondayKey = `${mon.getFullYear()}-${pad(mon.getMonth() + 1)}-${pad(mon.getDate())}`
+        calWeeks.push({ mondayKey, label: `${pad(mon.getDate())}-${pad(fri.getDate())}/${pad(fri.getMonth() + 1)}` })
+      }
+      const weekRows = calWeeks.map((w, i) => summaryRow(`${mk}-W${i + 1}`, i + 1, w.label, weekMap.get(w.mondayKey) ?? []))
+      const allTs = calWeeks.flatMap((w) => weekMap.get(w.mondayKey) ?? [])
       return {
         month: mk,
-        label: `${HE_MONTHS[Number(month) - 1]} ${year}`,
+        label: `${HE_MONTHS[month - 1]} ${year}`,
         weeks: weekRows,
         total: summaryRow(`${mk}-total`, 0, '', allTs),
       }

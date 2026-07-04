@@ -123,16 +123,16 @@ export function WeeklySummary() {
                   )}
                   <td className={`${cell} font-mono text-xs text-muted`} dir="ltr">{r.dateRange}</td>
                   <td className={`${cell} font-medium`}>{`שבוע ${r.weekNo}`}</td>
-                  <td className={`${cell} num`}>{r.trades}</td>
-                  <td className={`${cell} num text-win`}>{r.winners}</td>
-                  <td className={`${cell} num text-loss`}>{r.losers}</td>
+                  <td className={`${cell} num ${r.trades ? '' : 'text-muted/40'}`}>{r.trades}</td>
+                  <td className={`${cell} num text-win`}>{r.trades ? r.winners : <span className="text-muted/40">—</span>}</td>
+                  <td className={`${cell} num text-loss`}>{r.trades ? r.losers : <span className="text-muted/40">—</span>}</td>
                   {families.map((f) => (
                     <td key={`w-${f}`} className={`${cell} num`}>
-                      {points(r, f)}
+                      {r.trades ? points(r, f) : <span className="text-muted/40">—</span>}
                     </td>
                   ))}
-                  <td className={`${cell} num`}>{formatPct(r.winRate)}</td>
-                  <td className={`${cell} num ${signCls(r.rSum)}`}>{signed(r.rSum)}R</td>
+                  <td className={`${cell} num`}>{r.trades ? formatPct(r.winRate) : <span className="text-muted/40">—</span>}</td>
+                  <td className={`${cell} num ${signCls(r.rSum)}`}>{r.trades ? `${signed(r.rSum)}R` : <span className="text-muted/40">—</span>}</td>
 
                   {i === 0 && (
                     <>

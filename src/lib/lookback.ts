@@ -6,8 +6,8 @@ export type SessionTime = (typeof SESSION_TIMES)[number]
 
 // Each session time reveals its own six time markers (aligned by position).
 export const LOOKBACKS: Record<SessionTime, string[]> = {
-  '16:30': ['4:30', '10:30', '13:30', '16:30', '19:30', '22:30'],
-  '17:00': ['5:00', '11:00', '14:00', '17:00', '20:00', '23:00'],
+  '16:30': ['4:30', '10:30', '13:30', '16:30', '19:30', '22:30', 'פתיל 90'],
+  '17:00': ['5:00', '11:00', '14:00', '17:00', '20:00', '23:00', 'פתיל 90'],
 }
 
 // The session-open markers are blue; every other lookback is red.

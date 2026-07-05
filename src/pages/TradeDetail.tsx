@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, X, Pencil, Trash2 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
@@ -10,6 +10,12 @@ export default function TradeDetail() {
   const { trade, loading } = useTrade(id)
   const { deleteTrade } = useTradeActions()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Where "back" goes: the caller (e.g. the calendar) can pass a return target
+  // in navigation state; otherwise default to the trades list.
+  const backState = location.state as { backTo?: string; backLabel?: string } | null
+  const backTo = backState?.backTo ?? '/app/trades'
+  const backLabel = backState?.backLabel ?? 'חזרה לעסקאות'
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -53,8 +59,8 @@ export default function TradeDetail() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/app/trades" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-          <ArrowRight className="h-4 w-4" /> חזרה לעסקאות
+        <Link to={backTo} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+          <ArrowRight className="h-4 w-4" /> {backLabel}
         </Link>
         {confirming ? (
           <div className="flex items-center gap-2 text-sm">
@@ -62,7 +68,7 @@ export default function TradeDetail() {
             <button
               onClick={() => {
                 deleteTrade(trade.id)
-                navigate('/app/trades')
+                navigate(backTo)
               }}
               className="rounded-lg bg-loss/20 px-3 py-1.5 text-xs font-semibold text-loss hover:bg-loss/30"
             >

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, X, Sparkles } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { formatMoney, cleanSymbol } from '../lib/trades'
@@ -76,8 +76,15 @@ export default function Calendar() {
     const d = mx ? new Date(mx) : new Date()
     return { year: d.getFullYear(), month: d.getMonth() }
   }, [trades])
-  const [override, setOverride] = useState<{ year: number; month: number } | null>(null)
-  const { year, month } = override ?? latest
+  // Keep the viewed month in the URL (?y&m) so returning from a trade lands
+  // back on the same month instead of resetting to the latest.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pY = searchParams.get('y')
+  const pM = searchParams.get('m')
+  const hasParam = pY != null && pM != null
+  const year = hasParam ? Number(pY) : latest.year
+  const month = hasParam ? Number(pM) : latest.month
+  const goToMonth = (y: number, m: number) => setSearchParams({ y: String(y), m: String(m) })
   const [selected, setSelected] = useState<string | null>(null)
 
   const weeks = useMemo(() => {
@@ -102,7 +109,7 @@ export default function Calendar() {
     let y = year
     if (m < 0) { m = 11; y -= 1 }
     if (m > 11) { m = 0; y += 1 }
-    setOverride({ year: y, month: m })
+    goToMonth(y, m)
   }
 
   const todayKey = ymd(new Date())
@@ -129,7 +136,7 @@ export default function Calendar() {
           <div className="flex gap-2">
             <select
               value={month}
-              onChange={(e) => setOverride({ year, month: Number(e.target.value) })}
+              onChange={(e) => goToMonth(year, Number(e.target.value))}
               className="input w-auto py-1.5 text-sm"
             >
               {MONTHS_HE.map((m, i) => (
@@ -138,7 +145,7 @@ export default function Calendar() {
             </select>
             <select
               value={year}
-              onChange={(e) => setOverride({ year: Number(e.target.value), month })}
+              onChange={(e) => goToMonth(Number(e.target.value), month)}
               className="input w-auto py-1.5 text-sm"
             >
               {years.map((y) => (
@@ -238,7 +245,11 @@ export default function Calendar() {
           dateKey={selected}
           trades={trades.filter((t) => t.date.slice(0, 10) === selected)}
           onClose={() => setSelected(null)}
-          onOpenTrade={(id) => navigate(`/app/trades/${id}`)}
+          onOpenTrade={(id) =>
+            navigate(`/app/trades/${id}`, {
+              state: { backTo: `/app/calendar?y=${year}&m=${month}`, backLabel: 'חזרה ליומן' },
+            })
+          }
           onAddTrade={() => navigate(`/app/trades/new?date=${selected}`)}
           onAddImage={() => navigate(`/app/trades/from-image?date=${selected}`)}
         />

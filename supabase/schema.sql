@@ -98,6 +98,21 @@ drop trigger if exists trades_touch on public.trades;
 create trigger trades_touch before update on public.trades
   for each row execute function public.touch_updated_at();
 
+-- Lock ownership: an UPDATE can never change a trade's owner or journal. Without
+-- this, a shared editor's edit would "steal" the trade (its user_id would flip to
+-- the editor), hiding it from the journal owner under row-level security.
+create or replace function public.trades_lock_ownership()
+returns trigger language plpgsql as $$
+begin
+  new.user_id := old.user_id;
+  new.account_id := old.account_id;
+  return new;
+end; $$;
+
+drop trigger if exists trades_lock_ownership on public.trades;
+create trigger trades_lock_ownership before update on public.trades
+  for each row execute function public.trades_lock_ownership();
+
 -- ---------------------------------------------------------------------------
 -- journal_entries — daily emotional / discipline log
 -- ---------------------------------------------------------------------------

@@ -170,7 +170,7 @@ export default function ScreenshotImport() {
     const time = form.useExact && form.exactTime ? form.exactTime : form.time
     const payload: Trade = {
       id: crypto.randomUUID(),
-      user_id: (user?.id as string) ?? 'demo-user',
+      user_id: (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
       account_id: active.id,
       date: `${form.day}T${time}`,
       symbol: form.symbol,

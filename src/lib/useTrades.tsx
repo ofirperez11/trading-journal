@@ -94,19 +94,43 @@ export function TradesProvider({ children }: { children: ReactNode }) {
         setLoading(false)
         return
       }
-      setLoading(true)
-      supabase
-        .from('trades')
-        .select('*')
-        .order('date', { ascending: false })
-        .then(({ data, error: err }) => {
-          if (!active) return
-          if (err) setError(err.message)
-          else setBase((data ?? []).map((r) => normalizeTrade(r as Record<string, unknown>)))
-          setLoading(false)
-        })
+      // One-time cleanup: the added/edited/deleted layers are a DEMO-only
+      // persistence mechanism. If any linger in localStorage from earlier use
+      // they would silently override the shared DB on THIS device (hiding other
+      // users' edits and deleted trades). Purge them in Supabase mode.
+      if (added.length || Object.keys(edited).length || deleted.length) {
+        localStorage.removeItem(M_ADDED)
+        localStorage.removeItem(M_EDITED)
+        localStorage.removeItem(M_DELETED)
+        setAdded([])
+        setEdited({})
+        setDeleted([])
+      }
+      // Fetch the base set. On shared journals other users edit concurrently,
+      // so we also refresh silently on focus/visibility and on a timer — a
+      // one-time load would leave partners' edits invisible until a full reload.
+      const fetchBase = async (showLoading: boolean) => {
+        if (showLoading) setLoading(true)
+        const { data, error: err } = await supabase
+          .from('trades')
+          .select('*')
+          .order('date', { ascending: false })
+        if (!active) return
+        if (err) setError(err.message)
+        else setBase((data ?? []).map((r) => normalizeTrade(r as Record<string, unknown>)))
+        setLoading(false)
+      }
+      fetchBase(true)
+      const onFocus = () => fetchBase(false)
+      const onVisible = () => document.visibilityState === 'visible' && fetchBase(false)
+      window.addEventListener('focus', onFocus)
+      document.addEventListener('visibilitychange', onVisible)
+      const timer = setInterval(() => fetchBase(false), 60_000)
       return () => {
         active = false
+        window.removeEventListener('focus', onFocus)
+        document.removeEventListener('visibilitychange', onVisible)
+        clearInterval(timer)
       }
     }
     // Demo mode: bundled JSON, cached across mounts.
@@ -130,7 +154,13 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
-  const all = useMemo(() => compose(base, added, edited, deleted), [base, added, edited, deleted])
+  // In Supabase mode the DB (`base`) is the single source of truth — every
+  // create/edit/delete writes straight to it, so the local demo layers must NOT
+  // be applied (they would mask other users' changes on a shared journal).
+  const all = useMemo(
+    () => (isSupabaseConfigured ? base : compose(base, added, edited, deleted)),
+    [base, added, edited, deleted],
+  )
 
   function persistAdded(next: Trade[]) {
     setAdded(next)
@@ -162,9 +192,14 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured) {
       setBase((b) => b.map((t) => (t.id === id ? { ...t, ...patch } : t)))
       baseCache = null
+      // Never let an edit reassign ownership or move the trade to another journal
+      // — otherwise a shared editor's edit would "steal" the owner's trade.
+      const dbPatch = toDbRow(patch)
+      delete dbPatch.user_id
+      delete dbPatch.account_id
       supabase
         .from('trades')
-        .update(toDbRow(patch))
+        .update(dbPatch)
         .eq('id', id)
         .then(({ error }) => error && setError(error.message))
       return

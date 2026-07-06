@@ -135,7 +135,9 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
 
     const payload: Trade = {
       id: editing && trade ? trade.id : crypto.randomUUID(),
-      user_id: (user?.id as string) ?? 'demo-user',
+      // Preserve the trade's owner on edit (never steal ownership); new trades
+      // belong to the journal's owner so shared-journal entries stay visible to them.
+      user_id: editing && trade ? trade.user_id : (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
       account_id: editing && trade ? trade.account_id : active.id,
       date: `${form.day}T${form.time}`,
       symbol: form.symbol,

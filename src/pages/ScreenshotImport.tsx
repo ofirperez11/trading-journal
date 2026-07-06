@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ImagePlus, Loader2, Sparkles, Check, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
@@ -26,6 +26,11 @@ export default function ScreenshotImport() {
   const { active } = useJournals()
   const { addTrade } = useTradeActions()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Return target threaded from the calendar so a saved trade lands back there.
+  const backState = (location.state as { backTo?: string; backLabel?: string } | null) ?? null
+  const backTo = backState?.backTo ?? '/app/trades'
+  const backLabel = backState?.backLabel ?? 'חזרה לעסקאות'
   const [searchParams] = useSearchParams()
   const presetDate = searchParams.get('date') // YYYY-MM-DD, e.g. from the calendar
 
@@ -195,7 +200,7 @@ export default function ScreenshotImport() {
       images: image ? [image] : null,
     }
     addTrade(payload)
-    navigate(`/app/trades/${payload.id}`)
+    navigate(backState?.backTo ?? `/app/trades/${payload.id}`)
   }
 
   const field = 'flex flex-col gap-1.5'
@@ -242,8 +247,8 @@ export default function ScreenshotImport() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <Link to="/app/trades" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-        <ArrowRight className="h-4 w-4" /> חזרה לעסקאות
+      <Link to={backTo} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+        <ArrowRight className="h-4 w-4" /> {backLabel}
       </Link>
 
       <div className="flex items-center gap-2">

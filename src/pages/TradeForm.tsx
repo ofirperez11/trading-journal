@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ImagePlus, X, Loader2 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
@@ -42,6 +42,14 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   const { active } = useJournals()
   const { addTrade, updateTrade } = useTradeActions()
   const navigate = useNavigate()
+  const location = useLocation()
+  // A return target (e.g. the calendar month) threaded through from TradeDetail
+  // so editing preserves where the user came from.
+  const backState = (location.state as { backTo?: string; backLabel?: string } | null) ?? null
+  // For a NEW trade, "back"/"cancel" follow the caller's target (e.g. calendar);
+  // for an edit they go back to the trade being edited.
+  const newBackTo = backState?.backTo ?? '/app/trades'
+  const newBackLabel = backState?.backLabel ?? 'חזרה לעסקאות'
   const [searchParams] = useSearchParams()
   const presetDate = searchParams.get('date') // YYYY-MM-DD, e.g. from the calendar
 
@@ -159,10 +167,11 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
 
     if (editing && trade) {
       updateTrade(trade.id, payload)
-      navigate(`/app/trades/${trade.id}`)
+      navigate(`/app/trades/${trade.id}`, { state: backState })
     } else {
       addTrade(payload)
-      navigate(`/app/trades/${payload.id}`)
+      // From the calendar: go straight back there; otherwise to the new trade.
+      navigate(backState?.backTo ?? `/app/trades/${payload.id}`)
     }
   }
 
@@ -182,8 +191,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <Link to={editing && trade ? `/app/trades/${trade.id}` : '/app/trades'} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-        <ArrowRight className="h-4 w-4" /> {editing ? 'חזרה לעסקה' : 'חזרה לעסקאות'}
+      <Link to={editing && trade ? `/app/trades/${trade.id}` : newBackTo} state={backState} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+        <ArrowRight className="h-4 w-4" /> {editing ? 'חזרה לעסקה' : newBackLabel}
       </Link>
 
       <div>
@@ -349,7 +358,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
         {error && <p className="text-sm text-loss">{error}</p>}
 
         <div className="flex items-center justify-end gap-2 border-t border-black/[0.08] pt-4">
-          <Link to={editing && trade ? `/app/trades/${trade.id}` : '/app/trades'} className="btn-ghost">
+          <Link to={editing && trade ? `/app/trades/${trade.id}` : newBackTo} state={backState} className="btn-ghost">
             ביטול
           </Link>
           <button type="submit" className="btn-primary">

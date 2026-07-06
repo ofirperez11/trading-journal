@@ -250,8 +250,16 @@ export default function Calendar() {
               state: { backTo: `/app/calendar?y=${year}&m=${month}`, backLabel: 'חזרה ליומן' },
             })
           }
-          onAddTrade={() => navigate(`/app/trades/new?date=${selected}`)}
-          onAddImage={() => navigate(`/app/trades/from-image?date=${selected}`)}
+          onAddTrade={() =>
+            navigate(`/app/trades/new?date=${selected}`, {
+              state: { backTo: `/app/calendar?y=${year}&m=${month}`, backLabel: 'חזרה ליומן' },
+            })
+          }
+          onAddImage={() =>
+            navigate(`/app/trades/from-image?date=${selected}`, {
+              state: { backTo: `/app/calendar?y=${year}&m=${month}`, backLabel: 'חזרה ליומן' },
+            })
+          }
         />
       )}
     </div>

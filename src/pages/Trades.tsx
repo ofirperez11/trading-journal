@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Search, Plus, Sparkles, SlidersHorizontal, X } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { formatMoney, formatR, cleanSymbol } from '../lib/trades'
@@ -11,6 +11,7 @@ const MONTHS_HE = [
   'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
 ]
 const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'רווח', LOSS: 'הפסד', WASH: 'Wash' }
+const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 
 const GRID =
   'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_66px_52px_90px] sm:justify-between'
@@ -30,13 +31,27 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export default function Trades() {
   const { trades, loading } = useTrades()
-  const [query, setQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [symbolSel, setSymbolSel] = useState<Set<string>>(new Set())
-  const [statusSel, setStatusSel] = useState<Set<TradeStatus>>(new Set())
-  const [sideSel, setSideSel] = useState<Set<TradeSide>>(new Set())
-  const [monthSel, setMonthSel] = useState<Set<string>>(new Set())
-  const [filterYear, setFilterYear] = useState<string | null>(null)
+
+  // Filters live in the URL so returning from a trade restores the exact view.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const symbolSel = useMemo(() => new Set(csv(searchParams.get('sym'))), [searchParams])
+  const statusSel = useMemo(() => new Set(csv(searchParams.get('status')) as TradeStatus[]), [searchParams])
+  const sideSel = useMemo(() => new Set(csv(searchParams.get('side')) as TradeSide[]), [searchParams])
+  const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
+  const filterYear = searchParams.get('year')
+
+  const setParams = (mut: (p: URLSearchParams) => void) => {
+    const next = new URLSearchParams(searchParams)
+    mut(next)
+    setSearchParams(next, { replace: true })
+  }
+  const toggleParam = (key: string, val: string) => {
+    const cur = new Set(csv(searchParams.get(key)))
+    cur.has(val) ? cur.delete(val) : cur.add(val)
+    setParams((p) => (cur.size ? p.set(key, [...cur].join(',')) : p.delete(key)))
+  }
 
   // Facet options derived from the current journal's trades.
   const symbols = useMemo(
@@ -55,6 +70,7 @@ export default function Trades() {
   const monthsForYear = months.filter((m) => m.startsWith(activeYear ?? ''))
 
   const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size
+  const qs = searchParams.toString() // current filters, for the trade's "back" target
 
   const rows = useMemo(() => {
     return trades
@@ -71,16 +87,13 @@ export default function Trades() {
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [trades, symbolSel, statusSel, sideSel, monthSel, query])
 
-  function toggle<T>(setFn: (s: Set<T>) => void, cur: Set<T>, val: T) {
-    const next = new Set(cur)
-    next.has(val) ? next.delete(val) : next.add(val)
-    setFn(next)
-  }
   function clearAll() {
-    setSymbolSel(new Set())
-    setStatusSel(new Set())
-    setSideSel(new Set())
-    setMonthSel(new Set())
+    setParams((p) => {
+      p.delete('sym')
+      p.delete('status')
+      p.delete('side')
+      p.delete('months')
+    })
   }
 
   if (loading) {
@@ -126,7 +139,7 @@ export default function Trades() {
           <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setParams((p) => (e.target.value ? p.set('q', e.target.value) : p.delete('q')))}
             placeholder="חפש סימבול…"
             className="input w-56 pr-9"
           />
@@ -138,27 +151,27 @@ export default function Trades() {
         <div className="card space-y-4">
           <FacetGroup label="סימבול">
             {symbols.map((s) => (
-              <Chip key={s} active={symbolSel.has(s)} onClick={() => toggle(setSymbolSel, symbolSel, s)}>{s}</Chip>
+              <Chip key={s} active={symbolSel.has(s)} onClick={() => toggleParam('sym', s)}>{s}</Chip>
             ))}
           </FacetGroup>
           <FacetGroup label="סטטוס">
             {(['WIN', 'LOSS', 'WASH'] as TradeStatus[]).map((s) => (
-              <Chip key={s} active={statusSel.has(s)} onClick={() => toggle(setStatusSel, statusSel, s)}>{STATUS_LABEL[s]}</Chip>
+              <Chip key={s} active={statusSel.has(s)} onClick={() => toggleParam('status', s)}>{STATUS_LABEL[s]}</Chip>
             ))}
           </FacetGroup>
           <FacetGroup label="כיוון">
             {(['LONG', 'SHORT'] as TradeSide[]).map((s) => (
-              <Chip key={s} active={sideSel.has(s)} onClick={() => toggle(setSideSel, sideSel, s)}>{s === 'LONG' ? 'Long' : 'Short'}</Chip>
+              <Chip key={s} active={sideSel.has(s)} onClick={() => toggleParam('side', s)}>{s === 'LONG' ? 'Long' : 'Short'}</Chip>
             ))}
           </FacetGroup>
           <FacetGroup label="שנה">
             {years.map((y) => (
-              <Chip key={y} active={activeYear === y} onClick={() => setFilterYear(y)}>{y}</Chip>
+              <Chip key={y} active={activeYear === y} onClick={() => setParams((p) => p.set('year', y))}>{y}</Chip>
             ))}
           </FacetGroup>
           <FacetGroup label="חודש">
             {monthsForYear.map((m) => (
-              <Chip key={m} active={monthSel.has(m)} onClick={() => toggle(setMonthSel, monthSel, m)}>
+              <Chip key={m} active={monthSel.has(m)} onClick={() => toggleParam('months', m)}>
                 {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
               </Chip>
             ))}
@@ -195,6 +208,7 @@ export default function Trades() {
                   <Link
                     key={t.id}
                     to={`/app/trades/${t.id}`}
+                    state={{ backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }}
                     className={`${GRID} group items-center px-4 py-3 text-sm transition-colors hover:bg-black/[0.03]`}
                   >
                     <span className="text-muted">

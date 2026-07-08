@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
+import { Download } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { monthlyWeekSummary, type WeekRow } from '../lib/analytics'
+import { downloadCsv } from '../lib/csv'
 import { formatPct } from '../lib/trades'
 
 const NOTES_KEY = 'tj_week_notes'
@@ -45,6 +47,25 @@ export function WeeklySummary() {
     localStorage.setItem(NOTES_KEY, JSON.stringify(next))
   }
 
+  // Export the selected year's weekly table to CSV.
+  function exportCsv() {
+    const headers = ['חודש', 'שבוע', 'תאריך', 'עסקאות', 'מצליחה', 'מפסידה', ...families.map((f) => `נק׳ ${f}`), 'הצלחה שבועי', 'R שבועי']
+    const data = yearMonths.flatMap((m) =>
+      m.weeks.map((r) => [
+        m.label,
+        `שבוע ${r.weekNo}`,
+        r.dateRange,
+        r.trades,
+        r.trades ? r.winners : '',
+        r.trades ? r.losers : '',
+        ...families.map((f) => (r.trades && r.points[f] !== undefined ? r.points[f] : '')),
+        r.trades ? `${Math.round(r.winRate * 100)}%` : '',
+        r.trades ? r.rSum : '',
+      ]),
+    )
+    downloadCsv(`${active.name}-summary-${activeYear}.csv`, headers, data)
+  }
+
   if (loading) return null
   if (!activeYear || yearMonths.length === 0) {
     return <div className="card py-12 text-center text-sm text-muted">אין עדיין עסקאות להצגה ביומן הזה.</div>
@@ -60,17 +81,22 @@ export function WeeklySummary() {
         <span className="font-mono text-sm font-semibold uppercase tracking-wider text-muted">
           שנת {activeYear}
         </span>
-        <select
-          value={activeYear}
-          onChange={(e) => setYear(e.target.value)}
-          className="input w-auto py-1.5 text-sm"
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <button onClick={exportCsv} className="btn-ghost py-1.5 text-sm">
+            <Download className="h-4 w-4" /> ייצוא
+          </button>
+          <select
+            value={activeYear}
+            onChange={(e) => setYear(e.target.value)}
+            className="input w-auto py-1.5 text-sm"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

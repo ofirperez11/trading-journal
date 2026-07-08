@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Sparkles, SlidersHorizontal, X } from 'lucide-react'
+import { Search, Plus, Sparkles, SlidersHorizontal, X, Download } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
+import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol } from '../lib/trades'
+import { downloadCsv } from '../lib/csv'
 import { SideIndicator } from '../components/SideIndicator'
 import type { TradeSide, TradeStatus } from '../types'
 
@@ -31,6 +33,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export default function Trades() {
   const { trades, loading } = useTrades()
+  const { active } = useJournals()
   const [showFilters, setShowFilters] = useState(false)
 
   // Filters live in the URL so returning from a trade restores the exact view.
@@ -96,6 +99,30 @@ export default function Trades() {
     })
   }
 
+  // Export the currently-visible (filtered) rows to CSV.
+  function exportCsv() {
+    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'שיא', 'R', 'P&L', 'הערות']
+    const data = rows.map((t) => [
+      `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`,
+      t.date.slice(11, 16),
+      t.symbol,
+      t.side,
+      t.status,
+      t.entry,
+      t.exits?.[0] ?? t.exit ?? '',
+      t.exits && t.exits.length > 1 ? t.exits[1] : '',
+      t.qty,
+      t.target ?? '',
+      t.stoploss ?? '',
+      t.lookback ?? '',
+      t.peak_price ?? '',
+      t.r_multiple ?? '',
+      t.return_amount,
+      t.notes ?? '',
+    ])
+    downloadCsv(`${active.name}-עסקאות-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
+
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-muted">טוען עסקאות…</div>
   }
@@ -108,6 +135,9 @@ export default function Trades() {
           <p className="text-muted">{rows.length} מתוך {trades.length} עסקאות</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={exportCsv} disabled={rows.length === 0} className="btn-ghost disabled:opacity-40">
+            <Download className="h-4 w-4" /> ייצוא
+          </button>
           <Link to="/app/trades/from-image" className="btn-secondary">
             <Sparkles className="h-4 w-4" /> מתמונה
           </Link>

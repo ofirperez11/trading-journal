@@ -7,7 +7,9 @@ import { useTrade, useTradeActions } from '../lib/useTrades'
 import { imageUrl, cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { compressImage } from '../lib/image'
 import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
-import type { Trade, TradeSide, TradeStatus } from '../types'
+import { computePartials, seedExits } from '../lib/partials'
+import { ExitsField } from '../components/ExitsField'
+import type { Trade, TradeSide } from '../types'
 
 // Tradable assets and their dollar value per 1.0 index point, per contract.
 const ASSETS = ['NQ', 'MNQ', 'ES', 'MES', 'YM', 'MYM'] as const
@@ -65,9 +67,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     peak: trade?.peak_price != null ? String(trade.peak_price) : '',
     symbol: seedSymbol,
     side: (trade?.side ?? 'LONG') as TradeSide,
-    qty: trade?.qty != null ? String(trade.qty) : '',
     entry: trade?.entry != null ? String(trade.entry) : '',
-    exit: trade?.exit != null ? String(trade.exit) : '',
+    exits: seedExits(trade),
     target: trade?.target != null ? String(trade.target) : '',
     stoploss: trade?.stoploss != null ? String(trade.stoploss) : '',
     notes: trade?.notes ?? '',
@@ -92,21 +93,16 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   // --- live auto-calculations -------------------------------------------
   const pv = POINT_VALUE[form.symbol] ?? 0
   const entryN = num(form.entry)
-  const exitN = num(form.exit)
-  const qtyN = num(form.qty)
   const stopN = num(form.stoploss)
-  const dir = form.side === 'LONG' ? 1 : -1
-
-  const pnl =
-    entryN != null && exitN != null && qtyN != null
-      ? Math.round((exitN - entryN) * dir * qtyN * pv * 100) / 100
-      : null
-  const riskPts = entryN != null && stopN != null ? Math.abs(entryN - stopN) : null
-  const rMultiple =
-    entryN != null && exitN != null && riskPts
-      ? Math.round((((exitN - entryN) * dir) / riskPts) * 100) / 100
-      : null
-  const status: TradeStatus = pnl == null ? 'WASH' : pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'WASH'
+  const calc = computePartials({
+    entry: entryN,
+    side: form.side,
+    pv,
+    stop: stopN,
+    exits: form.exits,
+    dateTime: `${form.day}T${form.time}`,
+  })
+  const { pnl, rMultiple, status } = calc
 
   async function handleFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -144,10 +140,10 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       market: trade?.market ?? 'FUTURES',
       side: form.side,
       status,
-      qty: qtyN ?? 0,
+      qty: calc.totalQty,
       entry: entryN,
-      exit: exitN,
-      exits: exitN != null ? [exitN] : trade?.exits ?? null,
+      exit: calc.exitLast,
+      exits: calc.exitPrices.length ? calc.exitPrices : trade?.exits ?? null,
       target: num(form.target),
       stoploss: stopN,
       entry_total: trade?.entry_total ?? null,
@@ -163,7 +159,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       notes: form.notes.trim() || null,
       mood: trade?.mood ?? null,
       discipline_score: trade?.discipline_score ?? null,
-      executions: trade?.executions ?? null,
+      executions: calc.executions ?? trade?.executions ?? null,
       images: images.length ? images : null,
     }
 
@@ -268,27 +264,24 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
             </div>
           </div>
           <label className={field}>
-            <span className="field-label mb-0">כמות (חוזים)</span>
-            <input id="tf-qty" type="number" step="any" dir="ltr" className="input" value={form.qty} onChange={(e) => set('qty', e.target.value)} />
-          </label>
-
-          <label className={field}>
             <span className="field-label mb-0">מחיר כניסה</span>
             <input id="tf-entry" type="number" step="any" dir="ltr" className="input" value={form.entry} onChange={(e) => set('entry', e.target.value)} />
-          </label>
-          <label className={field}>
-            <span className="field-label mb-0">מחיר יציאה</span>
-            <input id="tf-exit" type="number" step="any" dir="ltr" className="input" value={form.exit} onChange={(e) => set('exit', e.target.value)} />
-          </label>
-
-          <label className={field}>
-            <span className="field-label mb-0">יעד</span>
-            <input type="number" step="any" dir="ltr" className="input" value={form.target} onChange={(e) => set('target', e.target.value)} />
           </label>
           <label className={field}>
             <span className="field-label mb-0">סטופ</span>
             <input id="tf-stop" type="number" step="any" dir="ltr" className="input" value={form.stoploss} onChange={(e) => set('stoploss', e.target.value)} />
           </label>
+
+          <ExitsField value={form.exits} onChange={(rows) => set('exits', rows)} />
+
+          <label className={field}>
+            <span className="field-label mb-0">יעד</span>
+            <input type="number" step="any" dir="ltr" className="input" value={form.target} onChange={(e) => set('target', e.target.value)} />
+          </label>
+          <div className={field}>
+            <span className="field-label mb-0">כמות כוללת (מחושב)</span>
+            <div className="input flex items-center num text-muted" dir="ltr">{calc.totalQty || '—'}</div>
+          </div>
 
           <label className={`${field} sm:col-span-2`}>
             <span className="field-label mb-0">שיא פוטנציאל — נקודות מהכניסה (אופציונלי)</span>

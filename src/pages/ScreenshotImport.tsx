@@ -8,7 +8,9 @@ import { compressImage } from '../lib/image'
 import { extractTradeFromImage, type ExtractedTrade } from '../lib/extractTrade'
 import { formatMoney, formatR } from '../lib/trades'
 import { SESSION_TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
-import type { Trade, TradeSide, TradeStatus } from '../types'
+import { computePartials, type ExitRow } from '../lib/partials'
+import { ExitsField } from '../components/ExitsField'
+import type { Trade, TradeSide } from '../types'
 
 const ASSETS = ['NQ', 'MNQ', 'ES', 'MES', 'YM', 'MYM'] as const
 const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
@@ -50,9 +52,8 @@ export default function ScreenshotImport() {
     lookback: '',
     symbol: 'MNQ',
     side: 'LONG' as TradeSide,
-    qty: '',
     entry: '',
-    exit: '',
+    exits: [{ price: '', qty: '' }] as ExitRow[],
     target: '',
     stoploss: '',
     peak: '',
@@ -71,9 +72,10 @@ export default function ScreenshotImport() {
     })
   }
 
-  // Mark the outcome → fill the exit price from the plan: win=target, loss=stop, break-even=entry.
+  // Mark the outcome → fill the FIRST exit's price from the plan: win=target, loss=stop, break-even=entry.
   function markOutcome(kind: 'WIN' | 'LOSS' | 'BE') {
-    set('exit', kind === 'WIN' ? form.target : kind === 'LOSS' ? form.stoploss : form.entry)
+    const price = kind === 'WIN' ? form.target : kind === 'LOSS' ? form.stoploss : form.entry
+    setForm((f) => ({ ...f, exits: f.exits.map((r, i) => (i === 0 ? { ...r, price } : r)) }))
   }
 
   function onDrop(e: React.DragEvent) {
@@ -111,7 +113,7 @@ export default function ScreenshotImport() {
       symbol: s,
       side: t.side ?? 'LONG',
       entry: t.entry != null ? String(t.entry) : '',
-      exit: t.exit != null ? String(t.exit) : '',
+      exits: [{ price: t.exit != null ? String(t.exit) : '', qty: '' }],
       target: t.target != null ? String(t.target) : '',
       stoploss: t.stoploss != null ? String(t.stoploss) : '',
       timeframe: t.timeframe ?? '',
@@ -142,20 +144,17 @@ export default function ScreenshotImport() {
   // --- live calc (same engine as the manual form) ---
   const pv = POINT_VALUE[form.symbol] ?? 0
   const entryN = num(form.entry)
-  const exitN = num(form.exit)
-  const qtyN = num(form.qty)
   const stopN = num(form.stoploss)
-  const dir = form.side === 'LONG' ? 1 : -1
-  const pnl =
-    entryN != null && exitN != null && qtyN != null
-      ? Math.round((exitN - entryN) * dir * qtyN * pv * 100) / 100
-      : null
-  const riskPts = entryN != null && stopN != null ? Math.abs(entryN - stopN) : null
-  const rMultiple =
-    entryN != null && exitN != null && riskPts
-      ? Math.round((((exitN - entryN) * dir) / riskPts) * 100) / 100
-      : null
-  const status: TradeStatus = pnl == null ? 'WASH' : pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'WASH'
+  const calcTime = form.useExact && form.exactTime ? form.exactTime : form.time
+  const calc = computePartials({
+    entry: entryN,
+    side: form.side,
+    pv,
+    stop: stopN,
+    exits: form.exits,
+    dateTime: `${form.day}T${calcTime}`,
+  })
+  const { pnl, rMultiple, status } = calc
 
   function reset() {
     setStage('idle')
@@ -167,20 +166,19 @@ export default function ScreenshotImport() {
   function save() {
     if (entryN == null) return setError('צריך מחיר כניסה')
     setError(null)
-    const time = form.useExact && form.exactTime ? form.exactTime : form.time
     const payload: Trade = {
       id: crypto.randomUUID(),
       user_id: (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
       account_id: active.id,
-      date: `${form.day}T${time}`,
+      date: `${form.day}T${calcTime}`,
       symbol: form.symbol,
       market: 'FUTURES',
       side: form.side,
       status,
-      qty: qtyN ?? 0,
+      qty: calc.totalQty,
       entry: entryN,
-      exit: exitN,
-      exits: exitN != null ? [exitN] : null,
+      exit: calc.exitLast,
+      exits: calc.exitPrices.length ? calc.exitPrices : null,
       target: num(form.target),
       stoploss: stopN,
       entry_total: null,
@@ -196,7 +194,7 @@ export default function ScreenshotImport() {
       notes: form.notes.trim() || null,
       mood: null,
       discipline_score: null,
-      executions: null,
+      executions: calc.executions,
       images: image ? [image] : null,
     }
     addTrade(payload)
@@ -234,14 +232,15 @@ export default function ScreenshotImport() {
             : 'border-accent/50 bg-accent/15 text-accent'
         : 'border-black/[0.12] text-muted hover:text-ink'
     }`
+  const firstExit = form.exits[0]?.price ?? ''
   const activeOutcome: 'WIN' | 'LOSS' | 'BE' | null =
-    form.exit === ''
+    firstExit === ''
       ? null
-      : form.exit === form.target
+      : firstExit === form.target
         ? 'WIN'
-        : form.exit === form.stoploss
+        : firstExit === form.stoploss
           ? 'LOSS'
-          : form.exit === form.entry
+          : firstExit === form.entry
             ? 'BE'
             : null
 
@@ -394,17 +393,18 @@ export default function ScreenshotImport() {
               </div>
 
               <label className={field}>
-                <span className="field-label mb-0">כמות (חוזים)</span>
-                <input type="number" step="any" dir="ltr" className="input" value={form.qty} onChange={(e) => set('qty', e.target.value)} />
-              </label>
-              <label className={field}>
                 <span className="field-label mb-0">מחיר כניסה</span>
                 <input type="number" step="any" dir="ltr" className={`input ${ring('entry')}`} value={form.entry} onChange={(e) => set('entry', e.target.value)} />
                 <Flag name="entry" />
               </label>
+              <label className={field}>
+                <span className="field-label mb-0">סטופ</span>
+                <input type="number" step="any" dir="ltr" className={`input ${ring('stoploss')}`} value={form.stoploss} onChange={(e) => set('stoploss', e.target.value)} />
+                <Flag name="stoploss" />
+              </label>
 
               <div className={`${field} sm:col-span-2`}>
-                <span className="field-label mb-0">תוצאת העסקה (קובעת את מחיר היציאה)</span>
+                <span className="field-label mb-0">תוצאת העסקה (קובעת את מחיר היציאה הראשונה)</span>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => markOutcome('WIN')} className={outcomeBtn(activeOutcome === 'WIN', 'win')}>הצליחה</button>
                   <button type="button" onClick={() => markOutcome('LOSS')} className={outcomeBtn(activeOutcome === 'LOSS', 'loss')}>נכשלה</button>
@@ -412,22 +412,17 @@ export default function ScreenshotImport() {
                 </div>
               </div>
 
-              <label className={field}>
-                <span className="field-label mb-0">מחיר יציאה</span>
-                <input type="number" step="any" dir="ltr" className={`input ${ring('exit')}`} value={form.exit} onChange={(e) => set('exit', e.target.value)} />
-                <Flag name="exit" />
-              </label>
+              <ExitsField value={form.exits} onChange={(rows) => set('exits', rows)} />
+
               <label className={field}>
                 <span className="field-label mb-0">יעד</span>
                 <input type="number" step="any" dir="ltr" className={`input ${ring('target')}`} value={form.target} onChange={(e) => set('target', e.target.value)} />
                 <Flag name="target" />
               </label>
-
-              <label className={field}>
-                <span className="field-label mb-0">סטופ</span>
-                <input type="number" step="any" dir="ltr" className={`input ${ring('stoploss')}`} value={form.stoploss} onChange={(e) => set('stoploss', e.target.value)} />
-                <Flag name="stoploss" />
-              </label>
+              <div className={field}>
+                <span className="field-label mb-0">כמות כוללת (מחושב)</span>
+                <div className="input flex items-center num text-muted" dir="ltr">{calc.totalQty || '—'}</div>
+              </div>
               <label className={field}>
                 <span className="field-label mb-0">שיא פוטנציאל — נקודות מהכניסה (אופציונלי)</span>
                 <input type="number" step="any" dir="ltr" className="input" value={form.peak} onChange={(e) => set('peak', e.target.value)} placeholder="נקודות מהכניסה" />

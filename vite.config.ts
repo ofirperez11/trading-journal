@@ -8,7 +8,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // We register the SW ourselves (main.tsx) so a new version is applied
+      // silently when the user returns to the tab — never mid-action.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Trading Journal',

@@ -5,6 +5,8 @@ import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { useTradeActions } from '../lib/useTrades'
 import { compressImage } from '../lib/image'
+import { uploadTradeImages } from '../lib/uploadImages'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { extractTradeFromImage, type ExtractedTrade } from '../lib/extractTrade'
 import { formatMoney, formatR } from '../lib/trades'
 import { SESSION_TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
@@ -43,6 +45,7 @@ export default function ScreenshotImport() {
   const [uncertain, setUncertain] = useState<string[]>([])
   const [confidence, setConfidence] = useState(1)
   const [dragging, setDragging] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
     day: presetDate ?? new Date().toISOString().slice(0, 10),
@@ -163,11 +166,20 @@ export default function ScreenshotImport() {
     setUncertain([])
   }
 
-  function save() {
+  async function save() {
     if (entryN == null) return setError('צריך מחיר כניסה')
+    if (saving) return
     setError(null)
+    const id = crypto.randomUUID()
+    // Upload the screenshot to Storage (base64 only in demo mode).
+    let finalImages: string[] | null = image ? [image] : null
+    if (image && isSupabaseConfigured) {
+      setSaving(true)
+      finalImages = await uploadTradeImages([image], (user?.id as string) ?? 'demo-user', id)
+      setSaving(false)
+    }
     const payload: Trade = {
-      id: crypto.randomUUID(),
+      id,
       user_id: (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
       account_id: active.id,
       date: `${form.day}T${calcTime}`,
@@ -195,7 +207,7 @@ export default function ScreenshotImport() {
       mood: null,
       discipline_score: null,
       executions: calc.executions,
-      images: image ? [image] : null,
+      images: finalImages,
     }
     addTrade(payload)
     navigate(backState?.backTo ?? `/app/trades/${payload.id}`)
@@ -453,8 +465,8 @@ export default function ScreenshotImport() {
 
             {error && <p className="text-sm text-loss">{error}</p>}
 
-            <button onClick={save} className="btn-primary w-full justify-center">
-              <Check className="h-4 w-4" /> שמור עסקה
+            <button onClick={save} disabled={saving} className="btn-primary w-full justify-center disabled:opacity-50">
+              <Check className="h-4 w-4" /> {saving ? 'שומר…' : 'שמור עסקה'}
             </button>
           </div>
         </div>

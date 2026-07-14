@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Trade } from '../types'
 import { normalizeTrade } from './trades'
+import { uploadTradeImages } from './uploadImages'
 import { isSupabaseConfigured, supabase } from './supabase'
 import { useJournals } from './journals'
 import { useAuth } from './auth'
@@ -106,26 +107,48 @@ export function TradesProvider({ children }: { children: ReactNode }) {
         setEdited({})
         setDeleted([])
       }
-      // Fetch the base set. On shared journals other users edit concurrently,
-      // so we also refresh silently on focus/visibility and on a timer — a
-      // one-time load would leave partners' edits invisible until a full reload.
-      const fetchBase = async (showLoading: boolean) => {
-        if (showLoading) setLoading(true)
-        const { data, error: err } = await supabase
-          .from('trades')
-          .select('*')
-          .order('date', { ascending: false })
+      // On shared journals others edit concurrently, so refresh on focus and on
+      // a timer — but INCREMENTALLY (only rows changed since the last sync) to
+      // keep egress tiny. A full re-download every minute per user blew past the
+      // free-tier bandwidth quota.
+      let lastSync = ''
+      const apply = (rows: Record<string, unknown>[], replace: boolean) => {
+        for (const r of rows) {
+          const u = String(r.updated_at ?? '')
+          if (u > lastSync) lastSync = u
+        }
+        const norm = rows.map((r) => normalizeTrade(r))
+        if (replace) {
+          setBase(norm)
+        } else if (norm.length) {
+          setBase((prev) => {
+            const m = new Map(prev.map((t) => [t.id, t]))
+            for (const t of norm) m.set(t.id, t)
+            return [...m.values()].sort((a, b) => b.date.localeCompare(a.date))
+          })
+        }
+      }
+      const initial = async () => {
+        setLoading(true)
+        const { data, error: err } = await supabase.from('trades').select('*').order('date', { ascending: false })
         if (!active) return
         if (err) setError(err.message)
-        else setBase((data ?? []).map((r) => normalizeTrade(r as Record<string, unknown>)))
+        else apply((data ?? []) as Record<string, unknown>[], true)
         setLoading(false)
       }
-      fetchBase(true)
-      const onFocus = () => fetchBase(false)
-      const onVisible = () => document.visibilityState === 'visible' && fetchBase(false)
+      const incremental = async () => {
+        if (!lastSync) return
+        const { data, error: err } = await supabase.from('trades').select('*').gt('updated_at', lastSync)
+        if (!active || err || !data?.length) return
+        apply(data as Record<string, unknown>[], false)
+      }
+      initial()
+      const onFocus = () => incremental()
+      const onVisible = () => document.visibilityState === 'visible' && incremental()
       window.addEventListener('focus', onFocus)
       document.addEventListener('visibilitychange', onVisible)
-      const timer = setInterval(() => fetchBase(false), 60_000)
+      // Poll only while the tab is visible; each poll transfers just changed rows.
+      const timer = setInterval(() => document.visibilityState === 'visible' && incremental(), 90_000)
       return () => {
         active = false
         window.removeEventListener('focus', onFocus)
@@ -153,6 +176,23 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
+
+  // One-time convergence: move any legacy base64 screenshots (stored inline in
+  // the row) into Storage, so trades queries stop re-downloading them.
+  const migratedRef = useRef(false)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !user || migratedRef.current) return
+    const targets = base.filter((t) => (t.images ?? []).some((im) => typeof im === 'string' && im.startsWith('data:')))
+    if (!targets.length) return
+    migratedRef.current = true
+    ;(async () => {
+      for (const t of targets) {
+        const urls = await uploadTradeImages(t.images ?? [], user.id, t.id)
+        if (urls.some((u, i) => u !== (t.images ?? [])[i])) updateTrade(t.id, { images: urls })
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, user?.id])
 
   // In Supabase mode the DB (`base`) is the single source of truth — every
   // create/edit/delete writes straight to it, so the local demo layers must NOT

@@ -6,6 +6,8 @@ import { useJournals } from '../lib/journals'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { imageUrl, cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { compressImage } from '../lib/image'
+import { uploadTradeImages } from '../lib/uploadImages'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
@@ -76,6 +78,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<string[]>(trade?.images ?? [])
   const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -123,14 +126,24 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (entryN == null) return setError('צריך מחיר כניסה')
     if (!form.day) return setError('צריך תאריך')
+    if (saving) return
     setError(null)
 
+    const id = editing && trade ? trade.id : crypto.randomUUID()
+    // Upload screenshots to Storage (keep base64 only in demo mode).
+    let finalImages: string[] | null = images.length ? images : null
+    if (images.length && isSupabaseConfigured) {
+      setSaving(true)
+      finalImages = await uploadTradeImages(images, (user?.id as string) ?? 'demo-user', id)
+      setSaving(false)
+    }
+
     const payload: Trade = {
-      id: editing && trade ? trade.id : crypto.randomUUID(),
+      id,
       // Preserve the trade's owner on edit (never steal ownership); new trades
       // belong to the journal's owner so shared-journal entries stay visible to them.
       user_id: editing && trade ? trade.user_id : (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
@@ -160,7 +173,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       mood: trade?.mood ?? null,
       discipline_score: trade?.discipline_score ?? null,
       executions: calc.executions ?? trade?.executions ?? null,
-      images: images.length ? images : null,
+      images: finalImages,
     }
 
     if (editing && trade) {
@@ -356,8 +369,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
           <Link to={editing && trade ? `/app/trades/${trade.id}` : newBackTo} state={backState} className="btn-ghost">
             ביטול
           </Link>
-          <button type="submit" className="btn-primary">
-            {editing ? 'שמור שינויים' : 'הוסף עסקה'}
+          <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
+            {saving ? 'שומר…' : editing ? 'שמור שינויים' : 'הוסף עסקה'}
           </button>
         </div>
       </form>

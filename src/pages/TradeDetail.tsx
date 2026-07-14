@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, X, Pencil, Trash2 } from 'lucide-react'
+import { ArrowRight, X, Pencil, Trash2, Copy, BookMarked, Check } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
+import { useJournals } from '../lib/journals'
+import { useAuth } from '../lib/auth'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
+import type { Account } from '../types'
 
 export default function TradeDetail() {
   const { id } = useParams()
   const { trade, loading } = useTrade(id)
-  const { deleteTrade } = useTradeActions()
+  const { deleteTrade, addTrade } = useTradeActions()
+  const { journals } = useJournals()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // Where "back" goes: the caller (e.g. the calendar) can pass a return target
@@ -18,6 +23,15 @@ export default function TradeDetail() {
   const backLabel = backState?.backLabel ?? 'חזרה לעסקאות'
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [dupOpen, setDupOpen] = useState(false)
+  const [dupDone, setDupDone] = useState<string | null>(null)
+
+  // Auto-clear the "duplicated" confirmation after a moment.
+  useEffect(() => {
+    if (!dupDone) return
+    const t = setTimeout(() => setDupDone(null), 2500)
+    return () => clearTimeout(t)
+  }, [dupDone])
 
   // Close the lightbox on Escape.
   useEffect(() => {
@@ -42,6 +56,14 @@ export default function TradeDetail() {
   const win = trade.return_amount > 0
   const exits = trade.exits ?? (trade.exit != null ? [trade.exit] : [])
   const isPartial = exits.length > 1
+
+  // Journals the user owns, other than the one this trade already lives in.
+  const otherJournals = journals.filter((jr) => jr.user_id === user?.id && jr.id !== trade.account_id)
+  function duplicateTo(jr: Account) {
+    addTrade({ ...trade!, id: crypto.randomUUID(), account_id: jr.id, user_id: jr.user_id })
+    setDupOpen(false)
+    setDupDone(jr.name)
+  }
 
   const fields: { label: string; value: string }[] = [
     { label: 'כניסה', value: String(trade.entry) },
@@ -80,12 +102,47 @@ export default function TradeDetail() {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Link to={`/app/trades/${trade.id}/edit`} state={backState} className="btn-ghost px-3 py-2 text-sm">
-              <Pencil className="h-4 w-4" /> ערוך
-            </Link>
-            <button onClick={() => setConfirming(true)} className="btn-ghost px-3 py-2 text-sm text-loss hover:text-loss">
-              <Trash2 className="h-4 w-4" /> מחק
-            </button>
+            {dupDone ? (
+              <span className="flex items-center gap-1 text-sm font-medium text-win">
+                <Check className="h-4 w-4" /> שוכפלה ל{dupDone}
+              </span>
+            ) : (
+              <>
+                {otherJournals.length > 0 && (
+                  <div className="relative">
+                    <button onClick={() => setDupOpen((o) => !o)} className="btn-ghost px-3 py-2 text-sm">
+                      <Copy className="h-4 w-4" /> שכפל
+                    </button>
+                    {dupOpen && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setDupOpen(false)} />
+                        <div className="panel absolute left-0 z-30 mt-2 w-56 origin-top animate-zoom-in overflow-hidden p-1 text-right">
+                          <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                            שכפל ליומן
+                          </div>
+                          {otherJournals.map((jr) => (
+                            <button
+                              key={jr.id}
+                              onClick={() => duplicateTo(jr)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-black/[0.04]"
+                            >
+                              <BookMarked className="h-4 w-4 shrink-0 text-accent-2" />
+                              <span className="truncate">{jr.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                <Link to={`/app/trades/${trade.id}/edit`} state={backState} className="btn-ghost px-3 py-2 text-sm">
+                  <Pencil className="h-4 w-4" /> ערוך
+                </Link>
+                <button onClick={() => setConfirming(true)} className="btn-ghost px-3 py-2 text-sm text-loss hover:text-loss">
+                  <Trash2 className="h-4 w-4" /> מחק
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

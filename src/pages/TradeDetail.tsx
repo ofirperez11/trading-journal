@@ -80,7 +80,7 @@ export default function TradeDetail() {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Link to={`/app/trades/${trade.id}/edit`} className="btn-ghost px-3 py-2 text-sm">
+            <Link to={`/app/trades/${trade.id}/edit`} state={backState} className="btn-ghost px-3 py-2 text-sm">
               <Pencil className="h-4 w-4" /> ערוך
             </Link>
             <button onClick={() => setConfirming(true)} className="btn-ghost px-3 py-2 text-sm text-loss hover:text-loss">

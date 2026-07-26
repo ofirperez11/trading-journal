@@ -29,3 +29,4 @@ public/demo
 # supabase CLI temp + local tooling
 supabase/.temp
 .claude/skills
+data_export/

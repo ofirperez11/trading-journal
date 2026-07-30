@@ -13,7 +13,12 @@
 // ---------------------------------------------------------------------------
 
 const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY')
-const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
+// Try several models in order. Each has its OWN free-tier daily quota, so when
+// one is exhausted (HTTP 429) we fall through to the next instead of failing —
+// this multiplies the effective daily limit at no cost.
+const GEMINI_MODELS = (Deno.env.get('GEMINI_MODEL') ??
+  'gemini-flash-lite-latest,gemini-flash-latest,gemini-2.5-flash-lite,gemini-2.0-flash,gemini-2.5-flash')
+  .split(',').map((s) => s.trim()).filter(Boolean)
 const ANTHROPIC_KEY = Deno.env.get('ANTHROPIC_API_KEY')
 const ANTHROPIC_MODEL = Deno.env.get('EXTRACT_MODEL') ?? 'claude-sonnet-4-6'
 
@@ -62,59 +67,70 @@ function extractJson(text: string): unknown {
   return JSON.parse(cleaned)
 }
 
-async function viaGemini(imageBase64: string, mediaType: string) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
-    {
+/** Try each Gemini model in turn; return the parsed trade, or null if all fail. */
+async function viaGemini(imageBase64: string, mediaType: string): Promise<{ trade: unknown; model: string } | null> {
+  for (const model of GEMINI_MODELS) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { inline_data: { mime_type: mediaType, data: imageBase64 } },
+                  { text: `${PROMPT}\n\n${JSON_SHAPE}` },
+                ],
+              },
+            ],
+            generationConfig: { temperature: 0, response_mime_type: 'application/json' },
+          }),
+        },
+      )
+      if (!res.ok) continue // quota (429) / model unavailable (404) → next model
+      const data = await res.json()
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+      if (text) return { trade: extractJson(text), model }
+    } catch {
+      /* network/parse error → try the next model */
+    }
+  }
+  return null
+}
+
+async function viaClaude(imageBase64: string, mediaType: string): Promise<{ trade: unknown } | null> {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY as string,
+        'anthropic-version': '2023-06-01',
+      },
       body: JSON.stringify({
-        contents: [
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1024,
+        messages: [
           {
-            parts: [
-              { inline_data: { mime_type: mediaType, data: imageBase64 } },
-              { text: `${PROMPT}\n\n${JSON_SHAPE}` },
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
+              { type: 'text', text: `${PROMPT}\n\n${JSON_SHAPE}` },
             ],
           },
         ],
-        generationConfig: { temperature: 0, response_mime_type: 'application/json' },
       }),
-    },
-  )
-  const data = await res.json()
-  if (!res.ok) return json({ error: 'gemini_error', detail: data }, 502)
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) return json({ error: 'gemini_no_text', detail: data }, 502)
-  return json({ trade: extractJson(text) }, 200)
-}
-
-async function viaClaude(imageBase64: string, mediaType: string) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY as string,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
-            { type: 'text', text: `${PROMPT}\n\n${JSON_SHAPE}` },
-          ],
-        },
-      ],
-    }),
-  })
-  const data = await res.json()
-  if (!res.ok) return json({ error: 'anthropic_error', detail: data }, 502)
-  const text = (data.content ?? []).find((c: { type: string }) => c.type === 'text')?.text
-  if (!text) return json({ error: 'anthropic_no_text', detail: data }, 502)
-  return json({ trade: extractJson(text) }, 200)
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const text = (data.content ?? []).find((c: { type: string }) => c.type === 'text')?.text
+    if (text) return { trade: extractJson(text) }
+  } catch {
+    /* fall through */
+  }
+  return null
 }
 
 Deno.serve(async (req: Request) => {
@@ -129,7 +145,18 @@ Deno.serve(async (req: Request) => {
     if (!imageBase64) return json({ error: 'missing imageBase64' }, 400)
     const mt = mediaType ?? 'image/webp'
 
-    return GEMINI_KEY ? await viaGemini(imageBase64, mt) : await viaClaude(imageBase64, mt)
+    const g = GEMINI_KEY ? await viaGemini(imageBase64, mt) : null
+    if (g) return json({ trade: g.trade }, 200)
+    const c = ANTHROPIC_KEY ? await viaClaude(imageBase64, mt) : null
+    if (c) return json({ trade: c.trade }, 200)
+
+    return json(
+      {
+        error: 'extraction_unavailable',
+        message: 'מכסת הפענוח האוטומטי של התמונות נוצלה לכרגע. אפשר למלא את השדות ידנית, או לנסות שוב מאוחר יותר.',
+      },
+      502,
+    )
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

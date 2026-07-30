@@ -64,7 +64,10 @@ export default function Calendar() {
   const years = useMemo(() => {
     const set = new Set<number>()
     for (const t of trades) set.add(Number(t.date.slice(0, 4)))
-    set.add(new Date().getFullYear())
+    // Always offer a range of past years (and next year) so an empty journal can
+    // still navigate back — e.g. to start a 2024/2025 backtest.
+    const now = new Date().getFullYear()
+    for (let y = now - 6; y <= now + 1; y++) set.add(y)
     return [...set].sort((a, b) => a - b)
   }, [trades])
 

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, X, Pencil, Trash2, Copy, BookMarked, Check } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
-import { useAuth } from '../lib/auth'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
 import type { Account } from '../types'
@@ -13,7 +12,6 @@ export default function TradeDetail() {
   const { trade, loading } = useTrade(id)
   const { deleteTrade, addTrade } = useTradeActions()
   const { journals } = useJournals()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // Where "back" goes: the caller (e.g. the calendar) can pass a return target
@@ -57,9 +55,12 @@ export default function TradeDetail() {
   const exits = trade.exits ?? (trade.exit != null ? [trade.exit] : [])
   const isPartial = exits.length > 1
 
-  // Journals the user owns, other than the one this trade already lives in.
-  const otherJournals = journals.filter((jr) => jr.user_id === user?.id && jr.id !== trade.account_id)
+  // Every journal the user can access (their own + shared), except the one this
+  // trade already lives in — so a trade can be copied between any of them.
+  const otherJournals = journals.filter((jr) => jr.id !== trade.account_id)
   function duplicateTo(jr: Account) {
+    // The copy belongs to the target journal's owner (so a shared journal's owner
+    // still sees it); editor RLS lets a shared editor insert it.
     addTrade({ ...trade!, id: crypto.randomUUID(), account_id: jr.id, user_id: jr.user_id })
     setDupOpen(false)
     setDupDone(jr.name)

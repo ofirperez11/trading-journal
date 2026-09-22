@@ -130,10 +130,26 @@ export function TradesProvider({ children }: { children: ReactNode }) {
       }
       const initial = async () => {
         setLoading(true)
-        const { data, error: err } = await supabase.from('trades').select('*').order('date', { ascending: false })
+        // Page through in 1000-row chunks — Supabase caps a single query at 1000
+        // rows, which would silently hide trades once a user can access more.
+        const PAGE = 1000
+        const all: Record<string, unknown>[] = []
+        for (let from = 0; ; from += PAGE) {
+          const { data, error: err } = await supabase
+            .from('trades')
+            .select('*')
+            .order('date', { ascending: false })
+            .range(from, from + PAGE - 1)
+          if (!active) return
+          if (err) {
+            setError(err.message)
+            break
+          }
+          all.push(...((data ?? []) as Record<string, unknown>[]))
+          if (!data || data.length < PAGE) break
+        }
         if (!active) return
-        if (err) setError(err.message)
-        else apply((data ?? []) as Record<string, unknown>[], true)
+        apply(all, true)
         setLoading(false)
       }
       const incremental = async () => {

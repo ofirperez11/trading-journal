@@ -360,6 +360,32 @@ export default function Analytics() {
         )}
       </ChartCard>
 
+      {/* ICT context — liquidity taken + dealing-range zone */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard
+          title="לפי לקיחת נזילות"
+          desc="אחוז ההצלחה בעסקאות שבהן נלקחה נזילות Buyside או Sellside, מול עסקאות שבהן לא נלקחה נזילות. העמודה = אחוז ההצלחה, ולצידה מספר העסקאות. עוזר לראות אם לקיחת נזילות (ובאיזה צד) משפרת לכם את הדיוק."
+          hint="אחוז הצלחה"
+        >
+          {a.byLiquidity.length ? (
+            <HBars items={a.byLiquidity} format={(v) => `${v}%`} />
+          ) : (
+            <EmptyNote text="עדיין לא תויג שדה הנזילות בעסקאות. סמנו Buyside / Sellside בעסקאות כדי לראות את ההשוואה." />
+          )}
+        </ChartCard>
+        <ChartCard
+          title="אחוז הצלחה לפי אזור"
+          desc="אחוז ההצלחה בכל אזור בטווח המסחר: Premium (יקר), Deadzone (אמצע), ו-Discount (זול). העמודה = אחוז ההצלחה, ולצידה מספר העסקאות. עוזר לזהות מאיזה אזור אתם נכנסים בצורה הכי מדויקת."
+          hint="אחוז הצלחה"
+        >
+          {a.byZone.length ? (
+            <HBars items={a.byZone} format={(v) => `${v}%`} />
+          ) : (
+            <EmptyNote text="עדיין לא תויג שדה האזור בעסקאות. סמנו Premium / Deadzone / Discount בעסקאות כדי לראות את הפילוח." />
+          )}
+        </ChartCard>
+      </div>
+
       {/* Win rate by stop, per asset */}
       <div className="grid gap-4 lg:grid-cols-3">
         {['MNQ', 'MES', 'YM'].map((asset) => {

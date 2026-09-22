@@ -47,6 +47,8 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
+  byLiquidity: Bucket[] // win rate by liquidity taken (buyside / sellside / none)
+  byZone: Bucket[] // win rate by dealing-range zone (premium / deadzone / discount)
   // day-level
   tradingDays: number
   winningDays: number
@@ -265,6 +267,39 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     })
     .sort((a, b) => b.value - a.value)
 
+  // Win-rate buckets by a categorical key (bar length = win rate %).
+  function winRateBuckets<K extends string>(key: (t: Trade) => K | null, order: { v: K; label: string }[]): Bucket[] {
+    const g = new Map<K, { count: number; wins: number; losses: number }>()
+    for (const t of trades) {
+      const k = key(t)
+      if (!k) continue
+      const e = g.get(k) ?? { count: 0, wins: 0, losses: 0 }
+      e.count++
+      if (t.return_amount > 0) e.wins++
+      else if (t.return_amount < 0) e.losses++
+      g.set(k, e)
+    }
+    return order
+      .filter((o) => g.has(o.v))
+      .map((o) => {
+        const e = g.get(o.v)!
+        const wr = e.wins + e.losses > 0 ? e.wins / (e.wins + e.losses) : 0
+        return { label: o.label, value: Math.round(wr * 100), count: e.count, tone: (wr >= 0.5 ? 'win' : 'loss') as 'win' | 'loss' }
+      })
+  }
+
+  const byLiquidity = winRateBuckets((t) => t.liquidity ?? 'none', [
+    { v: 'buyside', label: 'Buyside' },
+    { v: 'sellside', label: 'Sellside' },
+    { v: 'none', label: 'ללא נזילות' },
+  ])
+  const byZone = winRateBuckets((t) => t.zone ?? 'none', [
+    { v: 'premium', label: 'Premium' },
+    { v: 'deadzone', label: 'Deadzone' },
+    { v: 'discount', label: 'Discount' },
+    { v: 'none', label: 'ללא אזור' },
+  ])
+
   return {
     ...stats,
     stopByAsset,
@@ -281,6 +316,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
+    byLiquidity,
+    byZone,
     tradingDays,
     winningDays,
     losingDays,

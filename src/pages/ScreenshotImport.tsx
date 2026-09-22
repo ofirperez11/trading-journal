@@ -12,7 +12,8 @@ import { formatMoney, formatR } from '../lib/trades'
 import { SESSION_TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
 import { computePartials, type ExitRow } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
-import type { Trade, TradeSide } from '../types'
+import { TradeContextFields } from '../components/TradeContextFields'
+import type { Trade, TradeSide, Liquidity, Zone } from '../types'
 
 const ASSETS = ['NQ', 'MNQ', 'ES', 'MES', 'YM', 'MYM'] as const
 const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
@@ -59,7 +60,8 @@ export default function ScreenshotImport() {
     exits: [{ price: '', qty: '' }] as ExitRow[],
     target: '',
     stoploss: '',
-    peak: '',
+    liquidity: null as Liquidity | null,
+    zone: null as Zone | null,
     timeframe: '',
     notes: '',
   })
@@ -201,7 +203,8 @@ export default function ScreenshotImport() {
       hold_time: null,
       confidence: null,
       lookback: form.lookback || null,
-      peak_price: num(form.peak),
+      liquidity: form.liquidity,
+      zone: form.zone,
       tags: null,
       notes: form.notes.trim() || null,
       mood: null,
@@ -435,10 +438,12 @@ export default function ScreenshotImport() {
                 <span className="field-label mb-0">כמות כוללת (מחושב)</span>
                 <div className="input flex items-center num text-muted" dir="ltr">{calc.totalQty || '—'}</div>
               </div>
-              <label className={field}>
-                <span className="field-label mb-0">שיא פוטנציאל — נקודות מהכניסה (אופציונלי)</span>
-                <input type="number" step="any" dir="ltr" className="input" value={form.peak} onChange={(e) => set('peak', e.target.value)} placeholder="נקודות מהכניסה" />
-              </label>
+              <TradeContextFields
+                liquidity={form.liquidity}
+                zone={form.zone}
+                onLiquidity={(v) => set('liquidity', v)}
+                onZone={(v) => set('zone', v)}
+              />
               <label className={`${field} sm:col-span-2`}>
                 <span className="field-label mb-0">הערות</span>
                 <input className="input" value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="אופציונלי" />

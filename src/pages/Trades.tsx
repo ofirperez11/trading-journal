@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'רווח', LOSS: 'הפ
 const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 
 const GRID =
-  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_66px_52px_90px] sm:justify-between'
+  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_52px_90px] sm:justify-between'
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -101,7 +101,7 @@ export default function Trades() {
 
   // Export the currently-visible (filtered) rows to CSV.
   function exportCsv() {
-    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'שיא', 'R', 'P&L', 'הערות']
+    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'R', 'P&L', 'הערות']
     const data = rows.map((t) => [
       `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`,
       t.date.slice(11, 16),
@@ -115,7 +115,8 @@ export default function Trades() {
       t.target ?? '',
       t.stoploss ?? '',
       t.lookback ?? '',
-      t.peak_price ?? '',
+      t.liquidity ?? '',
+      t.zone ?? '',
       t.r_multiple ?? '',
       t.return_amount,
       t.notes ?? '',
@@ -227,7 +228,6 @@ export default function Trades() {
               <span className="hidden text-left sm:block">יציאה</span>
               <span className="hidden text-left sm:block">יציאה 2</span>
               <span className="hidden text-left sm:block">Lookback</span>
-              <span className="hidden text-left sm:block">שיא</span>
               <span className="hidden text-left sm:block">R</span>
               <span className="text-left">P&amp;L</span>
             </div>
@@ -265,9 +265,6 @@ export default function Trades() {
                     </span>
                     <span className="hidden text-left num text-muted sm:block" dir="ltr">
                       {t.lookback ?? <span className="text-muted/40">—</span>}
-                    </span>
-                    <span className="hidden text-left num text-muted sm:block">
-                      {t.peak_price ?? <span className="text-muted/40">—</span>}
                     </span>
                     <span className="hidden text-left num sm:block">
                       {t.r_multiple != null ? formatR(t.r_multiple).replace('R', '') : '—'}

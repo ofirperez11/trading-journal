@@ -7,6 +7,8 @@
 export type TradeSide = 'LONG' | 'SHORT'
 export type TradeStatus = 'WIN' | 'LOSS' | 'WASH'
 export type MarketType = 'FUTURES' | 'STOCK' | 'OPTION' | 'CRYPTO' | 'FOREX'
+export type Liquidity = 'buyside' | 'sellside'
+export type Zone = 'premium' | 'deadzone' | 'discount'
 
 /** A single fill that makes up a trade. */
 export interface Execution {
@@ -40,7 +42,8 @@ export interface Trade {
   hold_time: number | null // seconds
   confidence: number | null // 0-5
   lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
-  peak_price: number | null // best price the trade reached in favor (MFE) — for capture analysis
+  liquidity: Liquidity | null // which side's liquidity was taken
+  zone: Zone | null // dealing-range position at entry
   tags: string[] | null
   notes: string | null
   mood: string | null

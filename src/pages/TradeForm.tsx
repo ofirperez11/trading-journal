@@ -11,6 +11,7 @@ import { isSupabaseConfigured } from '../lib/supabase'
 import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
+import { TradeContextFields } from '../components/TradeContextFields'
 import type { Trade, TradeSide } from '../types'
 
 // Tradable assets and their dollar value per 1.0 index point, per contract.
@@ -66,7 +67,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     day: (trade?.date ?? (presetDate ? `${presetDate}T00:00` : new Date().toISOString())).slice(0, 10),
     time: (trade?.date?.slice(11, 16) === '17:00' ? '17:00' : '16:30') as (typeof TIMES)[number],
     lookback: trade?.lookback ?? '',
-    peak: trade?.peak_price != null ? String(trade.peak_price) : '',
+    liquidity: trade?.liquidity ?? null,
+    zone: trade?.zone ?? null,
     symbol: seedSymbol,
     side: (trade?.side ?? 'LONG') as TradeSide,
     entry: trade?.entry != null ? String(trade.entry) : '',
@@ -167,7 +169,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       hold_time: trade?.hold_time ?? null,
       confidence: trade?.confidence ?? null,
       lookback: form.lookback || null,
-      peak_price: num(form.peak),
+      liquidity: form.liquidity,
+      zone: form.zone,
       tags: trade?.tags ?? null,
       notes: form.notes.trim() || null,
       mood: trade?.mood ?? null,
@@ -296,10 +299,12 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
             <div className="input flex items-center num text-muted" dir="ltr">{calc.totalQty || '—'}</div>
           </div>
 
-          <label className={`${field} sm:col-span-2`}>
-            <span className="field-label mb-0">שיא פוטנציאל — נקודות מהכניסה (אופציונלי)</span>
-            <input type="number" step="any" dir="ltr" className="input" value={form.peak} onChange={(e) => set('peak', e.target.value)} placeholder="כמה נקודות העסקה הגיעה לטובתך מהכניסה" />
-          </label>
+          <TradeContextFields
+            liquidity={form.liquidity}
+            zone={form.zone}
+            onLiquidity={(v) => set('liquidity', v)}
+            onZone={(v) => set('zone', v)}
+          />
 
           {/* Auto-computed results */}
           <div className="sm:col-span-2">

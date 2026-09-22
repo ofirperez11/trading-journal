@@ -47,21 +47,6 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
-  mfe: {
-    count: number
-    avgPeakPts: number
-    avgCapturedPts: number
-    avgLeftPts: number
-    captureRatio: number | null // 0-1, captured ÷ potential
-    bySymbol: {
-      label: string
-      count: number
-      captureRatio: number | null
-      avgCaptured: number
-      avgPeak: number
-      avgLeft: number
-    }[] // full capture breakdown per instrument (MNQ, MES, …)
-  }
   // day-level
   tradingDays: number
   winningDays: number
@@ -280,45 +265,6 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     })
     .sort((a, b) => b.value - a.value)
 
-  // Maximum-favorable-excursion / capture analysis (from peak_price).
-  let mCount = 0
-  let sumPeak = 0
-  let sumCap = 0
-  const mfeSym = new Map<string, { peak: number; cap: number; count: number }>()
-  for (const t of trades) {
-    if (t.peak_price == null || t.entry == null || t.exit == null) continue
-    const dir = t.side === 'LONG' ? 1 : -1
-    // peak_price holds the peak favourable excursion in POINTS from entry.
-    const peakPts = Math.max(0, t.peak_price)
-    const capPts = (t.exit - t.entry) * dir
-    mCount++
-    sumPeak += peakPts
-    sumCap += capPts
-    const sym = cleanSymbol(t.symbol)
-    const g = mfeSym.get(sym) ?? { peak: 0, cap: 0, count: 0 }
-    g.peak += peakPts
-    g.cap += capPts
-    g.count++
-    mfeSym.set(sym, g)
-  }
-  const mfe = {
-    count: mCount,
-    avgPeakPts: mCount ? sumPeak / mCount : 0,
-    avgCapturedPts: mCount ? sumCap / mCount : 0,
-    avgLeftPts: mCount ? (sumPeak - sumCap) / mCount : 0,
-    captureRatio: sumPeak > 0 ? sumCap / sumPeak : null,
-    bySymbol: [...mfeSym.entries()]
-      .map(([label, g]) => ({
-        label,
-        count: g.count,
-        captureRatio: g.peak > 0 ? g.cap / g.peak : null,
-        avgCaptured: g.count ? g.cap / g.count : 0,
-        avgPeak: g.count ? g.peak / g.count : 0,
-        avgLeft: g.count ? (g.peak - g.cap) / g.count : 0,
-      }))
-      .sort((a, b) => b.count - a.count),
-  }
-
   return {
     ...stats,
     stopByAsset,
@@ -335,7 +281,6 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
-    mfe,
     tradingDays,
     winningDays,
     losingDays,

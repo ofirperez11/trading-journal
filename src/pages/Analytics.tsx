@@ -106,15 +106,6 @@ function InfoPopover({ text }: { text: string }) {
   )
 }
 
-function MiniStat({ label, value, cls = '' }: { label: string; value: string; cls?: string }) {
-  return (
-    <div className="rounded-xl border border-black/[0.08] bg-black/[0.02] p-3 text-center">
-      <div className="stat-label">{label}</div>
-      <div className={`num mt-1 text-lg font-bold ${cls}`}>{value}</div>
-    </div>
-  )
-}
-
 function EmptyNote({ text }: { text: string }) {
   return <div className="py-8 text-center text-sm leading-relaxed text-muted">{text}</div>
 }
@@ -357,49 +348,17 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
-      {/* Entry-model (lookback) + capture (peak potential) */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard
-          title="לפי מודל כניסה (Lookback)"
-          desc="ביצועי כל מודל כניסה שתייגתם: העמודה = תוחלת ב-R לעסקה, והאחוז שלצידה = אחוז ההצלחה. מודל עם R שלילי (אדום) או אחוז הצלחה נמוך הוא מודל חלש — כדאי להימנע ממנו או להוריד בו מינוף. מתמלא ככל שתעדכנו את שדה ה-Lookback בעסקאות."
-        >
-          {a.byLookback.length ? (
-            <HBars items={a.byLookback} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}R`} />
-          ) : (
-            <EmptyNote text="עדיין לא תויגו מודלי כניסה. עדכנו את שדה ה-Lookback בעסקאות כדי לראות אילו מודלים חזקים ואילו חלשים." />
-          )}
-        </ChartCard>
-        <ChartCard
-          title="מיצוי עסקאות (Peak Potential)"
-          desc="כמה מהתנועה לטובתכם באמת תפסתם: 'נלכד' = הנקודות שהרווחתם בפועל, 'פוטנציאל' = השיא שאליו הגיעה העסקה, ו'מיצוי' = היחס ביניהם. אם המיצוי נמוך והרבה נקודות נשארות על השולחן — שווה לשקול להחזיק עסקאות יותר זמן. מתמלא ככל שתעדכנו את שדה שיא הפוטנציאל."
-        >
-          {a.mfe.count ? (
-            <div className="space-y-4">
-              {a.mfe.bySymbol.map((s) => (
-                <div key={s.label} className="rounded-xl border border-black/[0.08] bg-black/[0.02] p-3">
-                  <div className="mb-3 flex items-baseline justify-between">
-                    <span className="flex items-baseline gap-2">
-                      <span className="font-semibold">{s.label}</span>
-                      <span className="num text-xs text-muted">{s.count} עסקאות</span>
-                    </span>
-                    <span className="num text-2xl font-bold text-accent">
-                      {s.captureRatio != null ? formatPct(s.captureRatio) : '—'}
-                      <span className="mr-1 text-xs font-medium text-muted"> מיצוי</span>
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <MiniStat label="נלכד (ממוצע)" value={`${s.avgCaptured.toFixed(1)} נק׳`} cls="text-win" />
-                    <MiniStat label="פוטנציאל (ממוצע)" value={`${s.avgPeak.toFixed(1)} נק׳`} />
-                    <MiniStat label="הושאר" value={`${s.avgLeft.toFixed(1)} נק׳`} cls="text-loss" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyNote text="עדיין אין נתוני שיא. עדכנו את שדה 'שיא הרווח (מחיר שיא)' בעסקאות כדי לראות כמה מהתנועה אתם תופסים ואם כדאי להחזיק יותר זמן." />
-          )}
-        </ChartCard>
-      </div>
+      {/* Entry-model (lookback) performance */}
+      <ChartCard
+        title="לפי מודל כניסה (Lookback)"
+        desc="ביצועי כל מודל כניסה שתייגתם: העמודה = תוחלת ב-R לעסקה, והאחוז שלצידה = אחוז ההצלחה. מודל עם R שלילי (אדום) או אחוז הצלחה נמוך הוא מודל חלש — כדאי להימנע ממנו או להוריד בו מינוף. מתמלא ככל שתעדכנו את שדה ה-Lookback בעסקאות."
+      >
+        {a.byLookback.length ? (
+          <HBars items={a.byLookback} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}R`} />
+        ) : (
+          <EmptyNote text="עדיין לא תויגו מודלי כניסה. עדכנו את שדה ה-Lookback בעסקאות כדי לראות אילו מודלים חזקים ואילו חלשים." />
+        )}
+      </ChartCard>
 
       {/* Win rate by stop, per asset */}
       <div className="grid gap-4 lg:grid-cols-3">

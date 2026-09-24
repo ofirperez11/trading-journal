@@ -1,4 +1,5 @@
-import type { Liquidity, Zone } from '../types'
+import type { Liquidity, Zone, Bias } from '../types'
+import { BIASES } from '../lib/bias'
 
 // ICT context selectors shared by the manual and image trade forms:
 //  - which side's liquidity was taken (buyside / sellside)
@@ -27,13 +28,17 @@ const ON: Record<'accent' | 'win' | 'loss' | 'muted', string> = {
 export function TradeContextFields({
   liquidity,
   zone,
+  bias,
   onLiquidity,
   onZone,
+  onBias,
 }: {
   liquidity: Liquidity | null
   zone: Zone | null
+  bias: Bias | null
   onLiquidity: (v: Liquidity | null) => void
   onZone: (v: Zone | null) => void
+  onBias: (v: Bias | null) => void
 }) {
   return (
     <>
@@ -69,6 +74,27 @@ export function TradeContextFields({
                 aria-pressed={on}
                 onClick={() => onZone(on ? null : o.v)}
                 className={`${BTN} ${on ? ON[o.tone] : OFF}`}
+              >
+                {o.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <span className="field-label mb-0">ביאס (זוג HTF)</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {BIASES.map((o) => {
+            const on = bias === o.v
+            return (
+              <button
+                key={o.v}
+                type="button"
+                title={o.desc}
+                aria-pressed={on}
+                onClick={() => onBias(on ? null : o.v)}
+                className={`${BTN} px-3 ${on ? ON.accent : OFF}`}
               >
                 {o.label}
               </button>

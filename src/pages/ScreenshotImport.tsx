@@ -14,7 +14,7 @@ import { computePartials, type ExitRow } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { TradeContextFields } from '../components/TradeContextFields'
 import { PriceMap } from '../components/PriceMap'
-import type { Trade, TradeSide, Liquidity, Zone } from '../types'
+import type { Trade, TradeSide, Liquidity, Zone, Bias } from '../types'
 
 const ASSETS = ['NQ', 'MNQ', 'ES', 'MES', 'YM', 'MYM'] as const
 const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
@@ -63,6 +63,7 @@ export default function ScreenshotImport() {
     stoploss: '',
     liquidity: null as Liquidity | null,
     zone: null as Zone | null,
+    bias: null as Bias | null,
     timeframe: '',
     notes: '',
   })
@@ -206,6 +207,7 @@ export default function ScreenshotImport() {
       lookback: form.lookback || null,
       liquidity: form.liquidity,
       zone: form.zone,
+      bias: form.bias,
       tags: null,
       notes: form.notes.trim() || null,
       mood: null,
@@ -532,8 +534,10 @@ export default function ScreenshotImport() {
                 <TradeContextFields
                   liquidity={form.liquidity}
                   zone={form.zone}
+                  bias={form.bias}
                   onLiquidity={(v) => set('liquidity', v)}
                   onZone={(v) => set('zone', v)}
+                  onBias={(v) => set('bias', v)}
                 />
                 <label className={`${field} sm:col-span-2`}>
                   <span className="field-label mb-0">הערות</span>

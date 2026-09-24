@@ -19,6 +19,7 @@ import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { downloadCsv } from '../lib/csv'
 import { lookbackColor } from '../lib/lookback'
+import { BIAS_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
 import type { Trade, TradeSide, TradeStatus } from '../types'
 
@@ -57,7 +58,7 @@ export default function Trades() {
   const statusSel = useMemo(() => new Set(csv(searchParams.get('status')) as TradeStatus[]), [searchParams])
   const sideSel = useMemo(() => new Set(csv(searchParams.get('side')) as TradeSide[]), [searchParams])
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
-  const filterYear = searchParams.get('year')
+  const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -74,10 +75,13 @@ export default function Trades() {
   const symbols = useMemo(() => [...new Set(trades.map((t) => cleanSymbol(t.symbol)))].sort(), [trades])
   const months = useMemo(() => [...new Set(trades.map((t) => t.date.slice(0, 7)))].sort().reverse(), [trades])
   const years = useMemo(() => [...new Set(trades.map((t) => t.date.slice(0, 4)))].sort().reverse(), [trades])
-  const activeYear = filterYear && years.includes(filterYear) ? filterYear : years[0]
-  const monthsForYear = months.filter((m) => m.startsWith(activeYear ?? ''))
+  // Months to show in the facet: those of the selected years, else the latest year.
+  const monthsForYear = yearSel.size
+    ? months.filter((m) => yearSel.has(m.slice(0, 4)))
+    : months.filter((m) => m.startsWith(years[0] ?? ''))
+  const multiYear = new Set(monthsForYear.map((m) => m.slice(0, 4))).size > 1
 
-  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size
+  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size
   const qs = searchParams.toString() // current filters, for the trade's "back" target
   const backState = { backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }
 
@@ -88,6 +92,7 @@ export default function Trades() {
           if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
           if (statusSel.size && !statusSel.has(t.status)) return false
           if (sideSel.size && !sideSel.has(t.side)) return false
+          if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
           if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
           if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
           return true
@@ -96,7 +101,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [trades, symbolSel, statusSel, sideSel, monthSel, query])
+  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -127,13 +132,14 @@ export default function Trades() {
       p.delete('sym')
       p.delete('status')
       p.delete('side')
+      p.delete('years')
       p.delete('months')
     })
   }
 
   // Export the currently-visible (filtered) rows to CSV.
   function exportCsv() {
-    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'R', 'P&L', 'הערות']
+    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'ביאס', 'R', 'P&L', 'הערות']
     const data = rows.map((t) => [
       `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`,
       t.date.slice(11, 16),
@@ -149,6 +155,7 @@ export default function Trades() {
       t.lookback ?? '',
       t.liquidity ?? '',
       t.zone ?? '',
+      t.bias ? BIAS_LABEL[t.bias] : '',
       t.r_multiple ?? '',
       t.return_amount,
       t.notes ?? '',
@@ -165,6 +172,7 @@ export default function Trades() {
     ...[...symbolSel].map((v) => ({ key: 'sym', val: v, label: v })),
     ...[...statusSel].map((v) => ({ key: 'status', val: v, label: STATUS_LABEL[v] })),
     ...[...sideSel].map((v) => ({ key: 'side', val: v, label: sideLabel(v) })),
+    ...[...yearSel].sort().map((v) => ({ key: 'years', val: v, label: v })),
     ...[...monthSel].sort().map((v) => ({ key: 'months', val: v, label: monthTitle(v) })),
   ]
 
@@ -308,7 +316,7 @@ export default function Trades() {
           </FacetGroup>
           <FacetGroup label="שנה">
             {years.map((y) => (
-              <button key={y} className={`num ${facet(activeYear === y)}`} onClick={() => setParams((p) => p.set('year', y))}>{y}</button>
+              <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>
             ))}
           </FacetGroup>
           <div className="sm:col-span-2">
@@ -316,6 +324,7 @@ export default function Trades() {
               {monthsForYear.map((m) => (
                 <button key={m} className={facet(monthSel.has(m))} onClick={() => toggleParam('months', m)}>
                   {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
+                  {multiYear ? <span className="num"> {m.slice(2, 4)}</span> : ''}
                 </button>
               ))}
             </FacetGroup>
@@ -333,7 +342,7 @@ export default function Trades() {
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full min-w-[1040px] text-sm">
+            <table className="w-full min-w-[1160px] text-sm">
               <thead>
                 <tr className="h-9 border-b border-border text-right text-[13px] text-muted [&>th]:px-2 [&>th]:font-normal">
                   <th>תאריך</th>
@@ -346,6 +355,7 @@ export default function Trades() {
                   <th>Lookback</th>
                   <th>נזילות</th>
                   <th>אזור</th>
+                  <th>ביאס</th>
                   <th className="!text-left">R</th>
                   <th className="!text-left">P&amp;L</th>
                 </tr>
@@ -355,7 +365,7 @@ export default function Trades() {
                   <Fragment key={g.ym || 'all'}>
                     {grouped && (
                       <tr className="border-b border-border">
-                        <td colSpan={12} className="px-2 pb-2 pt-5">
+                        <td colSpan={13} className="px-2 pb-2 pt-5">
                           <div className="flex items-center gap-2">
                             <ChevronDown className="h-4 w-4 text-muted" />
                             <span className="font-semibold">{monthTitle(g.ym)}</span>
@@ -456,6 +466,15 @@ function TableRow({ t, backState, delay }: { t: Trade; backState: object; delay:
       </td>
       <td>{t.liquidity ? <span className={`tag ${LIQ_TAG[t.liquidity]}`}>{LIQ_LABEL[t.liquidity]}</span> : <Dash />}</td>
       <td>{t.zone ? <span className={`tag ${ZONE_TAG[t.zone]}`}>{ZONE_LABEL[t.zone]}</span> : <Dash />}</td>
+      <td className="max-w-[150px]">
+        {t.bias ? (
+          <span className="tag tag-purple max-w-full truncate" title={BIAS_LABEL[t.bias]}>
+            {BIAS_LABEL[t.bias]}
+          </span>
+        ) : (
+          <Dash />
+        )}
+      </td>
       <td className="num text-left text-[#5f5e5b]">{t.r_multiple != null ? formatR(t.r_multiple) : <Dash />}</td>
       <td className={`num text-left font-semibold ${pnlCls(t.return_amount)}`}>{formatMoney(t.return_amount)}</td>
     </tr>

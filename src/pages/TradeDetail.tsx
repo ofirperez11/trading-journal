@@ -24,11 +24,13 @@ import {
   ImageIcon,
   ChevronRight,
   ChevronLeft,
+  Compass,
 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime, cleanSymbol } from '../lib/trades'
 import { lookbackColor } from '../lib/lookback'
+import { BIAS_LABEL } from '../lib/bias'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -281,6 +283,9 @@ export default function TradeDetail() {
           </Prop>
           <Prop icon={Layers} label="אזור">
             {trade.zone ? <span className={`tag ${ZONE_TAG[trade.zone]}`}>{ZONE_LABEL[trade.zone]}</span> : <Empty />}
+          </Prop>
+          <Prop icon={Compass} label="ביאס">
+            {trade.bias ? <span className="tag tag-purple">{BIAS_LABEL[trade.bias]}</span> : <Empty />}
           </Prop>
           <Prop icon={Sigma} label="R-Multiple">
             <span className="num font-semibold">{formatR(trade.r_multiple)}</span>

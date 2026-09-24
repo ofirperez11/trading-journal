@@ -9,6 +9,7 @@ export type TradeStatus = 'WIN' | 'LOSS' | 'WASH'
 export type MarketType = 'FUTURES' | 'STOCK' | 'OPTION' | 'CRYPTO' | 'FOREX'
 export type Liquidity = 'buyside' | 'sellside' | 'none'
 export type Zone = 'premium' | 'deadzone' | 'discount'
+export type Bias = '6h-3h' | '3h-90' | '3h-90-no6h' | '3h-wick90' | '3h-wick90-no6h' | '6h-90'
 
 /** A single fill that makes up a trade. */
 export interface Execution {
@@ -44,6 +45,7 @@ export interface Trade {
   lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
   liquidity: Liquidity | null // which side's liquidity was taken
   zone: Zone | null // dealing-range position at entry
+  bias: Bias | null // higher-timeframe bias pair used
   tags: string[] | null
   notes: string | null
   mood: string | null

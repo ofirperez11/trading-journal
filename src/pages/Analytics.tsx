@@ -633,6 +633,18 @@ export default function Analytics() {
             )}
           </Block>
         </div>
+        <Block
+          className="mt-3"
+          title="אחוז הצלחה לפי ביאס"
+          desc="אחוז ההצלחה לפי זוג ה-HTF (הביאס) שסומן בעסקה. נספרות רק עסקאות שסימנתם בהן ביאס. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%. עוזר לזהות אילו זוגות ביאס הכי מדויקים ומאילו כדאי להיזהר."
+          hint={<span className="tag">אחוז הצלחה</span>}
+        >
+          {a.byBias.length ? (
+            <BarRows rows={winRateRows(a.byBias)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+          ) : (
+            <EmptyNote text="עדיין לא תויג שדה הביאס בעסקאות. סמנו ביאס בעסקאות כדי לראות את הפילוח." />
+          )}
+        </Block>
       </Section>
 
       {/* ---- 5. Risk & stops ---- */}

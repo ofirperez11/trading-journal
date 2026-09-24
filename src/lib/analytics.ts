@@ -1,5 +1,6 @@
 import type { Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
+import { BIASES } from './bias'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.
@@ -49,6 +50,7 @@ export interface Analytics extends Stats {
   byLookback: Bucket[] // performance per entry-model (lookback)
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
+  byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
   // day-level
   tradingDays: number
   winningDays: number
@@ -304,6 +306,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     { v: 'SHORT·deadzone', label: 'Short · Deadzone' },
     { v: 'SHORT·discount', label: 'Short · Discount' },
   ])
+  const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: b.label })))
 
   return {
     ...stats,
@@ -323,6 +326,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byLookback,
     byLiquidity,
     byZone,
+    byBias,
     tradingDays,
     winningDays,
     losingDays,

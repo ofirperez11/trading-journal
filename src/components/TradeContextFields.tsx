@@ -15,13 +15,13 @@ const ZONES: { v: Zone; label: string; tone: 'loss' | 'muted' | 'win' }[] = [
   { v: 'discount', label: 'Discount', tone: 'win' },
 ]
 
-const BTN = 'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors'
-const OFF = 'border-black/[0.12] text-muted hover:text-ink'
+const BTN = 'h-10 flex-1 rounded-md border text-sm font-medium transition-all active:scale-[0.98]'
+const OFF = 'border-border text-[#5f5e5b] hover:bg-surface'
 const ON: Record<'accent' | 'win' | 'loss' | 'muted', string> = {
-  accent: 'border-accent/50 bg-accent/15 text-accent',
-  win: 'border-win/50 bg-win/15 text-win',
-  loss: 'border-loss/50 bg-loss/15 text-loss',
-  muted: 'border-ink/30 bg-black/[0.06] text-ink',
+  accent: 'border-transparent bg-tag-blue font-semibold text-tag-blue-fg',
+  win: 'border-transparent bg-tag-green font-semibold text-tag-green-fg',
+  loss: 'border-transparent bg-tag-red font-semibold text-tag-red-fg',
+  muted: 'border-transparent bg-tag-gray font-semibold text-tag-gray-fg',
 }
 
 export function TradeContextFields({
@@ -46,6 +46,7 @@ export function TradeContextFields({
               <button
                 key={o.v}
                 type="button"
+                aria-pressed={on}
                 onClick={() => onLiquidity(on ? null : o.v)}
                 className={`${BTN} ${on ? ON[o.tone] : OFF}`}
               >
@@ -65,6 +66,7 @@ export function TradeContextFields({
               <button
                 key={o.v}
                 type="button"
+                aria-pressed={on}
                 onClick={() => onZone(on ? null : o.v)}
                 className={`${BTN} ${on ? ON[o.tone] : OFF}`}
               >

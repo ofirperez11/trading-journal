@@ -17,9 +17,9 @@ export function ExitsField({ value, onChange }: { value: ExitRow[]; onChange: (r
       <span className="field-label mb-0">יציאות</span>
       <div className="mt-1.5 space-y-2">
         {value.map((r, i) => (
-          <div key={i} className="flex items-end gap-2">
+          <div key={i} className="flex animate-[fade-up_.3s_var(--ease-out-expo)_both] items-end gap-2">
             <label className="flex-1">
-              <span className="stat-label">{multi ? `יציאה ${i + 1} — מחיר` : 'מחיר יציאה'}</span>
+              <span className="text-[12px] text-muted">{multi ? `יציאה ${i + 1} · מחיר` : 'מחיר יציאה'}</span>
               <input
                 type="number"
                 step="any"
@@ -30,7 +30,7 @@ export function ExitsField({ value, onChange }: { value: ExitRow[]; onChange: (r
               />
             </label>
             <label className="w-28">
-              <span className="stat-label">חוזים</span>
+              <span className="text-[12px] text-muted">חוזים</span>
               <input
                 type="number"
                 step="any"
@@ -45,7 +45,7 @@ export function ExitsField({ value, onChange }: { value: ExitRow[]; onChange: (r
               onClick={() => remove(i)}
               aria-label="הסר יציאה"
               disabled={!multi}
-              className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-loss/10 hover:text-loss disabled:invisible"
+              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-tag-red hover:text-loss disabled:invisible"
             >
               <X className="h-4 w-4" />
             </button>
@@ -55,7 +55,7 @@ export function ExitsField({ value, onChange }: { value: ExitRow[]; onChange: (r
       <button
         type="button"
         onClick={add}
-        className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+        className="mt-2 inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-accent transition-colors hover:bg-accent/[0.07]"
       >
         <Plus className="h-4 w-4" /> הוסף יציאה (Partial)
       </button>

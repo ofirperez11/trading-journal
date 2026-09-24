@@ -7,7 +7,7 @@
 export type TradeSide = 'LONG' | 'SHORT'
 export type TradeStatus = 'WIN' | 'LOSS' | 'WASH'
 export type MarketType = 'FUTURES' | 'STOCK' | 'OPTION' | 'CRYPTO' | 'FOREX'
-export type Liquidity = 'buyside' | 'sellside'
+export type Liquidity = 'buyside' | 'sellside' | 'none'
 export type Zone = 'premium' | 'deadzone' | 'discount'
 
 /** A single fill that makes up a trade. */

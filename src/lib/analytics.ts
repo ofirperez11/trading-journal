@@ -47,8 +47,8 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
-  byLiquidity: Bucket[] // win rate by liquidity taken (buyside / sellside / none)
-  byZone: Bucket[] // win rate by dealing-range zone (premium / deadzone / discount)
+  byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
+  byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   // day-level
   tradingDays: number
   winningDays: number
@@ -268,8 +268,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     .sort((a, b) => b.value - a.value)
 
   // Win-rate buckets by a categorical key (bar length = win rate %).
-  function winRateBuckets<K extends string>(key: (t: Trade) => K | null, order: { v: K; label: string }[]): Bucket[] {
-    const g = new Map<K, { count: number; wins: number; losses: number }>()
+  function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[]): Bucket[] {
+    const g = new Map<string, { count: number; wins: number; losses: number }>()
     for (const t of trades) {
       const k = key(t)
       if (!k) continue
@@ -288,16 +288,21 @@ export function computeAnalytics(trades: Trade[]): Analytics {
       })
   }
 
-  const byLiquidity = winRateBuckets((t) => t.liquidity ?? 'none', [
+  // Only trades that were actually tagged count (untagged → excluded), so a
+  // partly-tagged backtest isn't diluted by the trades nobody reviewed.
+  const byLiquidity = winRateBuckets((t) => t.liquidity, [
     { v: 'buyside', label: 'Buyside' },
     { v: 'sellside', label: 'Sellside' },
-    { v: 'none', label: 'ללא נזילות' },
+    { v: 'none', label: 'לא נלקחה' },
   ])
-  const byZone = winRateBuckets((t) => t.zone ?? 'none', [
-    { v: 'premium', label: 'Premium' },
-    { v: 'deadzone', label: 'Deadzone' },
-    { v: 'discount', label: 'Discount' },
-    { v: 'none', label: 'ללא אזור' },
+  // Win rate by side × zone (Long vs Short in each dealing-range zone).
+  const byZone = winRateBuckets((t) => (t.zone ? `${t.side}·${t.zone}` : null), [
+    { v: 'LONG·premium', label: 'Long · Premium' },
+    { v: 'LONG·deadzone', label: 'Long · Deadzone' },
+    { v: 'LONG·discount', label: 'Long · Discount' },
+    { v: 'SHORT·premium', label: 'Short · Premium' },
+    { v: 'SHORT·deadzone', label: 'Short · Deadzone' },
+    { v: 'SHORT·discount', label: 'Short · Discount' },
   ])
 
   return {

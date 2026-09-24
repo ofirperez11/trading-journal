@@ -14,7 +14,7 @@ const MONTHS_HE = [
 ]
 const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'רווח', LOSS: 'הפסד', WASH: 'Wash' }
 const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
-const LIQ_LABEL: Record<string, string> = { buyside: 'Buyside', sellside: 'Sellside' }
+const LIQ_LABEL: Record<string, string> = { buyside: 'Buyside', sellside: 'Sellside', none: 'לא נלקחה' }
 const ZONE_LABEL: Record<string, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
 const ZONE_CLS: Record<string, string> = { premium: 'text-loss', deadzone: 'text-muted', discount: 'text-win' }
 

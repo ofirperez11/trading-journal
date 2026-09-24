@@ -4,9 +4,10 @@ import type { Liquidity, Zone } from '../types'
 //  - which side's liquidity was taken (buyside / sellside)
 //  - dealing-range position at entry (premium / deadzone / discount)
 
-const LIQUIDITY: { v: Liquidity; label: string }[] = [
-  { v: 'buyside', label: 'Buyside' },
-  { v: 'sellside', label: 'Sellside' },
+const LIQUIDITY: { v: Liquidity; label: string; tone: 'accent' | 'muted' }[] = [
+  { v: 'buyside', label: 'Buyside', tone: 'accent' },
+  { v: 'sellside', label: 'Sellside', tone: 'accent' },
+  { v: 'none', label: 'לא נלקחה', tone: 'muted' },
 ]
 const ZONES: { v: Zone; label: string; tone: 'loss' | 'muted' | 'win' }[] = [
   { v: 'premium', label: 'Premium', tone: 'loss' },
@@ -46,7 +47,7 @@ export function TradeContextFields({
                 key={o.v}
                 type="button"
                 onClick={() => onLiquidity(on ? null : o.v)}
-                className={`${BTN} ${on ? ON.accent : OFF}`}
+                className={`${BTN} ${on ? ON[o.tone] : OFF}`}
               >
                 {o.label}
               </button>

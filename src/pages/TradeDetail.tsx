@@ -5,9 +5,10 @@ import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
-import type { Account, Zone } from '../types'
+import type { Account, Zone, Liquidity } from '../types'
 
 const ZONE_LABEL: Record<Zone, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
+const LIQ_LABEL: Record<Liquidity, string> = { buyside: 'Buyside', sellside: 'Sellside', none: 'לא נלקחה' }
 
 export default function TradeDetail() {
   const { id } = useParams()
@@ -77,7 +78,7 @@ export default function TradeDetail() {
     { label: 'יעד', value: trade.target != null ? String(trade.target) : '—' },
     { label: 'סטופ', value: trade.stoploss != null ? String(trade.stoploss) : '—' },
     ...(trade.lookback ? [{ label: 'Lookback', value: trade.lookback }] : []),
-    ...(trade.liquidity ? [{ label: 'נזילות', value: trade.liquidity === 'buyside' ? 'Buyside' : 'Sellside' }] : []),
+    ...(trade.liquidity ? [{ label: 'נזילות', value: LIQ_LABEL[trade.liquidity] }] : []),
     ...(trade.zone ? [{ label: 'אזור', value: ZONE_LABEL[trade.zone] }] : []),
     { label: 'R-Multiple', value: formatR(trade.r_multiple) },
   ]

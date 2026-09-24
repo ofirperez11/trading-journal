@@ -69,6 +69,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     lookback: trade?.lookback ?? '',
     liquidity: trade?.liquidity ?? null,
     zone: trade?.zone ?? null,
+    bias: trade?.bias ?? null,
     symbol: seedSymbol,
     side: (trade?.side ?? 'LONG') as TradeSide,
     entry: trade?.entry != null ? String(trade.entry) : '',
@@ -171,6 +172,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       lookback: form.lookback || null,
       liquidity: form.liquidity,
       zone: form.zone,
+      bias: form.bias,
       tags: trade?.tags ?? null,
       notes: form.notes.trim() || null,
       mood: trade?.mood ?? null,
@@ -302,8 +304,10 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
           <TradeContextFields
             liquidity={form.liquidity}
             zone={form.zone}
+            bias={form.bias}
             onLiquidity={(v) => set('liquidity', v)}
             onZone={(v) => set('zone', v)}
+            onBias={(v) => set('bias', v)}
           />
 
           {/* Auto-computed results */}

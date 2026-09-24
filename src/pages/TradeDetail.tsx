@@ -5,6 +5,7 @@ import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime } from '../lib/trades'
 import { SideIndicator } from '../components/SideIndicator'
+import { BIAS_LABEL } from '../lib/bias'
 import type { Account, Zone, Liquidity } from '../types'
 
 const ZONE_LABEL: Record<Zone, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
@@ -80,6 +81,7 @@ export default function TradeDetail() {
     ...(trade.lookback ? [{ label: 'Lookback', value: trade.lookback }] : []),
     ...(trade.liquidity ? [{ label: 'נזילות', value: LIQ_LABEL[trade.liquidity] }] : []),
     ...(trade.zone ? [{ label: 'אזור', value: ZONE_LABEL[trade.zone] }] : []),
+    ...(trade.bias ? [{ label: 'ביאס', value: BIAS_LABEL[trade.bias] }] : []),
     { label: 'R-Multiple', value: formatR(trade.r_multiple) },
   ]
 

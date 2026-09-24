@@ -5,6 +5,7 @@ import { useTrades } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol } from '../lib/trades'
 import { downloadCsv } from '../lib/csv'
+import { BIAS_LABEL } from '../lib/bias'
 import { SideIndicator } from '../components/SideIndicator'
 import type { TradeSide, TradeStatus } from '../types'
 
@@ -19,7 +20,7 @@ const ZONE_LABEL: Record<string, string> = { premium: 'Premium', deadzone: 'Dead
 const ZONE_CLS: Record<string, string> = { premium: 'text-loss', deadzone: 'text-muted', discount: 'text-win' }
 
 const GRID =
-  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_74px_78px_52px_90px] sm:justify-between'
+  'grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[92px_56px_60px_64px_72px_72px_64px_70px_74px_78px_132px_52px_90px] sm:justify-between'
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -109,7 +110,7 @@ export default function Trades() {
 
   // Export the currently-visible (filtered) rows to CSV.
   function exportCsv() {
-    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'R', 'P&L', 'הערות']
+    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'ביאס', 'R', 'P&L', 'הערות']
     const data = rows.map((t) => [
       `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`,
       t.date.slice(11, 16),
@@ -125,6 +126,7 @@ export default function Trades() {
       t.lookback ?? '',
       t.liquidity ?? '',
       t.zone ?? '',
+      t.bias ? BIAS_LABEL[t.bias] : '',
       t.r_multiple ?? '',
       t.return_amount,
       t.notes ?? '',
@@ -227,7 +229,7 @@ export default function Trades() {
       {/* Table */}
       <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="sm:min-w-[1020px]">
+          <div className="sm:min-w-[1160px]">
             <div className={`${GRID} border-b border-black/[0.08] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted`}>
               <span>תאריך</span>
               <span className="hidden sm:block">סימבול</span>
@@ -239,6 +241,7 @@ export default function Trades() {
               <span className="hidden text-left sm:block">Lookback</span>
               <span className="hidden text-left sm:block">נזילות</span>
               <span className="hidden text-left sm:block">אזור</span>
+              <span className="hidden text-left sm:block">ביאס</span>
               <span className="hidden text-left sm:block">R</span>
               <span className="text-left">P&amp;L</span>
             </div>
@@ -282,6 +285,9 @@ export default function Trades() {
                     </span>
                     <span className="hidden text-left sm:block" dir="ltr">
                       {t.zone ? <span className={ZONE_CLS[t.zone]}>{ZONE_LABEL[t.zone]}</span> : <span className="text-muted/40">—</span>}
+                    </span>
+                    <span className="hidden truncate text-left text-muted sm:block" title={t.bias ? BIAS_LABEL[t.bias] : undefined}>
+                      {t.bias ? BIAS_LABEL[t.bias] : <span className="text-muted/40">—</span>}
                     </span>
                     <span className="hidden text-left num sm:block">
                       {t.r_multiple != null ? formatR(t.r_multiple).replace('R', '') : '—'}

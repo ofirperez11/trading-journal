@@ -386,6 +386,19 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
+      {/* Win rate by HTF bias pair */}
+      <ChartCard
+        title="אחוז הצלחה לפי ביאס"
+        desc="אחוז ההצלחה לפי זוג ה-HTF (הביאס) שסומן בעסקה. נספרות רק עסקאות שסימנתם בהן ביאס. העמודה = אחוז ההצלחה, ולצידה מספר העסקאות — עוזר לזהות אילו זוגות ביאס הכי מדויקים ומאילו כדאי להיזהר."
+        hint="אחוז הצלחה"
+      >
+        {a.byBias.length ? (
+          <HBars items={a.byBias} format={(v) => `${v}%`} />
+        ) : (
+          <EmptyNote text="עדיין לא תויג שדה הביאס בעסקאות. סמנו ביאס בעסקאות כדי לראות את הפילוח." />
+        )}
+      </ChartCard>
+
       {/* Win rate by stop, per asset */}
       <div className="grid gap-4 lg:grid-cols-3">
         {['MNQ', 'MES', 'YM'].map((asset) => {

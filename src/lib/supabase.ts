@@ -18,8 +18,8 @@ if (!isSupabaseConfigured) {
 }
 
 export const supabase = createClient(
-  url ?? 'http://localhost:54321',
-  anonKey ?? 'public-anon-key-placeholder',
+  url || 'http://localhost:54321',
+  anonKey || 'public-anon-key-placeholder',
   {
     auth: {
       persistSession: true,

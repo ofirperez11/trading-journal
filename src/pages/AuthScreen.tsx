@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { TrendingUp, ShieldCheck, Sparkles } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { LogoWordmark } from '../components/Logo'
-import { EquityCurve, sampleEquity } from '../components/EquityCurve'
+import { sampleEquity } from '../components/EquityCurve'
+import { LineChart } from '../components/charts'
 
 const perks = [
-  { icon: TrendingUp, text: 'אנליטיקה ויזואלית שמראה איפה אתה מרוויח — ואיפה לא.' },
-  { icon: Sparkles, text: 'ניתוח עסקה מצילום מסך וייבוא אוטומטי מ-Tradovate.' },
-  { icon: ShieldCheck, text: 'הנתונים שלך פרטיים, מאובטחים, ומסונכרנים בין כל המכשירים.' },
+  { color: '#9065b0', icon: TrendingUp, text: 'אנליטיקה ויזואלית שמראה איפה אתה מרוויח — ואיפה לא.' },
+  { color: '#337ea9', icon: Sparkles, text: 'ניתוח עסקה מצילום מסך וייבוא אוטומטי מ-Tradovate.' },
+  { color: '#448361', icon: ShieldCheck, text: 'הנתונים שלך פרטיים, מאובטחים, ומסונכרנים בין כל המכשירים.' },
 ]
 
 export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
@@ -45,29 +46,27 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
   return (
     <div className="grid min-h-full lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
-        <div className="pointer-events-none absolute -right-20 top-10 h-72 w-72 rounded-full bg-accent/25 blur-3xl" />
-        <div className="pointer-events-none absolute -left-10 bottom-0 h-72 w-72 rounded-full bg-accent-2/15 blur-3xl" />
+      <div className="relative hidden flex-col justify-between overflow-hidden border-l border-border bg-surface p-12 lg:flex">
         <Link to="/" className="relative">
           <LogoWordmark />
         </Link>
         <div className="relative">
           <h2 className="text-3xl font-bold leading-tight">
-            כל עסקה היא <span className="text-gradient">נתון</span>.<br />כל נתון הוא הזדמנות להשתפר.
+            כל עסקה היא <span className="rounded-md bg-tag-yellow px-1.5">נתון</span>.<br />כל נתון הוא הזדמנות להשתפר.
           </h2>
           <div className="mt-8 space-y-4 text-right">
             {perks.map((p) => (
-              <div key={p.text} className="flex items-start justify-end gap-3">
-                <span className="text-muted">{p.text}</span>
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/[0.05] text-accent-2">
-                  <p.icon className="h-4 w-4" strokeWidth={1.75} />
+              <div key={p.text} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-bg shadow-[0_0_0_1px_#ededeb]" style={{ color: p.color }}>
+                  <p.icon className="h-4 w-4" strokeWidth={2} />
                 </span>
+                <span className="text-[#5f5e5b]">{p.text}</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="panel relative p-3">
-          <EquityCurve data={sampleEquity} height={120} draw />
+        <div className="panel relative p-4">
+          <LineChart data={sampleEquity} height={120} format={(n) => `$${Math.round(n).toLocaleString('en-US')}`} showXAxis={false} />
         </div>
       </div>
 
@@ -78,25 +77,25 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
             <LogoWordmark />
           </Link>
 
-          <div className="card">
-            <h1 className="text-2xl font-bold">{isSignup ? 'יצירת חשבון' : 'התחברות'}</h1>
+          <div>
+            <h1 className="page-title">{isSignup ? 'יצירת חשבון' : 'התחברות'}</h1>
             <p className="mt-1 text-sm text-muted">
               {isSignup ? 'כמה שניות ומתחילים לתעד.' : 'טוב לראות אותך שוב.'}
             </p>
 
             {isDemo && (
-              <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+              <div className="mt-4 rounded-md bg-tag-yellow px-3 py-2 text-[13px] text-tag-yellow-fg">
                 מצב הדגמה — Supabase עוד לא מחובר. אפשר להיכנס עם כל אימייל כדי לסייר באתר.
               </div>
             )}
 
             {confirmSent ? (
               <div className="mt-6 space-y-4 text-center">
-                <div className="rounded-xl border border-win/30 bg-win/10 px-4 py-4 text-sm leading-relaxed text-win">
+                <div className="rounded-md bg-tag-green px-4 py-4 text-sm leading-relaxed text-tag-green-fg">
                   שלחנו קישור אימות אל <span className="font-semibold" dir="ltr">{email}</span>.<br />
                   פתח את המייל, לחץ על הקישור כדי להפעיל את החשבון, ואז חזור להתחבר.
                 </div>
-                <Link to="/login" className="inline-block text-sm text-accent-2 hover:underline">
+                <Link to="/login" className="inline-block text-sm text-accent hover:underline">
                   חזרה להתחברות ←
                 </Link>
               </div>
@@ -146,12 +145,12 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
               </div>
 
               {error && (
-                <div className="rounded-xl border border-loss/30 bg-loss/10 px-4 py-2.5 text-sm text-loss">
+                <div className="rounded-md bg-tag-red px-3 py-2 text-sm text-tag-red-fg">
                   {error}
                 </div>
               )}
 
-              <button type="submit" className="btn-primary w-full py-3" disabled={submitting}>
+              <button type="submit" className="btn-primary w-full !py-2.5 !text-[15px]" disabled={submitting}>
                 {submitting ? 'רגע...' : isSignup ? 'צור חשבון' : 'התחבר'}
               </button>
             </form>
@@ -159,7 +158,7 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
 
             <p className="mt-6 text-center text-sm text-muted">
               {isSignup ? 'כבר יש לך חשבון?' : 'עוד אין לך חשבון?'}{' '}
-              <Link to={isSignup ? '/login' : '/signup'} className="font-semibold text-accent-2 hover:underline">
+              <Link to={isSignup ? '/login' : '/signup'} className="font-semibold text-accent hover:underline">
                 {isSignup ? 'התחבר' : 'הירשם'}
               </Link>
             </p>

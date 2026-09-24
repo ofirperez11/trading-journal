@@ -12,13 +12,13 @@ colors:
   hairline-soft: "#f1f1ef"
   ink: "#37352f"
   ink-secondary: "#5f5e5b"
-  muted: "#787774"
+  muted: "#6f6e69"
   faint: "#91918e"
   divider-slash: "#c7c6c3"
   accent: "#2383e2"
   accent-hover: "#1a73c8"
-  win: "#448361"
-  loss: "#c4554d"
+  win: "#27704b"
+  loss: "#b4432f"
   today: "#eb5757"
   cover-fallback: "#e9e8e4"
   page-green: "#448361"
@@ -45,7 +45,16 @@ colors:
   tag-pink-fg: "#4c2337"
   tag-red: "#ffe2dd"
   tag-red-fg: "#5d1715"
-  chart-neutral: "#d3d1cb"
+  chart-neutral: "#c9c7c1"
+  chart-win: "#2f855a"
+  chart-loss: "#c9503d"
+  chart-win-text: "#27704b"
+  chart-loss-text: "#b4432f"
+  chart-cat-1: "#2b7fd0"
+  chart-cat-2: "#d9730d"
+  chart-grid: "#efeeec"
+  chart-zero: "#dcdad5"
+  chart-axis: "#8a8984"
 
 typography:
   page-title:
@@ -128,3 +137,9 @@ The journal is a set of **pages** in a workspace. One font (Noto Sans Hebrew) ca
 - `lg` (≥1024px): sidebar is fixed; below it collapses into a drawer behind a menu button.
 - KPI cards: 2 columns on mobile, 4 on wide screens. Calendar hides per-day trade counts on mobile.
 - The page never scrolls horizontally; wide tables scroll inside their own block.
+
+## Charts
+
+- One kit in `src/components/charts`: `LineChart` (equity / underwater), `Columns` (diverging bars), `BarRows` (ranked horizontal bars, optional 0–100 domain with a 50% reference line), `SplitBar` (part-to-whole), plus `PriceMap` for a single trade.
+- Marks use `chart-win` / `chart-loss` (validated with the dataviz palette checker; sign and baseline direction carry the meaning too). Numbers use the darker `*-text` tones for 4.5:1 contrast.
+- Hairline solid grids, 2px lines, bars ≤24px with a 4px rounded data end. Charts draw/grow when scrolled into view and every chart has a hover tooltip.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Download, Loader2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react'
+import { PageTitle } from '../components/PageTitle'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { toDbRow } from '../lib/useTrades'
@@ -135,11 +136,20 @@ export default function ImportHistory() {
     }
   }
 
+  const header = (
+    <PageTitle
+      icon={Download}
+      color="#787774"
+      title="ייבוא היסטוריה"
+      subtitle="הבא את העסקאות והצילומים הקיימים שלך אל היומן בענן."
+    />
+  )
+
   if (!isSupabaseConfigured) {
     return (
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">ייבוא</h1>
-        <div className="card text-muted">ייבוא זמין רק כשמחוברים ל-Supabase.</div>
+      <div>
+        {header}
+        <div className="callout mt-6">ייבוא זמין רק כשמחוברים ל-Supabase.</div>
       </div>
     )
   }
@@ -147,74 +157,69 @@ export default function ImportHistory() {
   const busy = phase === 'loading' || phase === 'importing'
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">ייבוא היסטוריה</h1>
-        <p className="text-muted">הבא את העסקאות והצילומים הקיימים שלך אל היומן בענן.</p>
-      </div>
+    <div className="max-w-2xl">
+      {header}
 
-      {/* Trades */}
-      <div className="card space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
-            <Download className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="font-semibold">עסקאות</div>
-            <div className="text-sm text-muted">
-              היומן הפעיל: <span className="text-ink">{active.name}</span>
-              {cloudCount !== null && <> · בענן: <span className="num text-ink">{cloudCount}</span></>}
+      <div className="mt-6 flex flex-col gap-4">
+        {/* Step 1 · Trades */}
+        <section className="panel block-in flex flex-col gap-4 p-5" style={{ '--i': 1 } as React.CSSProperties}>
+          <div className="flex items-start gap-3">
+            <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface text-sm font-bold text-muted">1</span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[17px] font-semibold">עסקאות</h2>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted">
+                <span>
+                  ליומן: <span className="font-medium text-ink">{active.name}</span>
+                </span>
+                {cloudCount !== null && (
+                  <span className="tag">
+                    בענן: <span className="num font-semibold">{cloudCount}</span>
+                  </span>
+                )}
+              </div>
             </div>
+            {phase === 'done' && <span className="tag tag-green !font-semibold"><Check className="h-3.5 w-3.5" /> הושלם</span>}
           </div>
-        </div>
 
-        {cloudCount !== null && cloudCount > 0 && phase === 'idle' && (
-          <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm text-accent">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>כבר יש {cloudCount} עסקאות ביומן. ייבוא נוסף עלול ליצור כפילויות.</span>
+          {cloudCount !== null && cloudCount > 0 && phase === 'idle' && (
+            <div className="flex items-start gap-2 rounded-md bg-tag-yellow px-3 py-2.5 text-sm text-tag-yellow-fg">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>כבר יש {cloudCount} עסקאות ביומן. ייבוא נוסף עלול ליצור כפילויות.</span>
+            </div>
+          )}
+          {phase === 'importing' && <Progress label="מייבא עסקאות…" value={progress} total={total} />}
+          {phase === 'done' && <Success text={`הייבוא הושלם: ${total} עסקאות נוספו.`} />}
+          {error && <ErrorLine text={error} />}
+
+          <button onClick={runImport} disabled={busy} className="btn-ghost self-start">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {busy ? 'מייבא…' : 'ייבא עסקאות'}
+          </button>
+        </section>
+
+        {/* Step 2 · Screenshots */}
+        <section className="panel block-in flex flex-col gap-4 p-5" style={{ '--i': 2 } as React.CSSProperties}>
+          <div className="flex items-start gap-3">
+            <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface text-sm font-bold text-muted">2</span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[17px] font-semibold">צילומי מסך היסטוריים</h2>
+              <p className="mt-0.5 text-sm text-muted">מעלה את הצילומים לאחסון בענן ומקשר כל אחד לעסקה שלו.</p>
+            </div>
+            {imgPhase === 'done' && <span className="tag tag-green !font-semibold"><Check className="h-3.5 w-3.5" /> הושלם</span>}
           </div>
-        )}
-        {phase === 'importing' && (
-          <Progress label="מייבא עסקאות…" value={progress} total={total} />
-        )}
-        {phase === 'done' && <Success text={`הייבוא הושלם — ${total} עסקאות נוספו.`} />}
-        {error && <ErrorLine text={error} />}
 
-        <button onClick={runImport} disabled={busy} className="btn-ghost w-full justify-center">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {busy ? 'מייבא…' : 'ייבא עסקאות'}
-        </button>
-      </div>
+          {imgPhase === 'working' && <Progress label="מעלה צילומים…" value={imgProgress} total={imgTotal} />}
+          {imgPhase === 'done' && <Success text={`הועלו ${imgProgress} צילומים. רענן את העסקאות כדי לראות אותם.`} />}
+          {imgError && <ErrorLine text={imgError} />}
 
-      {/* Screenshots */}
-      <div className="card space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
-            <ImageIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="font-semibold">צילומי מסך היסטוריים</div>
-            <div className="text-sm text-muted">מעלה את הצילומים לאחסון בענן ומקשר לכל עסקה.</div>
-          </div>
-        </div>
-
-        {imgPhase === 'working' && <Progress label="מעלה צילומים…" value={imgProgress} total={imgTotal} />}
-        {imgPhase === 'done' && (
-          <Success text={`הועלו ${imgProgress} צילומים. רענן את העסקאות כדי לראות אותם.`} />
-        )}
-        {imgError && <ErrorLine text={imgError} />}
-
-        <button
-          onClick={migrateImages}
-          disabled={imgPhase === 'working'}
-          className="btn-primary w-full justify-center"
-        >
-          {imgPhase === 'working' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-          {imgPhase === 'working' ? 'מעלה…' : 'העלה צילומי מסך'}
-        </button>
-        <p className="text-xs text-muted">
-          יש להריץ פעם אחת מהמחשב שבו נמצאים הצילומים (localhost). ההעלאה עשויה לקחת כמה דקות.
-        </p>
+          <button onClick={migrateImages} disabled={imgPhase === 'working'} className="btn-primary self-start">
+            {imgPhase === 'working' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+            {imgPhase === 'working' ? 'מעלה…' : 'העלה צילומי מסך'}
+          </button>
+          <p className="text-[12px] text-faint">
+            יש להריץ פעם אחת מהמחשב שבו נמצאים הצילומים (localhost). ההעלאה עשויה לקחת כמה דקות.
+          </p>
+        </section>
       </div>
     </div>
   )
@@ -227,8 +232,8 @@ function Progress({ label, value, total }: { label: string; value: number; total
         <span className="text-muted">{label}</span>
         <span className="num">{value} / {total}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/[0.05]">
-        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${total ? (value / total) * 100 : 0}%` }} />
+      <div className="h-1.5 overflow-hidden rounded-full bg-[#efeeec]">
+        <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${total ? (value / total) * 100 : 0}%` }} />
       </div>
     </div>
   )
@@ -236,7 +241,7 @@ function Progress({ label, value, total }: { label: string; value: number; total
 
 function Success({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-win/30 bg-win/10 p-3 text-sm text-win">
+    <div className="flex items-center gap-2 rounded-md bg-tag-green px-3 py-2.5 text-sm text-tag-green-fg">
       <Check className="h-4 w-4" /> {text}
     </div>
   )
@@ -244,7 +249,7 @@ function Success({ text }: { text: string }) {
 
 function ErrorLine({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-loss/30 bg-loss/10 p-3 text-sm text-loss">
+    <div className="flex items-center gap-2 rounded-md bg-tag-red px-3 py-2.5 text-sm text-tag-red-fg">
       <AlertTriangle className="h-4 w-4" /> {text}
     </div>
   )

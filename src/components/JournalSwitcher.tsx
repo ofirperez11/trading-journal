@@ -32,7 +32,7 @@ export function JournalSwitcher() {
   }
 
   const iconBtn =
-    'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.06] hover:text-ink'
+    'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-[#e9e8e4] hover:text-ink'
 
   return (
     <div className="relative">
@@ -41,7 +41,7 @@ export function JournalSwitcher() {
         className="flex w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-2 py-1.5 text-sm transition-colors hover:bg-surface-2"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <BookMarked className="h-4 w-4 shrink-0 text-accent-2" />
+          <BookMarked className="h-4 w-4 shrink-0 text-muted" />
           <span className="truncate font-medium">{active.name}</span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -50,8 +50,8 @@ export function JournalSwitcher() {
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="panel absolute z-30 mt-2 w-full min-w-[15rem] origin-top animate-zoom-in overflow-hidden p-1 text-right">
-            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <div className="panel absolute z-30 mt-1 w-full min-w-[15rem] origin-top animate-zoom-in overflow-hidden p-1 text-right shadow-[0_12px_32px_-12px_rgba(15,15,15,.3)]">
+            <div className="px-2.5 py-1.5 text-xs font-semibold text-muted">
               היומנים שלי
             </div>
 
@@ -61,7 +61,7 @@ export function JournalSwitcher() {
                 return (
                   <div
                     key={j.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-loss/10 px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-2 rounded-md bg-tag-red px-3 py-2 text-sm"
                   >
                     <div className="flex items-center gap-1.5">
                       <button
@@ -69,7 +69,7 @@ export function JournalSwitcher() {
                           deleteJournal(j.id)
                           setConfirmDelete(null)
                         }}
-                        className="rounded-md bg-loss/20 px-2 py-1 text-xs font-semibold text-loss hover:bg-loss/30"
+                        className="rounded-md bg-loss px-2 py-1 text-xs font-semibold text-white hover:opacity-90"
                       >
                         מחק
                       </button>
@@ -85,7 +85,7 @@ export function JournalSwitcher() {
                 )
               }
               return (
-                <div key={j.id} className="group flex items-center gap-1 rounded-lg hover:bg-black/[0.04]">
+                <div key={j.id} className="group flex items-center gap-1 rounded-md hover:bg-surface">
                   <button
                     onClick={() => {
                       setActive(j.id)
@@ -102,7 +102,7 @@ export function JournalSwitcher() {
                         </span>
                       )}
                     </span>
-                    {j.id === active.id && <Check className="h-4 w-4 shrink-0 text-accent-2" />}
+                    {j.id === active.id && <Check className="h-4 w-4 shrink-0 text-accent" />}
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 pl-1.5">
                     <button onClick={() => setShareId(j.id)} className={iconBtn} aria-label={`שיתוף ${j.name}`} title="שיתוף">
@@ -111,7 +111,7 @@ export function JournalSwitcher() {
                     {canDelete(j) && (
                       <button
                         onClick={() => setConfirmDelete(j.id)}
-                        className={`${iconBtn} hover:bg-loss/10 hover:text-loss`}
+                        className={`${iconBtn} hover:!bg-tag-red hover:!text-loss`}
                         aria-label={`מחיקת ${j.name}`}
                         title="מחיקה"
                       >
@@ -123,7 +123,7 @@ export function JournalSwitcher() {
               )
             })}
 
-            <div className="my-1 border-t border-black/[0.08]" />
+            <div className="my-1 border-t border-border" />
             <form onSubmit={handleAdd} className="flex items-center gap-1.5 p-1">
               <input
                 value={name}

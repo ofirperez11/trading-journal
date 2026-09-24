@@ -105,17 +105,17 @@ export function EquityCurve({
 
       {hi != null && (
         <>
-          <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-black/20" style={{ left: `${hx}%` }} />
+          <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-[#cfcdc8]" style={{ left: `${hx}%` }} />
           <div
             className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-bg"
             style={{ left: `${hx}%`, top: `${hy}%`, background: color }}
           />
           <div
-            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-black/[0.12] bg-surface-2 px-2.5 py-1.5 text-center shadow-panel"
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-bg px-3 py-2 text-center shadow-[0_8px_24px_-8px_rgba(15,15,15,.25)]"
             style={{ left: `${Math.min(88, Math.max(12, hx))}%`, top: `${Math.max(14, hy - 6)}%` }}
           >
-            {labels?.[hi] && <div className="font-mono text-[10px] text-muted">{labels[hi]}</div>}
-            <div className="num text-sm font-bold" style={{ color }}>
+            {labels?.[hi] && <div className="text-[11px] text-muted">{labels[hi]}</div>}
+            <div className="num text-sm font-bold text-ink">
               {format(data[hi])}
             </div>
           </div>

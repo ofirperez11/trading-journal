@@ -38,25 +38,25 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex animate-zoom-in items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex animate-zoom-in items-center justify-center bg-black/30 p-4"
       onClick={onClose}
     >
-      <div className="panel w-full max-w-md p-5 text-right" onClick={(e) => e.stopPropagation()}>
+      <div className="panel w-full max-w-md p-5 text-right shadow-[0_24px_48px_-16px_rgba(15,15,15,.35)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold">שיתוף יומן</h2>
+            <h2 className="text-xl">שיתוף יומן</h2>
             <p className="mt-0.5 text-sm text-muted">{journal.name}</p>
           </div>
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.05] hover:text-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        <p className="mt-3 rounded-md bg-tag-yellow px-3 py-2 text-[13px] text-tag-yellow-fg">
           השיתוף ייכנס לתוקף כשנחבר את Supabase. בינתיים זו תצוגה מקדימה של מי שתזמין ובאיזו הרשאה.
         </p>
 
@@ -84,14 +84,14 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
             <option value="viewer">צפייה</option>
             <option value="editor">עריכה</option>
           </select>
-          <button type="submit" className="btn-primary shrink-0 px-3 py-3" aria-label="שתף">
+          <button type="submit" className="btn-primary h-[38px] shrink-0 !px-3" aria-label="שתף">
             <UserPlus className="h-4 w-4" />
           </button>
         </form>
         {error && <p className="mt-2 text-sm text-loss">{error}</p>}
 
         <div className="mt-5">
-          <div className="stat-label">משותף עם</div>
+          <div className="text-[13px] font-semibold text-muted">משותף עם</div>
           {shares.length === 0 ? (
             <p className="mt-3 text-sm text-muted">היומן עדיין לא משותף עם אף אחד.</p>
           ) : (
@@ -99,17 +99,17 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
               {shares.map((s) => (
                 <li
                   key={s.email}
-                  className="flex items-center justify-between rounded-xl border border-black/[0.08] bg-black/[0.02] px-3 py-2"
+                  className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-surface"
                 >
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => unshareJournal(journalId, s.email)}
                       aria-label={`הסר שיתוף עם ${s.email}`}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-loss/10 hover:text-loss"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-tag-red hover:text-loss"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                    <span className="pill">{roleLabel[s.role]}</span>
+                    <span className={`tag ${s.role === 'editor' ? 'tag-blue' : ''}`}>{roleLabel[s.role]}</span>
                   </div>
                   <span dir="ltr" className="truncate text-sm text-ink">
                     {s.email}

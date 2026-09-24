@@ -35,8 +35,8 @@ export default function TradeForm() {
   }
   if (editing && !trade) {
     return (
-      <div className="card text-center text-muted">
-        העסקה לא נמצאה. <Link to="/app/trades" className="text-accent-2 hover:underline">חזרה</Link>
+      <div className="callout">
+        העסקה לא נמצאה. <Link to="/app/trades" className="text-accent hover:underline">חזרה</Link>
       </div>
     )
   }

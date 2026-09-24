@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Check, Loader2, LogOut, User, ShieldCheck, Download } from 'lucide-react'
+import { Check, Loader2, LogOut, Download, Settings as SettingsIcon } from 'lucide-react'
+import { PageTitle } from '../components/PageTitle'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -58,83 +59,77 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const field = 'flex flex-col gap-1.5'
+  const row = 'grid grid-cols-1 items-center gap-2 border-b border-[#f1f0ed] py-3.5 last:border-0 sm:grid-cols-[180px_minmax(0,1fr)]'
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">הגדרות</h1>
-        <p className="text-muted">פרופיל וחשבון.</p>
-      </div>
+    <div className="max-w-2xl">
+      <PageTitle icon={SettingsIcon} color="#787774" title="הגדרות" subtitle="פרופיל, גיבוי וחשבון." />
 
       {/* Profile */}
-      <div className="card space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-lg font-semibold uppercase text-white">
-            {(name || 'T').slice(0, 1)}
+      <section className="block-in mt-8" style={{ '--i': 1 } as React.CSSProperties}>
+        <h2 className="mb-1 text-[17px] font-semibold">פרופיל</h2>
+        <div className="flex flex-col">
+          <div className={row}>
+            <span className="text-sm text-muted">תמונה</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink text-base font-bold text-white">
+              {(name || 'T').slice(0, 1)}
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <User className="h-4 w-4 text-muted" /> פרופיל
-          </div>
+          <label className={row}>
+            <span className="text-sm text-muted">שם תצוגה</span>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="איך לקרוא לך?" />
+          </label>
+          <label className={row}>
+            <span className="text-sm text-muted">אימייל</span>
+            <input className="input bg-surface text-muted" dir="ltr" value={user?.email ?? ''} readOnly />
+          </label>
         </div>
-
-        <label className={field}>
-          <span className="field-label mb-0">שם תצוגה</span>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="איך לקרוא לך?" />
-        </label>
-        <label className={field}>
-          <span className="field-label mb-0">אימייל</span>
-          <input className="input opacity-60" dir="ltr" value={user?.email ?? ''} readOnly />
-        </label>
-
-        {error && <p className="text-sm text-loss">{error}</p>}
-
-        <div className="flex items-center gap-3">
+        {error && <p className="mt-2 rounded-md bg-tag-red px-3 py-2 text-sm text-tag-red-fg">{error}</p>}
+        <div className="mt-3 flex items-center gap-3">
           <button onClick={saveProfile} disabled={saving || !name.trim()} className="btn-primary">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             שמור
           </button>
-          {saved && <span className="text-sm text-win">נשמר ✓</span>}
+          {saved && (
+            <span className="flex animate-[fade-up_.3s_ease_both] items-center gap-1 text-sm font-medium text-win">
+              <Check className="h-4 w-4" /> נשמר
+            </span>
+          )}
         </div>
-      </div>
+      </section>
 
       {/* Backup */}
-      <div className="card space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Download className="h-4 w-4 text-muted" /> גיבוי נתונים
-        </div>
-        <p className="text-sm text-muted">
-          הורד קובץ עם כל העסקאות, היומנים והרשומות שלך — נקודת שחזור מקומית. מומלץ מדי פעם.
-          (בנוסף מתבצע גיבוי אוטומטי יומי בענן.)
+      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 2 } as React.CSSProperties}>
+        <h2 className="mb-1 text-[17px] font-semibold">גיבוי נתונים</h2>
+        <p className="text-sm leading-relaxed text-muted">
+          הורד קובץ עם כל העסקאות, היומנים והרשומות שלך: נקודת שחזור מקומית. מומלץ לעשות את זה מדי פעם.
+          בנוסף מתבצע גיבוי אוטומטי יומי בענן.
         </p>
-        <button onClick={exportBackup} disabled={exporting} className="btn-ghost">
+        <button onClick={exportBackup} disabled={exporting || !isSupabaseConfigured} className="btn-ghost mt-3">
           {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           ייצוא גיבוי (JSON)
         </button>
-      </div>
+      </section>
 
       {/* Account */}
-      <div className="card space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <ShieldCheck className="h-4 w-4 text-muted" /> חשבון
+      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 3 } as React.CSSProperties}>
+        <h2 className="mb-1 text-[17px] font-semibold">חשבון</h2>
+        <div className="flex flex-col">
+          <div className={row}>
+            <span className="text-sm text-muted">סטטוס</span>
+            <span>
+              <span className={`tag ${isDemo ? 'tag-yellow' : 'tag-green'}`}>{isDemo ? 'מצב הדגמה' : 'מחובר לענן'}</span>
+            </span>
+          </div>
+          <div className={row}>
+            <span className="text-sm text-muted">יומנים</span>
+            <span className="num text-sm font-semibold">{journals.length}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted">סטטוס</span>
-          <span className={isDemo ? 'text-accent' : 'text-win'}>{isDemo ? 'מצב הדגמה' : 'מחובר לענן'}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted">יומנים</span>
-          <span className="num text-ink">{journals.length}</span>
-        </div>
-        <div className="border-t border-black/[0.08] pt-4">
-          <button
-            onClick={signOut}
-            className="btn inline-flex border border-loss/40 bg-loss/[0.06] text-loss hover:bg-loss/10"
-          >
-            <LogOut className="h-4 w-4" /> התנתק
-          </button>
-        </div>
-      </div>
+        <button onClick={signOut} className="btn mt-3 border border-[#f3c9c1] text-loss hover:bg-tag-red">
+          <LogOut className="h-4 w-4" /> התנתק
+        </button>
+      </section>
     </div>
   )
 }

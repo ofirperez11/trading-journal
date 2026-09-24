@@ -20,7 +20,7 @@ export function LogoWordmark({ size = 30 }: { size?: number }) {
   return (
     <div className="flex items-center gap-2.5">
       <Logo size={size} />
-      <span className="font-mono text-sm font-semibold uppercase tracking-[0.18em] text-ink">
+      <span className="text-[15px] font-bold text-ink">
         Trading&nbsp;Journal
       </span>
     </div>

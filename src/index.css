@@ -139,6 +139,15 @@
   }
 }
 
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(600%);
+  }
+}
+
 @keyframes peek {
   from {
     transform: translateX(-100%);

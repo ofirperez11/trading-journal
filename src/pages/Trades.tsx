@@ -46,7 +46,7 @@ export default function Trades() {
   const statusSel = useMemo(() => new Set(csv(searchParams.get('status')) as TradeStatus[]), [searchParams])
   const sideSel = useMemo(() => new Set(csv(searchParams.get('side')) as TradeSide[]), [searchParams])
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
-  const filterYear = searchParams.get('year')
+  const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -72,10 +72,13 @@ export default function Trades() {
     () => [...new Set(trades.map((t) => t.date.slice(0, 4)))].sort().reverse(),
     [trades],
   )
-  const activeYear = filterYear && years.includes(filterYear) ? filterYear : years[0]
-  const monthsForYear = months.filter((m) => m.startsWith(activeYear ?? ''))
+  // Months to show in the facet: those of the selected years, else the latest year.
+  const monthsForYear = yearSel.size
+    ? months.filter((m) => yearSel.has(m.slice(0, 4)))
+    : months.filter((m) => m.startsWith(years[0] ?? ''))
+  const multiYear = new Set(monthsForYear.map((m) => m.slice(0, 4))).size > 1
 
-  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size
+  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size
   const qs = searchParams.toString() // current filters, for the trade's "back" target
 
   const rows = useMemo(() => {
@@ -84,6 +87,7 @@ export default function Trades() {
         if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
         if (statusSel.size && !statusSel.has(t.status)) return false
         if (sideSel.size && !sideSel.has(t.side)) return false
+        if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
         if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
         if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
         return true
@@ -91,13 +95,14 @@ export default function Trades() {
       // Newest first. Sort on the raw string (tz-independent) so the order
       // matches the displayed date exactly.
       .sort((a, b) => b.date.localeCompare(a.date))
-  }, [trades, symbolSel, statusSel, sideSel, monthSel, query])
+  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, query])
 
   function clearAll() {
     setParams((p) => {
       p.delete('sym')
       p.delete('status')
       p.delete('side')
+      p.delete('years')
       p.delete('months')
     })
   }
@@ -200,13 +205,14 @@ export default function Trades() {
           </FacetGroup>
           <FacetGroup label="שנה">
             {years.map((y) => (
-              <Chip key={y} active={activeYear === y} onClick={() => setParams((p) => p.set('year', y))}>{y}</Chip>
+              <Chip key={y} active={yearSel.has(y)} onClick={() => toggleParam('years', y)}>{y}</Chip>
             ))}
           </FacetGroup>
           <FacetGroup label="חודש">
             {monthsForYear.map((m) => (
               <Chip key={m} active={monthSel.has(m)} onClick={() => toggleParam('months', m)}>
                 {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
+                {multiYear ? ` ${m.slice(2, 4)}` : ''}
               </Chip>
             ))}
           </FacetGroup>

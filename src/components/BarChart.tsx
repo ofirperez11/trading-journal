@@ -7,8 +7,8 @@ const textCls: Record<string, string> = {
   accent: 'text-accent',
 }
 const baseColor: Record<string, string> = {
-  win: '68,131,97',
-  loss: '196,85,77',
+  win: '47,133,90',
+  loss: '201,80,61',
   accent: '51,126,169',
 }
 

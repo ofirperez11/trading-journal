@@ -23,7 +23,7 @@ interface Props {
 export function EquityCurve({
   data,
   draw = false,
-  color = '#448361',
+  color = '#2f855a',
   format = (n) => String(Math.round(n)),
   labels,
   className,

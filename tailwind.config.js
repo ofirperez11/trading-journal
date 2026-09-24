@@ -11,13 +11,13 @@ export default {
         'surface-2': '#fbfbfa', // hover fill
         border: '#ededeb', // hairline
         ink: '#37352f',
-        muted: '#787774',
+        muted: '#6f6e69',
         faint: '#91918e',
         accent: '#2383e2', // links, primary action
         'accent-2': '#1a73c8',
         // Trading semantics — muted green / red that read well on white.
-        win: '#448361',
-        loss: '#c4554d',
+        win: '#27704b', // profit text (chart marks use #2f855a)
+        loss: '#b4432f', // loss text (chart marks use #c9503d)
         tile: '#37352f',
         // Tag (select-property) colours: bg + text pairs.
         tag: {

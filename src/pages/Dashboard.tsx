@@ -165,7 +165,7 @@ function PageHeader({
   return (
     <header>
       <div className="block-in -mt-[72px] mb-4 flex h-[78px] w-[78px] items-center justify-center rounded-[14px] bg-bg shadow-[0_0_0_1px_#ededeb,0_6px_16px_-8px_rgba(15,15,15,.25)]">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#448361" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2f855a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M3 3v18h18" />
           <path d="M7 15l4-4 3 3 6-7" />
         </svg>
@@ -348,9 +348,9 @@ function PerformanceRadar({ trades, stats }: { trades: Trade[]; stats: ReturnTyp
         </g>
         <polygon
           points={poly((i) => Math.max(axes[i].v, 0.04))}
-          fill="#448361"
+          fill="#2f855a"
           fillOpacity={0.2}
-          stroke="#448361"
+          stroke="#2f855a"
           strokeWidth={2}
           strokeLinejoin="round"
           className="origin-center [transform-box:fill-box]"

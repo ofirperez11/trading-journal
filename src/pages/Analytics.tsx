@@ -431,7 +431,7 @@ export default function Analytics() {
       {header}
 
       {/* ---- 1. Where you stand ---- */}
-      <section className="mt-8 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <section className="mt-8 grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
         <div className="block-in flex flex-col gap-2" style={{ '--i': 1 } as React.CSSProperties}>
           <div className="text-[13px] font-medium text-muted">רווח נקי · {currentLabel}</div>
           <div

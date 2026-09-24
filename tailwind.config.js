@@ -4,29 +4,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Apple-inspired light palette — white/parchment canvas, near-black ink,
-        // a single Action Blue accent. (Win/loss kept for trading semantics.)
-        bg: '#ffffff', // canvas
-        surface: '#f5f5f7', // parchment
-        'surface-2': '#fafafc', // pearl
-        border: '#d2d2d7', // hairline
-        ink: '#1d1d1f',
-        muted: '#6e6e73',
-        // The single interactive color.
-        accent: '#0066cc',
-        'accent-2': '#0071e3',
-        // Trading semantics (Apple system green / red).
-        win: '#34c759',
-        loss: '#ff3b30',
-        // Near-black tile surface for the rare dark section.
-        tile: '#1d1d1f',
+        // Workspace palette (Notion-style document UI): warm-white canvas,
+        // warm near-black ink, soft hairlines, one blue for actions.
+        bg: '#ffffff', // page canvas
+        surface: '#f7f7f5', // sidebar / subtle fills
+        'surface-2': '#fbfbfa', // hover fill
+        border: '#ededeb', // hairline
+        ink: '#37352f',
+        muted: '#787774',
+        faint: '#91918e',
+        accent: '#2383e2', // links, primary action
+        'accent-2': '#1a73c8',
+        // Trading semantics — muted green / red that read well on white.
+        win: '#448361',
+        loss: '#c4554d',
+        tile: '#37352f',
+        // Tag (select-property) colours: bg + text pairs.
+        tag: {
+          gray: '#e3e2e0', 'gray-fg': '#32302c',
+          brown: '#eee0da', 'brown-fg': '#442a1e',
+          orange: '#fadec9', 'orange-fg': '#49290e',
+          yellow: '#fdecc8', 'yellow-fg': '#402c1b',
+          green: '#dbeddb', 'green-fg': '#1c3829',
+          blue: '#d3e5ef', 'blue-fg': '#183347',
+          purple: '#e8deee', 'purple-fg': '#412454',
+          pink: '#f5e0e9', 'pink-fg': '#4c2337',
+          red: '#ffe2dd', 'red-fg': '#5d1715',
+        },
       },
       fontFamily: {
-        // SF Pro on Apple devices (incl. Hebrew) via system-ui; Heebo as the
-        // open fallback elsewhere.
-        display: ['system-ui', '-apple-system', '"Heebo"', '"Segoe UI"', 'sans-serif'],
-        sans: ['system-ui', '-apple-system', '"Heebo"', '"Segoe UI"', 'sans-serif'],
-        mono: ['system-ui', '-apple-system', '"Heebo"', 'sans-serif'],
+        display: ['"Noto Sans Hebrew"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['"Noto Sans Hebrew"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       borderRadius: {
         '4xl': '2rem',

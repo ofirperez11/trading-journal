@@ -1,9 +1,9 @@
 import type { Bucket } from '../lib/analytics'
 
 const barColor: Record<string, string> = {
-  win: '#34c759',
-  loss: '#ff3b30',
-  accent: '#0066cc',
+  win: '#448361',
+  loss: '#c4554d',
+  accent: '#337ea9',
 }
 const textCls: Record<string, string> = {
   win: 'text-win',

@@ -120,7 +120,7 @@ export default function Calendar() {
   if (loading) return <div className="flex h-64 items-center justify-center text-muted">טוען…</div>
 
   return (
-    <div className="[margin-inline:calc(50%-50vw)] px-4 sm:px-8">
+    <div>
       <div className="mb-5 flex items-center justify-between">
         <h1 className="text-2xl font-bold">לוח שנה</h1>
       </div>

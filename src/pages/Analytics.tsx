@@ -275,12 +275,12 @@ export default function Analytics() {
   ]
 
   const winLossSegments = [
-    { label: 'זכיות', value: a.wins, color: '#3FCF8E' },
-    { label: 'הפסדים', value: a.losses, color: '#F26D6D' },
-    { label: 'תיקו', value: a.washes, color: '#6B7280' },
+    { label: 'זכיות', value: a.wins, color: '#448361' },
+    { label: 'הפסדים', value: a.losses, color: '#c4554d' },
+    { label: 'תיקו', value: a.washes, color: '#d3d1cb' },
   ]
 
-  const STOP_COLORS = ['#0066cc', '#5ac8fa', '#c7c7cc']
+  const STOP_COLORS = ['#337ea9', '#9065b0', '#d3d1cb']
   const STOP_DESC: Record<string, string> = {
     MNQ: 'פילוח עסקאות ה-MNQ לפי גודל הסטופ שהשתמשת בו — 15 נקודות מול 20 נקודות. כל פלח בעוגה מראה כמה עסקאות נסגרו עם אותו סטופ, ולצידו אחוז ההצלחה של אותו סטופ. כך תוכל לראות עם איזה גודל סטופ אתה רווחי יותר. במרכז — אחוז ההצלחה הכולל ב-MNQ.',
     MES: 'פילוח עסקאות ה-MES לפי גודל הסטופ — 3 נקודות מול 4 נקודות. כל פלח מראה כמה עסקאות נסגרו עם אותו סטופ ואת אחוז ההצלחה שלו, כדי לזהות איזה גודל סטופ עובד לך טוב יותר. במרכז — אחוז ההצלחה הכולל ב-MES.',
@@ -429,7 +429,7 @@ export default function Analytics() {
           desc="כמה החשבון נמצא מתחת לשיא הגבוה ביותר שלו, בכל נקודת זמן. זהו מדד הסיכון/כאב: ככל שהגרף רדוד יותר — ניהול הסיכון טוב יותר. הערך המקסימלי הוא הירידה הגדולה ביותר שחווית."
           hint={`מקס׳ ${formatMoney(-a.maxDrawdown)}`}
         >
-          <EquityCurve data={a.drawdown} labels={a.equityLabels} format={(n) => formatMoney(n)} height={150} color="#F26D6D" draw />
+          <EquityCurve data={a.drawdown} labels={a.equityLabels} format={(n) => formatMoney(n)} height={150} color="#c4554d" draw />
         </ChartCard>
 
         <ChartCard

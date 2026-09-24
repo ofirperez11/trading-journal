@@ -38,7 +38,7 @@ export function JournalSwitcher() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-black/[0.08] bg-black/[0.03] px-3 py-2 text-sm transition-colors hover:bg-black/[0.05]"
+        className="flex w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-2 py-1.5 text-sm transition-colors hover:bg-surface-2"
       >
         <span className="flex min-w-0 items-center gap-2">
           <BookMarked className="h-4 w-4 shrink-0 text-accent-2" />

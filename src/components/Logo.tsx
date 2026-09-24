@@ -2,7 +2,7 @@
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden>
-      <rect width="64" height="64" rx="15" fill="#0066cc" />
+      <rect width="64" height="64" rx="15" fill="#37352f" />
       <polyline
         points="14,42 26,30 36,38 50,18"
         fill="none"

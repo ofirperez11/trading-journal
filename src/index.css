@@ -13,26 +13,28 @@
   #root {
     height: 100%;
   }
+  /* The off-canvas mobile drawer must not widen the page. */
+  html,
   body {
-    @apply text-ink antialiased;
-    background-color: #f5f5f7; /* parchment canvas */
-    font-family: system-ui, -apple-system, 'Heebo', 'Segoe UI', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    letter-spacing: -0.01em;
+    overflow-x: clip;
   }
-  /* Headlines: SF Pro Display cadence — weight 600, "Apple tight" tracking. */
+  body {
+    @apply bg-bg text-ink antialiased;
+    font-family: 'Noto Sans Hebrew', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
   h1,
   h2 {
-    @apply font-display font-semibold;
-    letter-spacing: -0.022em;
+    @apply font-display font-bold;
+    letter-spacing: -0.01em;
   }
   ::selection {
     @apply bg-accent/20 text-ink;
   }
   :focus-visible {
-    outline: 2px solid #0071e3;
+    outline: 2px solid #2383e2;
     outline-offset: 2px;
-    border-radius: 8px;
+    border-radius: 6px;
   }
   ::-webkit-scrollbar {
     width: 10px;
@@ -40,7 +42,7 @@
   }
   ::-webkit-scrollbar-thumb {
     border-radius: 9999px;
-    background: #c7c7cc;
+    background: #d3d1cb;
   }
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -54,20 +56,20 @@
 }
 
 @layer components {
-  /* Card — white surface, 1px hairline, no shadow (Apple elevation = surface + hairline). */
+  /* Block — white surface with a soft hairline, like a database/callout block. */
   .panel {
-    @apply rounded-[18px] border border-black/[0.08] bg-white;
+    @apply rounded-[10px] border border-border bg-bg;
   }
   .card {
-    @apply panel p-6;
+    @apply panel p-5;
   }
 
   /* Labels + numeric readouts. */
   .stat-label {
-    @apply text-[13px] font-medium text-muted;
+    @apply text-[13px] text-muted;
   }
   .stat-value {
-    @apply mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink;
+    @apply mt-1 text-2xl font-bold tabular-nums text-ink;
     direction: ltr;
     text-align: right;
   }
@@ -77,31 +79,56 @@
     unicode-bidi: isolate;
   }
 
-  /* Buttons — the signature Apple blue pill; press = scale(0.96). */
+  /* Buttons — compact, 6px radius; press = scale(0.97). */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-medium transition-all duration-150 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primary {
     @apply btn bg-accent text-white hover:bg-accent-2;
   }
   .btn-ghost {
-    @apply btn border border-black/[0.12] bg-white text-ink hover:bg-black/[0.03];
+    @apply btn border border-border bg-bg text-ink hover:bg-surface;
   }
   .btn-secondary {
-    @apply btn border border-accent/50 bg-white text-accent hover:bg-accent/[0.06];
+    @apply btn text-accent hover:bg-accent/[0.08];
   }
 
   /* Form fields */
   .field-label {
-    @apply mb-1.5 block text-[13px] font-medium text-muted;
+    @apply mb-1 block text-[13px] text-muted;
   }
   .input {
-    @apply w-full rounded-xl border border-black/[0.12] bg-white px-4 py-2.5 text-[15px] text-ink placeholder:text-muted/70 outline-none transition-all focus:border-accent focus:ring-4 focus:ring-accent/15;
+    @apply w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-ink outline-none transition-shadow placeholder:text-faint focus:border-accent/60 focus:ring-[3px] focus:ring-accent/15;
   }
 
-  /* Subtle capsule tag */
-  .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-surface px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted;
+  /* Tag — a select-property chip. Colour with .tag-green / .tag-red etc. */
+  .pill,
+  .tag {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-px text-[12px] font-normal leading-5 bg-tag-gray text-tag-gray-fg;
+  }
+  .tag-green { @apply bg-tag-green text-tag-green-fg; }
+  .tag-red { @apply bg-tag-red text-tag-red-fg; }
+  .tag-blue { @apply bg-tag-blue text-tag-blue-fg; }
+  .tag-purple { @apply bg-tag-purple text-tag-purple-fg; }
+  .tag-yellow { @apply bg-tag-yellow text-tag-yellow-fg; }
+  .tag-orange { @apply bg-tag-orange text-tag-orange-fg; }
+  .tag-pink { @apply bg-tag-pink text-tag-pink-fg; }
+  .tag-brown { @apply bg-tag-brown text-tag-brown-fg; }
+
+  /* Callout — grey block with a leading icon. */
+  .callout {
+    @apply flex gap-3 rounded-lg bg-[#f1f1ef] px-4 py-3.5 text-[15px] leading-relaxed;
+  }
+
+  /* Page title block used at the top of every page. */
+  .page-title {
+    @apply text-[32px] font-bold leading-tight sm:text-[40px];
+  }
+
+  /* Staggered block entrance. Set --i on the element for the delay. */
+  .block-in {
+    animation: fade-up 0.55s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
   }
 
   .text-gradient {
@@ -109,6 +136,17 @@
   }
   .glow-amber {
     text-shadow: none;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

@@ -4,7 +4,7 @@ export default function Summary() {
   // Break out of the app's centered max-width container so the table can use
   // the full page width.
   return (
-    <div className="[margin-inline:calc(50%-50vw)] px-4 sm:px-8">
+    <div>
       <div className="space-y-5">
         <div>
           <h1 className="text-2xl font-bold">סיכום שבועי</h1>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   BookOpen,
@@ -12,24 +12,52 @@ import {
   LogOut,
   Menu,
   X,
+  Plus,
+  ImagePlus,
+  type LucideIcon,
 } from 'lucide-react'
-import { Logo } from './Logo'
 import { JournalSwitcher } from './JournalSwitcher'
+import { DashboardCover } from './DashboardCover'
 import { useAuth } from '../lib/auth'
+import { useJournals } from '../lib/journals'
 
-const nav = [
-  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/app/trades', label: 'Trades', icon: BookOpen },
-  { to: '/app/analytics', label: 'Analytics', icon: TrendingUp },
-  { to: '/app/summary', label: 'Summary', icon: Table2 },
-  { to: '/app/calendar', label: 'Calendar', icon: Calendar },
-  { to: '/app/journal', label: 'Journal', icon: PenLine },
-  { to: '/app/import', label: 'Import', icon: Download },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  color: string
+  end?: boolean
+}
+
+// Journal pages — each gets its own colour, like page icons in a workspace.
+const pages: NavItem[] = [
+  { to: '/app', label: 'דשבורד', icon: LayoutDashboard, color: '#448361', end: true },
+  { to: '/app/trades', label: 'עסקאות', icon: BookOpen, color: '#337ea9' },
+  { to: '/app/analytics', label: 'אנליטיקה', icon: TrendingUp, color: '#9065b0' },
+  { to: '/app/summary', label: 'סיכום', icon: Table2, color: '#d9730d' },
+  { to: '/app/calendar', label: 'לוח שנה', icon: Calendar, color: '#cb912f' },
+  { to: '/app/journal', label: 'יומן אישי', icon: PenLine, color: '#c14c8a' },
 ]
+const utility: NavItem[] = [
+  { to: '/app/import', label: 'ייבוא', icon: Download, color: '#787774' },
+  { to: '/app/settings', label: 'הגדרות', icon: Settings, color: '#787774' },
+]
+
+/** Breadcrumb label for the current route. */
+function pageLabel(path: string): string {
+  if (path === '/app/trades/new') return 'עסקה חדשה'
+  if (path === '/app/trades/from-image') return 'עסקה מצילום מסך'
+  if (/^\/app\/trades\/[^/]+\/edit$/.test(path)) return 'עריכת עסקה'
+  if (/^\/app\/trades\/[^/]+$/.test(path)) return 'עסקה'
+  const hit = [...pages, ...utility]
+    .filter((p) => (p.end ? path === p.to : path.startsWith(p.to)))
+    .sort((a, b) => b.to.length - a.to.length)[0]
+  return hit?.label ?? ''
+}
 
 export default function AppShell() {
   const { user, signOut, isDemo } = useAuth()
+  const { active } = useJournals()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
 
@@ -45,106 +73,121 @@ export default function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [navOpen])
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-      isActive
-        ? 'border border-black/[0.08] bg-gradient-to-l from-accent/20 to-accent-2/10 text-ink'
-        : 'text-muted hover:bg-black/[0.04] hover:text-ink'
+  const itemClass = ({ isActive }: { isActive: boolean }) =>
+    `flex h-[30px] items-center gap-2 rounded-md px-2 text-sm transition-colors ${
+      isActive ? 'bg-black/[0.055] font-semibold text-ink' : 'text-[#5f5e5b] hover:bg-black/[0.04]'
     }`
 
-  return (
-    <div className="min-h-full">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-black/[0.08] bg-bg/80 px-4 py-3 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setNavOpen(true)}
-            aria-label="פתח תפריט"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.12] bg-black/[0.03] text-ink transition-colors hover:bg-black/[0.06]"
-          >
-            <Menu className="h-5 w-5" strokeWidth={1.75} />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="hidden font-mono text-sm font-semibold uppercase tracking-[0.16em] text-ink sm:block">
-              Trading&nbsp;Journal
-            </span>
-          </div>
-        </div>
-        <div className="w-44 sm:w-56">
-          <JournalSwitcher />
-        </div>
-      </header>
+  const sidebar = (
+    <div className="flex h-full flex-col gap-0.5 px-2 py-2.5">
+      <div className="flex items-center gap-2 px-2 pb-2.5 pt-1.5">
+        <span className="flex h-6 w-6 items-center justify-center rounded-[5px] bg-ink text-xs font-bold text-white">
+          {name.slice(0, 1)}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
+        <button
+          onClick={() => setNavOpen(false)}
+          aria-label="סגור תפריט"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-black/[0.05] lg:hidden"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
-      {/* Drawer backdrop */}
+      <Link to="/app/trades/new" className={itemClass({ isActive: false })}>
+        <Plus className="h-4 w-4" strokeWidth={2} />
+        עסקה חדשה
+      </Link>
+      <Link to="/app/trades/from-image" className={itemClass({ isActive: false })}>
+        <ImagePlus className="h-4 w-4" strokeWidth={2} />
+        עסקה מצילום מסך
+      </Link>
+
+      <div className="px-2 pb-1 pt-4 text-xs font-semibold text-faint">יומן</div>
+      <div className="mb-1 px-0.5">
+        <JournalSwitcher />
+      </div>
+      <nav aria-label="עמודי היומן" className="flex flex-col gap-0.5">
+        {pages.map((item) => (
+          <NavLink key={item.to} to={item.to} end={item.end} className={itemClass}>
+            <item.icon className="h-4 w-4" strokeWidth={2} style={{ color: item.color }} />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="flex-1" />
+
+      {isDemo && (
+        <div className="mx-1 mb-2 rounded-md bg-tag-yellow px-2.5 py-1.5 text-[12px] leading-snug text-tag-yellow-fg">
+          מצב הדגמה: הנתונים נשמרים רק בדפדפן הזה.
+        </div>
+      )}
+      <nav aria-label="כלים" className="flex flex-col gap-0.5">
+        {utility.map((item) => (
+          <NavLink key={item.to} to={item.to} className={itemClass}>
+            <item.icon className="h-4 w-4" strokeWidth={2} />
+            {item.label}
+          </NavLink>
+        ))}
+        <button onClick={signOut} className={`${itemClass({ isActive: false })} hover:text-loss`}>
+          <LogOut className="h-4 w-4" strokeWidth={2} />
+          התנתק
+        </button>
+      </nav>
+    </div>
+  )
+
+  const crumb = pageLabel(location.pathname)
+  // Data-heavy pages (wide tables / grids) get a wider page column.
+  const wide = ['/app/trades', '/app/summary', '/app/calendar'].includes(location.pathname)
+
+  return (
+    <div className="min-h-full lg:pr-[248px]">
+      {/* Desktop sidebar — always visible */}
+      <aside className="fixed inset-y-0 right-0 z-40 hidden w-[248px] border-l border-border bg-surface lg:block">
+        {sidebar}
+      </aside>
+
+      {/* Mobile drawer */}
       <div
         onClick={() => setNavOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 lg:hidden ${
           navOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden
       />
-
-      {/* Slide-out nav drawer (from the right, RTL start) */}
       <aside
         aria-hidden={!navOpen}
-        className={`fixed inset-y-0 right-0 z-50 flex w-72 max-w-[82vw] flex-col border-l border-black/[0.08] bg-surface/95 p-4 backdrop-blur-xl transition-transform duration-300 ${
+        className={`fixed inset-y-0 right-0 z-50 w-[272px] max-w-[85vw] border-l border-border bg-surface shadow-xl transition-transform duration-300 lg:hidden ${
           navOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ transitionTimingFunction: 'var(--ease-out-expo)' }}
       >
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="font-mono text-sm font-semibold uppercase tracking-[0.16em] text-ink">
-              Journal
-            </span>
-          </div>
-          <button
-            onClick={() => setNavOpen(false)}
-            aria-label="סגור תפריט"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-black/[0.05] hover:text-ink"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-1">
-          {nav.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
-              <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="mt-4 border-t border-black/[0.08] pt-4">
-          <div className="flex items-center gap-3 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-sm font-semibold uppercase text-bg">
-              {name.slice(0, 1)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{name}</div>
-              <button
-                onClick={signOut}
-                className="flex items-center gap-1 text-xs text-muted hover:text-loss"
-              >
-                <LogOut className="h-3 w-3" />
-                התנתק
-              </button>
-            </div>
-          </div>
-        </div>
+        {sidebar}
       </aside>
 
-      {/* Main */}
-      <main className="min-h-[calc(100%-65px)]">
-        {isDemo && (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-2 text-center text-sm text-amber-300">
-            ⚠️ מצב הדגמה — חברו את Supabase כדי לשמור נתונים אמיתיים.
-          </div>
+      {/* Top bar: breadcrumb */}
+      <header className="sticky top-0 z-30 flex h-11 items-center gap-1.5 bg-bg/90 px-3 text-sm text-muted backdrop-blur">
+        <button
+          onClick={() => setNavOpen(true)}
+          aria-label="פתח תפריט"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-ink hover:bg-black/[0.05] lg:hidden"
+        >
+          <Menu className="h-5 w-5" strokeWidth={1.75} />
+        </button>
+        <span className="truncate">{active.name}</span>
+        {crumb && (
+          <>
+            <span className="text-[#c7c6c3]">/</span>
+            <span className="truncate text-ink">{crumb}</span>
+          </>
         )}
-        <div className="mx-auto max-w-6xl p-6">
+      </header>
+
+      <main>
+        {location.pathname === '/app' && <DashboardCover />}
+        <div className={`mx-auto px-5 pb-20 pt-8 sm:px-10 ${wide ? 'max-w-[1480px] lg:px-12' : 'max-w-[1100px] lg:px-16'}`}>
           <Outlet />
         </div>
       </main>

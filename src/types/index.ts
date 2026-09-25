@@ -9,7 +9,15 @@ export type TradeStatus = 'WIN' | 'LOSS' | 'WASH'
 export type MarketType = 'FUTURES' | 'STOCK' | 'OPTION' | 'CRYPTO' | 'FOREX'
 export type Liquidity = 'buyside' | 'sellside' | 'none'
 export type Zone = 'premium' | 'deadzone' | 'discount'
-export type Bias = '6h-3h' | '3h-90' | '3h-90-no6h' | '3h-wick90' | '3h-wick90-no6h' | '6h-90'
+export type Bias =
+  | '6-3'
+  | '6-body90'
+  | '6-wick90'
+  | '3-body90'
+  | '3-wick90'
+  | '6body-3body'
+  | '6body-90body'
+  | '3body-90body'
 
 /** A single fill that makes up a trade. */
 export interface Execution {

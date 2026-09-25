@@ -1,14 +1,17 @@
 import type { Bias } from '../types'
 
 // Higher-timeframe bias pairs (the ordered pair of HTF blocks used for the entry).
-// `label` is the short chip text; `desc` explains the pair.
+// `label` is the short chip text; `desc` explains the pair. The last three are
+// flagged by the trader as uncertain (may not be produced by the indicator).
 export const BIASES: { v: Bias; label: string; desc: string }[] = [
-  { v: '6h-3h', label: '3H', desc: 'זוג 6H + 3H' },
-  { v: '3h-90', label: '90 דק', desc: 'זוג 3H + 90' },
-  { v: '3h-90-no6h', label: '90 דק · בלי 6H', desc: 'זוג 3H + 90 (כשאין בלוק 6H)' },
-  { v: '3h-wick90', label: 'פתיל 90 בלבד ⚠️', desc: 'זוג 3H + פתיל 90' },
-  { v: '3h-wick90-no6h', label: 'פתיל 90 בלבד · בלי 6H ⚠️', desc: 'זוג 3H + פתיל 90 (כשאין בלוק 6H)' },
-  { v: '6h-90', label: '90 מתוך 6H ⚠️', desc: 'זוג 6H + 90' },
+  { v: '6-3', label: '6 ל-3', desc: 'זוג 6 → 3' },
+  { v: '6-body90', label: '6 לנר 90', desc: 'זוג 6 → נר 90' },
+  { v: '6-wick90', label: '6 לפתיל 90', desc: 'זוג 6 → פתיל 90' },
+  { v: '3-body90', label: '3 לנר 90', desc: 'זוג 3 → נר 90' },
+  { v: '3-wick90', label: '3 לפתיל 90', desc: 'זוג 3 → פתיל 90' },
+  { v: '6body-3body', label: 'גוף 6 ל-גוף 3 ⚠️', desc: 'גוף 6 בלי פתיל → גוף 3 בלי פתיל (ייתכן שלא תקין)' },
+  { v: '6body-90body', label: 'גוף 6 ל-גוף 90 ⚠️', desc: 'גוף 6 בלי פתיל → גוף 90 בלי פתיל (ייתכן שלא תקין)' },
+  { v: '3body-90body', label: 'גוף 3 ל-גוף 90 ⚠️', desc: 'גוף 3 בלי פתיל → גוף 90 בלי פתיל (ייתכן שלא תקין)' },
 ]
 
 export const BIAS_LABEL: Record<Bias, string> = Object.fromEntries(

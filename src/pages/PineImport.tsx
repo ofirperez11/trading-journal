@@ -109,23 +109,26 @@ export default function PineImport() {
     )
   }
 
-  async function onFile(file: File) {
+  // Several CSVs at once: a new Replay start clears Pine Logs, so each session is
+  // exported separately. Overlapping days collapse in the parser.
+  async function onFiles(files: File[]) {
     try {
-      load(await file.text())
+      const texts = await Promise.all(files.map((f) => f.text()))
+      load(texts.join('\n'))
     } catch {
-      setError('לא הצלחתי לקרוא את הקובץ')
+      setError('לא הצלחתי לקרוא את הקבצים')
     }
   }
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (f) onFile(f)
+    if (files.length) onFiles(files)
   }
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
-    const f = e.dataTransfer.files?.[0]
-    if (f) onFile(f)
+    const files = Array.from(e.dataTransfer.files ?? [])
+    if (files.length) onFiles(files)
     else {
       const t = e.dataTransfer.getData('text')
       if (t) {
@@ -268,10 +271,10 @@ export default function PineImport() {
               <ClipboardPaste className="h-4 w-4" /> קרא עסקאות
             </button>
             <label className="btn-ghost cursor-pointer">
-              <Upload className="h-4 w-4" /> קובץ CSV מ-Pine Logs
-              <input type="file" accept=".csv,.txt,text/csv,text/plain" className="hidden" onChange={handleFile} />
+              <Upload className="h-4 w-4" /> קבצי CSV מ-Pine Logs
+              <input type="file" multiple accept=".csv,.txt,text/csv,text/plain" className="hidden" onChange={handleFile} />
             </label>
-            <span className="text-[13px] text-faint">אפשר להדביק כמה ימים בבת אחת. הודעות כפולות מאוחדות אוטומטית.</span>
+            <span className="text-[13px] text-faint">אפשר לגרור כמה קבצי CSV יחד (אחד מכל סשן Replay). ימים שחוזרים על עצמם מאוחדים אוטומטית.</span>
           </div>
         </div>
       )}

@@ -8,7 +8,7 @@ import { useTrades, useTradeActions } from '../lib/useTrades'
 import { parsePineLogs, pineNotes, pineTags, type PineTrade } from '../lib/pineLog'
 import { computePartials } from '../lib/partials'
 import { cleanSymbol, formatMoney, formatR } from '../lib/trades'
-import { LOOKBACKS } from '../lib/lookback'
+import { LOOKBACKS, withGap } from '../lib/lookback'
 import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Bias, Liquidity, Trade, Zone } from '../types'
 
@@ -404,7 +404,7 @@ export default function PineImport() {
                       <span className="text-[12px] text-muted">Lookback</span>
                       <select className="input !h-9" value={r.lookback} onChange={(e) => patch(i, { lookback: e.target.value })}>
                         <option value="">—</option>
-                        {LOOKBACKS[r.t.session].map((lb) => (
+                        {LOOKBACKS[r.t.session].flatMap((lb) => [lb, withGap(lb, true)]).map((lb) => (
                           <option key={lb} value={lb}>{lb}</option>
                         ))}
                       </select>

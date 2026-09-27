@@ -8,7 +8,7 @@ import { imageUrl, cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { compressImage } from '../lib/image'
 import { uploadTradeImages } from '../lib/uploadImages'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
+import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor, splitGap, withGap } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { PriceMap } from '../components/PriceMap'
@@ -67,7 +67,8 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   const [form, setForm] = useState(() => ({
     day: (trade?.date ?? (presetDate ? `${presetDate}T00:00` : new Date().toISOString())).slice(0, 10),
     time: (trade?.date?.slice(11, 16) === '17:00' ? '17:00' : '16:30') as (typeof TIMES)[number],
-    lookback: trade?.lookback ?? '',
+    lookback: splitGap(trade?.lookback ?? '').base,
+    gap: splitGap(trade?.lookback ?? '').gap,
     liquidity: trade?.liquidity ?? null,
     zone: trade?.zone ?? null,
     bias: trade?.bias ?? null,
@@ -170,7 +171,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       r_multiple: rMultiple,
       hold_time: trade?.hold_time ?? null,
       confidence: trade?.confidence ?? null,
-      lookback: form.lookback || null,
+      lookback: form.lookback ? withGap(form.lookback, form.gap) : null,
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
@@ -298,6 +299,14 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                       </button>
                     )
                   })}
+                </div>
+                <div className="mt-1 flex gap-2" role="group" aria-label="גאפ">
+                  <button type="button" aria-pressed={!form.gap} disabled={!form.lookback} onClick={() => set('gap', false)} className={`${choice(!form.gap, 'bg-ink text-white')} disabled:opacity-40`}>
+                    לא גאפ
+                  </button>
+                  <button type="button" aria-pressed={form.gap} disabled={!form.lookback} onClick={() => set('gap', true)} className={`${choice(form.gap, 'bg-ink text-white')} disabled:opacity-40`}>
+                    גאפ
+                  </button>
                 </div>
               </div>
             </div>

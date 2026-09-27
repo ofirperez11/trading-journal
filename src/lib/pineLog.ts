@@ -1,5 +1,5 @@
 import type { Bias, Liquidity, TradeSide, Zone } from '../types'
-import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
+import { LOOKBACKS, SESSION_TIMES, withGap, type SessionTime } from './lookback'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
 // TradingView's Pine Logs. Accepts text pasted straight from Pine Logs or the
@@ -183,6 +183,7 @@ function parseOne(chunk: string): PineTrade | null {
       if (lm) lookback = resolveLookback(lm[1], session)
     }
     if (lookbackRaw && !lookback) warnings.push(`לוקבק לא מוכר: ${lookbackRaw}`)
+    if (lookback) lookback = withGap(lookback, lookbackRaw.includes('גאפ'))
   }
 
   const baseRaw = field(lines, 'בייס')

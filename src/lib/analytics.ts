@@ -25,20 +25,20 @@ export interface AssetStopStats {
   buckets: StopStat[]
 }
 
-/** Expected stop sizes (points) per asset — trades snap to the nearest. */
-const STOP_SIZES: Record<string, number[]> = { MNQ: [15, 20], MES: [3, 4], YM: [] }
-const STOP_ASSETS = ['MNQ', 'MES', 'YM']
-
-function nearest(arr: number[], v: number): number {
-  return arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
-}
-
 /** Lookback-size breakdown for one index (micro + mini contracts together). */
 export interface LookbackSizeStats {
   asset: 'NQ' | 'ES'
   buckets: Bucket[] // win rate per size range (points)
   avgWin: number | null // avg lookback size of winners
   avgLoss: number | null // avg lookback size of losers
+}
+
+/** Expected stop sizes (points) per asset — trades snap to the nearest. */
+const STOP_SIZES: Record<string, number[]> = { MNQ: [15, 20], MES: [3, 4], YM: [] }
+const STOP_ASSETS = ['MNQ', 'MES', 'YM']
+
+function nearest(arr: number[], v: number): number {
+  return arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
 }
 
 export interface Analytics extends Stats {

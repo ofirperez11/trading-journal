@@ -40,6 +40,9 @@ export interface PineTrade {
 }
 
 const SEP = /═{5,}/
+// Invisible direction marks (RLM/LRM, embeddings, isolates) that Pine Logs puts
+// at the start of Hebrew lines — they break the "label:" / "📝" prefix checks.
+const BIDI_MARKS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g
 
 /** Value of a "label: value" line; strips a trailing CSV quote. */
 function field(lines: string[], label: string): string {
@@ -118,7 +121,7 @@ function parseZone(raw: string): Zone | null {
 function parseOne(chunk: string): PineTrade | null {
   const lines = chunk
     .split(/\r?\n/)
-    .map((l) => l.trim().replace(/^"+/, ''))
+    .map((l) => l.replace(BIDI_MARKS, '').trim().replace(/^"+/, '').trim())
     .filter(Boolean)
   const header = lines.find((l) => l.startsWith('📝'))
   if (!header) return null

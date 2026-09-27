@@ -12,33 +12,32 @@ export const BIAS_GROUPS: { g: BiasGroup; label: string }[] = [
 ]
 
 export const BIASES: { v: Bias; group: BiasGroup; label: string; desc: string }[] = [
-  { v: '6-3_nn', group: '6-3', label: 'בלי · בלי', desc: '6 בלי פתיל → 3 בלי פתיל' },
-  { v: '6-3_nw', group: '6-3', label: 'בלי · עם', desc: '6 בלי פתיל → 3 עם פתיל' },
-  { v: '6-3_wn', group: '6-3', label: 'עם · בלי', desc: '6 עם פתיל → 3 בלי פתיל' },
-  { v: '6-3_ww', group: '6-3', label: 'עם · עם', desc: '6 עם פתיל → 3 עם פתיל' },
+  { v: '6-3_nn', group: '6-3', label: '6 בלי פתיל / 3 בלי פתיל', desc: 'זוג 6 ל-3' },
+  { v: '6-3_nw', group: '6-3', label: '6 בלי פתיל / 3 עם פתיל', desc: 'זוג 6 ל-3' },
+  { v: '6-3_wn', group: '6-3', label: '6 עם פתיל / 3 בלי פתיל', desc: 'זוג 6 ל-3' },
+  { v: '6-3_ww', group: '6-3', label: '6 עם פתיל / 3 עם פתיל', desc: 'זוג 6 ל-3' },
 
-  { v: '3b90_nn', group: '3-body90', label: 'בלי · בלי', desc: '3 בלי פתיל → נר 90 בלי פתיל' },
-  { v: '3b90_nw', group: '3-body90', label: 'בלי · עם', desc: '3 בלי פתיל → נר 90 עם פתיל' },
-  { v: '3b90_wn', group: '3-body90', label: 'עם · בלי', desc: '3 עם פתיל → נר 90 בלי פתיל' },
-  { v: '3b90_ww', group: '3-body90', label: 'עם · עם', desc: '3 עם פתיל → נר 90 עם פתיל' },
+  { v: '3b90_nn', group: '3-body90', label: '3 בלי פתיל / 90 בלי פתיל', desc: 'זוג 3 ל-נר 90' },
+  { v: '3b90_nw', group: '3-body90', label: '3 בלי פתיל / 90 עם פתיל', desc: 'זוג 3 ל-נר 90' },
+  { v: '3b90_wn', group: '3-body90', label: '3 עם פתיל / 90 בלי פתיל', desc: 'זוג 3 ל-נר 90' },
+  { v: '3b90_ww', group: '3-body90', label: '3 עם פתיל / 90 עם פתיל', desc: 'זוג 3 ל-נר 90' },
 
-  { v: '3w90_n', group: '3-wick90', label: '3 בלי פתיל', desc: '3 בלי פתיל → פתיל 90 (רק פתיל)' },
-  { v: '3w90_w', group: '3-wick90', label: '3 עם פתיל', desc: '3 עם פתיל → פתיל 90 (רק פתיל)' },
+  { v: '3w90_n', group: '3-wick90', label: '3 בלי פתיל / פתיל 90', desc: 'זוג 3 ל-פתיל 90 (90 רק פתיל)' },
+  { v: '3w90_w', group: '3-wick90', label: '3 עם פתיל / פתיל 90', desc: 'זוג 3 ל-פתיל 90 (90 רק פתיל)' },
 
-  { v: '6b90_nn', group: '6-body90', label: 'בלי · בלי', desc: '6 בלי פתיל → נר 90 בלי פתיל (חריג)' },
-  { v: '6b90_nw', group: '6-body90', label: 'בלי · עם', desc: '6 בלי פתיל → נר 90 עם פתיל (חריג)' },
-  { v: '6b90_wn', group: '6-body90', label: 'עם · בלי', desc: '6 עם פתיל → נר 90 בלי פתיל (חריג)' },
-  { v: '6b90_ww', group: '6-body90', label: 'עם · עם', desc: '6 עם פתיל → נר 90 עם פתיל (חריג)' },
+  { v: '6b90_nn', group: '6-body90', label: '6 בלי פתיל / 90 בלי פתיל', desc: 'זוג 6 ל-נר 90 · מקרה חריג' },
+  { v: '6b90_nw', group: '6-body90', label: '6 בלי פתיל / 90 עם פתיל', desc: 'זוג 6 ל-נר 90 · מקרה חריג' },
+  { v: '6b90_wn', group: '6-body90', label: '6 עם פתיל / 90 בלי פתיל', desc: 'זוג 6 ל-נר 90 · מקרה חריג' },
+  { v: '6b90_ww', group: '6-body90', label: '6 עם פתיל / 90 עם פתיל', desc: 'זוג 6 ל-נר 90 · מקרה חריג' },
 ]
 
-const GROUP_LABEL = Object.fromEntries(BIAS_GROUPS.map((g) => [g.g, g.label])) as Record<BiasGroup, string>
-
-/** Short chip label (wick config only) — used inside the grouped picker. */
+/** Short chip label — used inside the grouped picker. */
 export const BIAS_LABEL: Record<Bias, string> = Object.fromEntries(
   BIASES.map((b) => [b.v, b.label]),
 ) as Record<Bias, string>
 
-/** Standalone label (pair · config) — used in the table, detail, CSV and charts. */
+/** Standalone label — used in the table, detail, CSV and charts. The label
+ * already names both blocks, so it is self-sufficient. */
 export const BIAS_FULL_LABEL: Record<Bias, string> = Object.fromEntries(
-  BIASES.map((b) => [b.v, `${GROUP_LABEL[b.group]} · ${b.label}`]),
+  BIASES.map((b) => [b.v, b.label]),
 ) as Record<Bias, string>

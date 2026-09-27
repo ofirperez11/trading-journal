@@ -87,7 +87,7 @@ export function TradeContextFields({
         {BIAS_GROUPS.map((grp) => (
           <div key={grp.g} className="flex flex-col gap-1.5">
             <span className="text-[12px] text-muted">{grp.label}</span>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {BIASES.filter((o) => o.group === grp.g).map((o) => {
                 const on = bias === o.v
                 return (
@@ -97,7 +97,7 @@ export function TradeContextFields({
                     title={o.desc}
                     aria-pressed={on}
                     onClick={() => onBias(on ? null : o.v)}
-                    className={`${BTN} px-2 ${on ? ON.accent : OFF}`}
+                    className={`${BTN} px-3 ${on ? ON.accent : OFF}`}
                   >
                     {o.label}
                   </button>

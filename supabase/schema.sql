@@ -79,6 +79,7 @@ create table if not exists public.trades (
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
   zone text,                   -- ICT: dealing-range position at entry ('premium' | 'deadzone' | 'discount')
   bias text,                   -- ICT: HTF bias pair (e.g. '6h-3h', '3h-90', '3h-wick90', '6h-90')
+  chart_move jsonb,            -- for/against points per timeframe, e.g. {"1":{"for":60.75,"against":0}} (Pine import)
   tags text[],
   notes text,
   mood text,

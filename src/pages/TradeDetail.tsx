@@ -25,12 +25,14 @@ import {
   ChevronRight,
   ChevronLeft,
   Compass,
+  Activity,
 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime, cleanSymbol } from '../lib/trades'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
+import { CHART_MOVE_LABEL, CHART_MOVE_TFS } from '../lib/chartMove'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -290,6 +292,38 @@ export default function TradeDetail() {
           <Prop icon={Sigma} label="R-Multiple">
             <span className="num font-semibold">{formatR(trade.r_multiple)}</span>
           </Prop>
+
+          {/* Chart move — points for / against per timeframe (Pine import) */}
+          {trade.chart_move && (
+            <div className="mt-5">
+              <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold">
+                <Activity className="h-4 w-4 text-faint" /> מהלך גרף
+                <span className="text-[13px] font-normal text-muted">לפי סגירת נר, בנקודות</span>
+              </h2>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th>גרף</th>
+                    <th className="!text-left">בעד</th>
+                    <th className="!text-left">נגד</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CHART_MOVE_TFS.map((tf) => {
+                    const m = trade.chart_move?.[tf]
+                    if (!m) return null
+                    return (
+                      <tr key={tf} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                        <td>{CHART_MOVE_LABEL[tf]}</td>
+                        <td className={`num text-left font-medium ${m.for > 0 ? 'text-win' : 'text-muted'}`}>{m.for.toFixed(2)}</td>
+                        <td className={`num text-left font-medium ${m.against > 0 ? 'text-loss' : 'text-muted'}`}>{m.against.toFixed(2)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="mt-5">

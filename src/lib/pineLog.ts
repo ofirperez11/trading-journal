@@ -1,5 +1,6 @@
-import type { Bias, Liquidity, TradeSide, Zone } from '../types'
+import type { Bias, ChartMove, Liquidity, TradeSide, Zone } from '../types'
 import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
+import { parseChartMove } from './chartMove'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
 // TradingView's Pine Logs. Accepts text pasted straight from Pine Logs or the
@@ -36,6 +37,7 @@ export interface PineTrade {
   week: string
   beRaw: string
   htfRaw: string
+  chartMove: ChartMove | null // "מהלך גרף" block — for/against points per timeframe
   warnings: string[]
 }
 
@@ -226,6 +228,7 @@ function parseOne(chunk: string): PineTrade | null {
     week: field(lines, 'שבוע בחודש'),
     beRaw: field(lines, 'ברייק-איבן'),
     htfRaw: field(lines, 'ביאס (HTF 6H/3H)'),
+    chartMove: parseChartMove(lines),
     warnings,
   }
 }

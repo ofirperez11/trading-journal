@@ -1,4 +1,5 @@
 import type { Trade, Execution, TradeSide, TradeStatus, MarketType } from '../types'
+import { normalizeChartMove } from './chartMove'
 
 // ---------------------------------------------------------------------------
 // Trade normalization + analytics.
@@ -73,6 +74,7 @@ export function normalizeTrade(raw: Record<string, unknown>): Trade {
     liquidity: (raw.liquidity as Trade['liquidity']) ?? null,
     zone: (raw.zone as Trade['zone']) ?? null,
     bias: (raw.bias as Trade['bias']) ?? null,
+    chart_move: normalizeChartMove(raw.chart_move),
     tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : null,
     notes: raw.notes ? String(raw.notes) : null,
     mood: raw.mood ? String(raw.mood) : null,

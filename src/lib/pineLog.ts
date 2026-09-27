@@ -1,24 +1,10 @@
-import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback.ts'
+import type { Bias, Liquidity, TradeSide, Zone } from '../types'
+import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
-// TradingView's Pine Logs (and sends by webhook). Accepts text pasted straight
-// from Pine Logs or the CSV that Pine Logs exports (quoted multi-line cells) —
-// both are split on the report's "══════" separator line.
-//
-// Shared with the `pine-webhook` Edge Function: this file and lookback.ts are
-// copied to supabase/functions/_shared by `npm run fn:sync`, so they must stay
-// free of other imports (the unions below mirror src/types).
-
-type TradeSide = 'LONG' | 'SHORT'
-type Liquidity = 'buyside' | 'sellside' | 'none'
-type Zone = 'premium' | 'deadzone' | 'discount'
-type Bias =
-  | '6-3_nn' | '6-3_nw' | '6-3_wn' | '6-3_ww'
-  | '3b90_nn' | '3b90_nw' | '3b90_wn' | '3b90_ww'
-  | '3w90_n' | '3w90_w'
-  | '6b90_nn' | '6b90_nw' | '6b90_wn' | '6b90_ww'
-
-export const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
+// TradingView's Pine Logs. Accepts text pasted straight from Pine Logs or the
+// CSV that Pine Logs exports (quoted multi-line cells) — both are split on the
+// report's "══════" separator line.
 
 export type PineResult = 'target' | 'stop' | 'be' | 'eod' | 'unfilled' | 'unknown'
 
@@ -282,43 +268,4 @@ export function pineTags(t: PineTrade): string[] {
   if (tf) tags.push(`LB ${tf[1]}m`)
   if (t.dayKind) tags.push(t.dayKind.replace(/\s*[🤖🏔🔘]/gu, '').trim())
   return tags
-}
-
-/** A trades-table row for a report (used by the webhook, where nothing is edited). */
-export function pineTradeRow(t: PineTrade, qty: number) {
-  const pv = POINT_VALUE[t.symbol] ?? 0
-  const dir = t.side === 'LONG' ? 1 : -1
-  const dateTime = `${t.day}T${t.session}`
-  const pnl = t.exit != null ? Math.round((t.exit - t.entry) * dir * qty * pv * 100) / 100 : null
-  const risk = t.stop != null ? Math.abs(t.entry - t.stop) * qty * pv : 0
-  const r = pnl != null && risk ? Math.round((pnl / risk) * 100) / 100 : null
-  const openAct = t.side === 'LONG' ? 'BUY' : 'SELL'
-  const closeAct = t.side === 'LONG' ? 'SELL' : 'BUY'
-  return {
-    date: dateTime,
-    symbol: t.symbol,
-    market: 'FUTURES',
-    side: t.side,
-    status: pnl == null || pnl === 0 ? 'WASH' : pnl > 0 ? 'WIN' : 'LOSS',
-    qty,
-    entry: t.entry,
-    exit: t.exit,
-    target: t.target,
-    stoploss: t.stop,
-    return_amount: pnl ?? 0,
-    r_multiple: r,
-    lookback: t.lookback,
-    liquidity: t.liquidity,
-    zone: t.zone,
-    bias: t.bias,
-    tags: pineTags(t),
-    notes: pineNotes(t),
-    executions:
-      t.exit != null
-        ? [
-            { action: openAct, price: t.entry, qty, commission: 0, dateTime },
-            { action: closeAct, price: t.exit, qty, commission: 0, dateTime },
-          ]
-        : null,
-  }
 }

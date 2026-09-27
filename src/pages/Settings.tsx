@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Check, Loader2, LogOut, Download, Settings as SettingsIcon } from 'lucide-react'
 import { PageTitle } from '../components/PageTitle'
-import { TradingViewLink } from '../components/TradingViewLink'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -64,7 +63,7 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl">
-      <PageTitle icon={SettingsIcon} color="#787774" title="הגדרות" subtitle="פרופיל, חיבור ל-TradingView, גיבוי וחשבון." />
+      <PageTitle icon={SettingsIcon} color="#787774" title="הגדרות" subtitle="פרופיל, גיבוי וחשבון." />
 
       {/* Profile */}
       <section className="block-in mt-8" style={{ '--i': 1 } as React.CSSProperties}>
@@ -99,17 +98,8 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* TradingView webhook */}
-      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 2 } as React.CSSProperties}>
-        <h2 className="mb-1 text-[17px] font-semibold">חיבור ל-TradingView (אוטומטי)</h2>
-        <p className="mb-3 text-sm leading-relaxed text-muted">
-          כל עסקה שהאינדיקטור סוגר בלייב נכנסת ליומן הזה לבד, דרך התראת Webhook. ב-Replay (באק-טסט) התראות לא פועלות — שם משתמשים ב"עסקאות מ-Pine Logs".
-        </p>
-        <TradingViewLink />
-      </section>
-
       {/* Backup */}
-      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 3 } as React.CSSProperties}>
+      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 2 } as React.CSSProperties}>
         <h2 className="mb-1 text-[17px] font-semibold">גיבוי נתונים</h2>
         <p className="text-sm leading-relaxed text-muted">
           הורד קובץ עם כל העסקאות, היומנים והרשומות שלך: נקודת שחזור מקומית. מומלץ לעשות את זה מדי פעם.
@@ -122,7 +112,7 @@ export default function Settings() {
       </section>
 
       {/* Account */}
-      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 4 } as React.CSSProperties}>
+      <section className="block-in mt-10 border-t border-border pt-6" style={{ '--i': 3 } as React.CSSProperties}>
         <h2 className="mb-1 text-[17px] font-semibold">חשבון</h2>
         <div className="flex flex-col">
           <div className={row}>

@@ -100,7 +100,7 @@ export default function PineImport() {
           target: str(t.target),
           exit: str(t.exit),
           qty: defQty,
-          lookback: t.lookback ?? '',
+          lookback: t.lookback ? withGap(t.lookback, t.lookbackRaw.includes('גאפ')) : '',
           bias: t.bias,
           zone: t.zone,
           liquidity: t.liquidity,

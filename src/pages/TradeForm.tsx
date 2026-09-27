@@ -67,8 +67,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   const [form, setForm] = useState(() => ({
     day: (trade?.date ?? (presetDate ? `${presetDate}T00:00` : new Date().toISOString())).slice(0, 10),
     time: (trade?.date?.slice(11, 16) === '17:00' ? '17:00' : '16:30') as (typeof TIMES)[number],
-    lookback: splitGap(trade?.lookback ?? '').base,
-    gap: splitGap(trade?.lookback ?? '').gap,
+    lookback: trade?.lookback ?? '',
     liquidity: trade?.liquidity ?? null,
     zone: trade?.zone ?? null,
     bias: trade?.bias ?? null,
@@ -93,10 +92,13 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   // position (e.g. 10:30 ↔ 11:00), or clear it if none was chosen.
   function setTime(tm: (typeof TIMES)[number]) {
     setForm((f) => {
-      const idx = LOOKBACKS[f.time].indexOf(f.lookback)
-      return { ...f, time: tm, lookback: idx >= 0 ? LOOKBACKS[tm][idx] : '' }
+      const { base, gap } = splitGap(f.lookback)
+      const idx = LOOKBACKS[f.time].indexOf(base)
+      return { ...f, time: tm, lookback: idx >= 0 ? withGap(LOOKBACKS[tm][idx], gap) : '' }
     })
   }
+  // The lookback value carries the gap flag ("19:30 גאפ"); a new pick starts as not-gap.
+  const lb = splitGap(form.lookback)
 
   // --- live auto-calculations -------------------------------------------
   const pv = POINT_VALUE[form.symbol] ?? 0
@@ -171,7 +173,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       r_multiple: rMultiple,
       hold_time: trade?.hold_time ?? null,
       confidence: trade?.confidence ?? null,
-      lookback: form.lookback ? withGap(form.lookback, form.gap) : null,
+      lookback: form.lookback || null,
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
@@ -275,16 +277,16 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
               <div className={`${field} sm:col-span-2`}>
                 <span className="field-label mb-0">Lookback (מודל כניסה)</span>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-                  {LOOKBACKS[form.time].map((lb) => {
-                    const blue = lookbackColor(lb) === '#5B9DF9'
-                    const on = form.lookback === lb
+                  {LOOKBACKS[form.time].map((marker) => {
+                    const blue = lookbackColor(marker) === '#5B9DF9'
+                    const on = lb.base === marker
                     return (
                       <button
-                        key={lb}
+                        key={marker}
                         type="button"
                         dir="ltr"
                         aria-pressed={on}
-                        onClick={() => set('lookback', on ? '' : lb)}
+                        onClick={() => set('lookback', on ? '' : marker)}
                         className={`h-10 rounded-md text-sm font-semibold transition-all active:scale-[0.97] ${
                           on
                             ? blue
@@ -295,16 +297,16 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                               : 'bg-tag-red text-tag-red-fg hover:brightness-95'
                         }`}
                       >
-                        {lb}
+                        {marker}
                       </button>
                     )
                   })}
                 </div>
                 <div className="mt-1 flex gap-2" role="group" aria-label="גאפ">
-                  <button type="button" aria-pressed={!form.gap} disabled={!form.lookback} onClick={() => set('gap', false)} className={`${choice(!form.gap, 'bg-ink text-white')} disabled:opacity-40`}>
+                  <button type="button" aria-pressed={!lb.gap} disabled={!lb.base} onClick={() => set('lookback', lb.base)} className={`${choice(!lb.gap, 'bg-ink text-white')} disabled:opacity-40`}>
                     לא גאפ
                   </button>
-                  <button type="button" aria-pressed={form.gap} disabled={!form.lookback} onClick={() => set('gap', true)} className={`${choice(form.gap, 'bg-ink text-white')} disabled:opacity-40`}>
+                  <button type="button" aria-pressed={lb.gap} disabled={!lb.base} onClick={() => set('lookback', withGap(lb.base, true))} className={`${choice(lb.gap, 'bg-ink text-white')} disabled:opacity-40`}>
                     גאפ
                   </button>
                 </div>

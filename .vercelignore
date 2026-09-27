@@ -1,0 +1,8 @@
+# Never upload local private data to the public site. The CLI does NOT read
+# .gitignore, so anything here would otherwise be served publicly.
+public/demo
+data_export
+Claude outputs
+.claude
+.env
+.env.*

@@ -24,7 +24,10 @@ async function loadBase(): Promise<Trade[]> {
     baseCache = (data ?? []).map((r) => normalizeTrade(r as Record<string, unknown>))
     return baseCache
   }
-  const res = await fetch('/demo/trades.json')
+  // The owner's real export (public/demo, gitignored) when present; otherwise
+  // the committed synthetic sample, so a fresh clone runs without a backend.
+  let res = await fetch('/demo/trades.json')
+  if (!res.ok || !res.headers.get('content-type')?.includes('json')) res = await fetch('/sample/trades.json')
   if (!res.ok) throw new Error('failed to load demo trades')
   const raw = (await res.json()) as Record<string, unknown>[]
   baseCache = raw.map(normalizeTrade).sort((a, b) => b.date.localeCompare(a.date))

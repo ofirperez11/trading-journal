@@ -30,3 +30,11 @@ public/demo
 supabase/.temp
 .claude/skills
 data_export/
+
+# build byproducts of `tsc -b` (now written under node_modules/.tmp)
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# per-machine Claude Code settings (permissions, local paths) — never shared
+.claude/settings.local.json

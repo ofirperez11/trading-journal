@@ -48,6 +48,8 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
+  byLookbackSize: Bucket[] // win rate by lookback size range (points) — trades with a size only
+  lookbackSizeAvg: { win: number | null; loss: number | null } // avg lookback size, winners vs losers
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
@@ -290,6 +292,25 @@ export function computeAnalytics(trades: Trade[]): Analytics {
       })
   }
 
+  // Lookback size (points) → fixed ranges; only trades with a size count.
+  const byLookbackSize = winRateBuckets(
+    (t) => (t.lookback_size == null ? null : t.lookback_size < 2 ? '0-2' : t.lookback_size < 4 ? '2-4' : t.lookback_size < 6 ? '4-6' : '6+'),
+    [
+      { v: '0-2', label: '0–2 נק׳' },
+      { v: '2-4', label: '2–4 נק׳' },
+      { v: '4-6', label: '4–6 נק׳' },
+      { v: '6+', label: '6+ נק׳' },
+    ],
+  )
+  const avgSize = (ts: Trade[]): number | null => {
+    const s = ts.map((t) => t.lookback_size).filter((v) => v != null)
+    return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null
+  }
+  const lookbackSizeAvg = {
+    win: avgSize(trades.filter((t) => t.return_amount > 0)),
+    loss: avgSize(trades.filter((t) => t.return_amount < 0)),
+  }
+
   // Only trades that were actually tagged count (untagged → excluded), so a
   // partly-tagged backtest isn't diluted by the trades nobody reviewed.
   const byLiquidity = winRateBuckets((t) => t.liquidity, [
@@ -324,6 +345,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
+    byLookbackSize,
+    lookbackSizeAvg,
     byLiquidity,
     byZone,
     byBias,

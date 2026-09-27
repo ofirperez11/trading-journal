@@ -68,6 +68,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     day: (trade?.date ?? (presetDate ? `${presetDate}T00:00` : new Date().toISOString())).slice(0, 10),
     time: (trade?.date?.slice(11, 16) === '17:00' ? '17:00' : '16:30') as (typeof TIMES)[number],
     lookback: trade?.lookback ?? '',
+    lookbackSize: trade?.lookback_size != null ? String(trade.lookback_size) : '',
     liquidity: trade?.liquidity ?? null,
     zone: trade?.zone ?? null,
     bias: trade?.bias ?? null,
@@ -171,6 +172,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       hold_time: trade?.hold_time ?? null,
       confidence: trade?.confidence ?? null,
       lookback: form.lookback || null,
+      lookback_size: num(form.lookbackSize),
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
@@ -300,6 +302,19 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                   })}
                 </div>
               </div>
+              <label className={field}>
+                <span className="field-label mb-0">גודל Lookback (נק׳)</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  dir="ltr"
+                  className="input"
+                  placeholder="למשל 3.5"
+                  value={form.lookbackSize}
+                  onChange={(e) => set('lookbackSize', e.target.value)}
+                />
+              </label>
             </div>
           </FormSection>
 

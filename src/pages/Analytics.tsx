@@ -609,6 +609,25 @@ export default function Analytics() {
             <EmptyNote text="עדיין לא תויגו מודלי כניסה. עדכנו את שדה ה-Lookback בעסקאות כדי לראות אילו מודלים חזקים ואילו חלשים." />
           )}
         </Block>
+        <Block
+          className="mt-3"
+          title="אחוז הצלחה לפי גודל Lookback"
+          desc="אחוז ההצלחה לפי גודל ה-Lookback בנקודות, בטווחים של 0–2, 2–4, 4–6 ו-6 ומעלה. מתחת: הגודל הממוצע בעסקאות מנצחות מול מפסידות. נספרות רק עסקאות שיש בהן גודל Lookback (מ-Pine Logs או שהוזן ידנית). הקו האפור = 50%."
+          hint={<span className="tag">אחוז הצלחה</span>}
+        >
+          {a.byLookbackSize.length ? (
+            <>
+              <BarRows rows={winRateRows(a.byLookbackSize)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+              <p className="mt-3 text-[13px] text-muted">
+                גודל ממוצע: מנצחות{' '}
+                <b className="num text-win">{a.lookbackSizeAvg.win != null ? a.lookbackSizeAvg.win.toFixed(2) : '—'}</b> נק׳ · מפסידות{' '}
+                <b className="num text-loss">{a.lookbackSizeAvg.loss != null ? a.lookbackSizeAvg.loss.toFixed(2) : '—'}</b> נק׳
+              </p>
+            </>
+          ) : (
+            <EmptyNote text="עדיין אין עסקאות עם גודל Lookback. הוא נשמר אוטומטית מ-Pine Logs, ואפשר להזין אותו ידנית בטופס העסקה." />
+          )}
+        </Block>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <Block
             title="לפי לקיחת נזילות"

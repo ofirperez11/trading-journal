@@ -11,6 +11,7 @@ import Analytics from './pages/Analytics'
 import Summary from './pages/Summary'
 import Calendar from './pages/Calendar'
 import ScreenshotImport from './pages/ScreenshotImport'
+import PineImport from './pages/PineImport'
 import ImportHistory from './pages/ImportHistory'
 import Journal from './pages/Journal'
 import Settings from './pages/Settings'
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="trades" element={<Trades />} />
         <Route path="trades/new" element={<TradeForm />} />
         <Route path="trades/from-image" element={<ScreenshotImport />} />
+        <Route path="trades/from-pine" element={<PineImport />} />
         <Route path="trades/:id" element={<TradeDetail />} />
         <Route path="trades/:id/edit" element={<TradeForm />} />
         <Route path="analytics" element={<Analytics />} />

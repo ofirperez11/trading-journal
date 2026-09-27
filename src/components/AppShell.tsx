@@ -14,6 +14,7 @@ import {
   X,
   Plus,
   ImagePlus,
+  ClipboardPaste,
   type LucideIcon,
 } from 'lucide-react'
 import { JournalSwitcher } from './JournalSwitcher'
@@ -47,6 +48,7 @@ const utility: NavItem[] = [
 function pageLabel(path: string): string {
   if (path === '/app/trades/new') return 'עסקה חדשה'
   if (path === '/app/trades/from-image') return 'עסקה מצילום מסך'
+  if (path === '/app/trades/from-pine') return 'עסקאות מ-Pine Logs'
   if (/^\/app\/trades\/[^/]+\/edit$/.test(path)) return 'עריכת עסקה'
   if (/^\/app\/trades\/[^/]+$/.test(path)) return 'עסקה'
   const hit = [...pages, ...utility]
@@ -101,6 +103,10 @@ export default function AppShell() {
       <Link to="/app/trades/from-image" className={itemClass({ isActive: false })}>
         <ImagePlus className="h-4 w-4" strokeWidth={2} />
         עסקה מצילום מסך
+      </Link>
+      <Link to="/app/trades/from-pine" className={itemClass({ isActive: false })}>
+        <ClipboardPaste className="h-4 w-4" strokeWidth={2} />
+        עסקאות מ-Pine Logs
       </Link>
 
       <div className="px-2 pb-1 pt-4 text-xs font-semibold text-faint">יומן</div>

@@ -68,6 +68,7 @@ interface TradesContextValue {
   loading: boolean
   error: string | null
   addTrade: (trade: Trade) => void
+  addTrades: (trades: Trade[]) => void
   updateTrade: (id: string, patch: Partial<Trade>) => void
   deleteTrade: (id: string) => void
 }
@@ -244,6 +245,22 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     persistAdded([trade, ...added])
   }
 
+  // Batch insert — a loop of addTrade would lose all but the last in demo mode
+  // (each call spreads the same stale `added`).
+  function addTrades(trades: Trade[]) {
+    if (!trades.length) return
+    if (isSupabaseConfigured) {
+      setBase((b) => [...trades, ...b])
+      baseCache = null
+      supabase
+        .from('trades')
+        .insert(trades.map(toDbRow))
+        .then(({ error }) => error && setError(error.message))
+      return
+    }
+    persistAdded([...trades, ...added])
+  }
+
   function updateTrade(id: string, patch: Partial<Trade>) {
     if (isSupabaseConfigured) {
       setBase((b) => b.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -291,7 +308,7 @@ export function TradesProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <TradesContext.Provider value={{ all, loading, error, addTrade, updateTrade, deleteTrade }}>
+    <TradesContext.Provider value={{ all, loading, error, addTrade, addTrades, updateTrade, deleteTrade }}>
       {children}
     </TradesContext.Provider>
   )
@@ -317,6 +334,6 @@ export function useTrade(id: string | undefined): { trade: Trade | null; loading
 }
 
 export function useTradeActions() {
-  const { addTrade, updateTrade, deleteTrade } = useTradesCtx()
-  return { addTrade, updateTrade, deleteTrade }
+  const { addTrade, addTrades, updateTrade, deleteTrade } = useTradesCtx()
+  return { addTrade, addTrades, updateTrade, deleteTrade }
 }

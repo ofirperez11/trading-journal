@@ -13,6 +13,7 @@ import {
   Camera,
   ChevronDown,
   ImageOff,
+  ClipboardPaste,
 } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
@@ -197,6 +198,9 @@ export default function Trades() {
             </button>
             <Link to="/app/trades/from-image" className="btn-ghost">
               <Sparkles className="h-4 w-4" /> מתמונה
+            </Link>
+            <Link to="/app/trades/from-pine" className="btn-ghost">
+              <ClipboardPaste className="h-4 w-4" /> מ-Pine Logs
             </Link>
             <Link to="/app/trades/new" className="btn-primary">
               <Plus className="h-4 w-4" /> עסקה חדשה

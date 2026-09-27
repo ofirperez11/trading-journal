@@ -12,6 +12,7 @@ import {
   Table2,
   LayoutGrid,
   Columns3,
+  ClipboardPaste,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
@@ -226,6 +227,7 @@ function QuickActions() {
   const items = [
     { to: '/app/trades/new', label: 'עסקה חדשה', icon: Plus },
     { to: '/app/trades/from-image', label: 'עסקה מצילום מסך', icon: ImagePlus },
+    { to: '/app/trades/from-pine', label: 'עסקאות מ-Pine Logs', icon: ClipboardPaste },
     { to: '/app/import', label: 'ייבוא CSV', icon: Download },
     { to: '/app/journal', label: 'כתיבה ביומן', icon: PenLine },
   ]

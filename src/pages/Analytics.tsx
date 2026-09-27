@@ -77,7 +77,17 @@ const present = (of: (t: Trade) => string | null, order: Opt[]) => (trades: Trad
   const seen = new Set(trades.map(of))
   return order.filter((o) => seen.has(o.v))
 }
-const LOOKBACK_ORDER = [...new Set([...LOOKBACKS['16:30'], ...LOOKBACKS['17:00']])].map((v) => ({ v, label: v }))
+const LOOKBACK_ORDER = [...new Set([...LOOKBACKS['16:30'], ...LOOKBACKS['17:00']])]
+/** Every lookback in the journal (incl. variants like "19:30 גאפ"), in marker order. */
+const lookbackOptions = (trades: Trade[]): Opt[] => {
+  const rank = (v: string) => {
+    const i = LOOKBACK_ORDER.findIndex((m) => v === m || v.startsWith(m + ' '))
+    return i < 0 ? LOOKBACK_ORDER.length : i
+  }
+  return [...new Set(trades.map((t) => t.lookback).filter((v) => v != null))]
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .map((v) => ({ v, label: v }))
+}
 
 const FACETS: Facet[] = [
   {
@@ -115,7 +125,7 @@ const FACETS: Facet[] = [
       { v: 'WASH', label: 'BE' },
     ]),
   },
-  { key: 'lb', label: 'Lookback', of: (t) => t.lookback, options: present((t) => t.lookback, LOOKBACK_ORDER) },
+  { key: 'lb', label: 'Lookback', of: (t) => t.lookback, options: lookbackOptions },
   {
     key: 'bias',
     label: 'ביאס',

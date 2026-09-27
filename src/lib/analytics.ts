@@ -1,6 +1,6 @@
 import type { Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
-import { BIASES } from './bias'
+import { BIASES, BIAS_FULL_LABEL } from './bias'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.
@@ -306,7 +306,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     { v: 'SHORT·deadzone', label: 'Short · Deadzone' },
     { v: 'SHORT·discount', label: 'Short · Discount' },
   ])
-  const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: b.label })))
+  const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] })))
 
   return {
     ...stats,

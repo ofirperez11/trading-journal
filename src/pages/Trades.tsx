@@ -19,7 +19,7 @@ import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { downloadCsv } from '../lib/csv'
 import { lookbackColor } from '../lib/lookback'
-import { BIAS_LABEL } from '../lib/bias'
+import { BIAS_FULL_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
 import type { Trade, TradeSide, TradeStatus } from '../types'
 
@@ -155,7 +155,7 @@ export default function Trades() {
       t.lookback ?? '',
       t.liquidity ?? '',
       t.zone ?? '',
-      t.bias ? BIAS_LABEL[t.bias] : '',
+      t.bias ? BIAS_FULL_LABEL[t.bias] : '',
       t.r_multiple ?? '',
       t.return_amount,
       t.notes ?? '',
@@ -468,8 +468,8 @@ function TableRow({ t, backState, delay }: { t: Trade; backState: object; delay:
       <td>{t.zone ? <span className={`tag ${ZONE_TAG[t.zone]}`}>{ZONE_LABEL[t.zone]}</span> : <Dash />}</td>
       <td className="max-w-[150px]">
         {t.bias ? (
-          <span className="tag tag-purple max-w-full truncate" title={BIAS_LABEL[t.bias]}>
-            {BIAS_LABEL[t.bias]}
+          <span className="tag tag-purple max-w-full truncate" title={BIAS_FULL_LABEL[t.bias]}>
+            {BIAS_FULL_LABEL[t.bias]}
           </span>
         ) : (
           <Dash />

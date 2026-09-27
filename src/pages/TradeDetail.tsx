@@ -17,6 +17,7 @@ import {
   Target,
   ShieldAlert,
   Timer,
+  Ruler,
   Droplets,
   Layers,
   Sigma,
@@ -25,7 +26,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Compass,
-  Ruler,
 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'

@@ -33,6 +33,14 @@ function nearest(arr: number[], v: number): number {
   return arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
 }
 
+/** Lookback-size breakdown for one index (micro + mini contracts together). */
+export interface LookbackSizeStats {
+  asset: 'NQ' | 'ES'
+  buckets: Bucket[] // win rate per size range (points)
+  avgWin: number | null // avg lookback size of winners
+  avgLoss: number | null // avg lookback size of losers
+}
+
 export interface Analytics extends Stats {
   stopByAsset: Record<string, AssetStopStats>
   expectancy: number // avg P&L per trade
@@ -48,8 +56,7 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
-  byLookbackSize: Bucket[] // win rate by lookback size range (points) — trades with a size only
-  lookbackSizeAvg: { win: number | null; loss: number | null } // avg lookback size, winners vs losers
+  lookbackSize: LookbackSizeStats[] // win rate by lookback size range, NQ and ES separately
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
@@ -272,9 +279,9 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     .sort((a, b) => b.value - a.value)
 
   // Win-rate buckets by a categorical key (bar length = win rate %).
-  function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[]): Bucket[] {
+  function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[], from: Trade[] = trades): Bucket[] {
     const g = new Map<string, { count: number; wins: number; losses: number }>()
-    for (const t of trades) {
+    for (const t of from) {
       const k = key(t)
       if (!k) continue
       const e = g.get(k) ?? { count: 0, wins: 0, losses: 0 }
@@ -293,23 +300,25 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   }
 
   // Lookback size (points) → fixed ranges; only trades with a size count.
-  const byLookbackSize = winRateBuckets(
-    (t) => (t.lookback_size == null ? null : t.lookback_size < 2 ? '0-2' : t.lookback_size < 4 ? '2-4' : t.lookback_size < 6 ? '4-6' : '6+'),
-    [
-      { v: '0-2', label: '0–2 נק׳' },
-      { v: '2-4', label: '2–4 נק׳' },
-      { v: '4-6', label: '4–6 נק׳' },
-      { v: '6+', label: '6+ נק׳' },
-    ],
-  )
-  const avgSize = (ts: Trade[]): number | null => {
-    const s = ts.map((t) => t.lookback_size).filter((v) => v != null)
-    return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null
-  }
-  const lookbackSizeAvg = {
-    win: avgSize(trades.filter((t) => t.return_amount > 0)),
-    loss: avgSize(trades.filter((t) => t.return_amount < 0)),
-  }
+  // NQ and ES apart (MNQ counts as NQ, MES as ES) — their point scales differ.
+  const sizeRange = (v: number) => (v < 1 ? '0-1' : v < 2 ? '1-2' : v < 3 ? '2-3' : '3+')
+  const SIZE_RANGES = [
+    { v: '0-1', label: '0–1 נק׳' },
+    { v: '1-2', label: '1–2 נק׳' },
+    { v: '2-3', label: '2–3 נק׳' },
+    { v: '3+', label: '3+ נק׳' },
+  ]
+  const avgSize = (ts: Trade[]): number | null =>
+    ts.length ? ts.reduce((s, t) => s + (t.lookback_size ?? 0), 0) / ts.length : null
+  const lookbackSize: LookbackSizeStats[] = (['NQ', 'ES'] as const).map((asset) => {
+    const ts = trades.filter((t) => t.lookback_size != null && cleanSymbol(t.symbol).endsWith(asset))
+    return {
+      asset,
+      buckets: winRateBuckets((t) => sizeRange(t.lookback_size ?? 0), SIZE_RANGES, ts),
+      avgWin: avgSize(ts.filter((t) => t.return_amount > 0)),
+      avgLoss: avgSize(ts.filter((t) => t.return_amount < 0)),
+    }
+  })
 
   // Only trades that were actually tagged count (untagged → excluded), so a
   // partly-tagged backtest isn't diluted by the trades nobody reviewed.
@@ -345,8 +354,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
-    byLookbackSize,
-    lookbackSizeAvg,
+    lookbackSize,
     byLiquidity,
     byZone,
     byBias,

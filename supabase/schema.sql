@@ -239,3 +239,30 @@ create policy "shared editor - trades write" on public.trades
         and s.shared_with_user_id = auth.uid() and s.role = 'editor'
     )
   );
+
+-- ===========================================================================
+-- webhook_tokens — secret per user+journal for the TradingView → journal
+-- webhook (Edge Function pine-webhook). The token in the URL is the auth.
+-- ===========================================================================
+create table if not exists public.webhook_tokens (
+  token uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  qty numeric not null default 1,
+  created_at timestamptz not null default now(),
+  unique (user_id, account_id)
+);
+alter table public.webhook_tokens enable row level security;
+create policy "own webhook tokens" on public.webhook_tokens
+  for all
+  using (auth.uid() = user_id)
+  with check (
+    auth.uid() = user_id and (
+      exists (select 1 from public.accounts a where a.id = account_id and a.user_id = auth.uid())
+      or exists (
+        select 1 from public.journal_shares s
+        where s.account_id = webhook_tokens.account_id
+          and s.shared_with_user_id = auth.uid() and s.role = 'editor'
+      )
+    )
+  );

@@ -5,14 +5,13 @@ import { PageTitle } from '../components/PageTitle'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { useTrades, useTradeActions } from '../lib/useTrades'
-import { parsePineLogs, pineNotes, pineTags, type PineTrade } from '../lib/pineLog'
+import { parsePineLogs, pineNotes, pineTags, POINT_VALUE, type PineTrade } from '../lib/pineLog'
 import { computePartials } from '../lib/partials'
 import { cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { LOOKBACKS } from '../lib/lookback'
 import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Bias, Liquidity, Trade, Zone } from '../types'
 
-const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
 const QTY_KEY = 'pine-import-qty'
 
 const RESULT_TAG: Record<PineTrade['result'], { label: string; cls: string }> = {

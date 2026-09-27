@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "fn:sync": "mkdir -p supabase/functions/_shared && cp src/lib/lookback.ts src/lib/pineLog.ts supabase/functions/_shared/"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

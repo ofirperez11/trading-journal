@@ -152,6 +152,15 @@ const FACETS: Facet[] = [
       { v: 'none', label: 'לא נלקחה' },
     ]),
   },
+  {
+    key: 'ath',
+    label: 'ATH',
+    of: (t) => (t.tags?.includes('ATH') ? 'ath' : 'no'),
+    options: fixed([
+      { v: 'ath', label: 'ATH' },
+      { v: 'no', label: 'ללא ATH' },
+    ]),
+  },
 ]
 const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 

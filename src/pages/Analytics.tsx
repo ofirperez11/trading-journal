@@ -6,10 +6,8 @@ import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
-import { cleanSymbol, computeStats, formatMoney, formatPct } from '../lib/trades'
-import { LOOKBACKS, SESSION_TIMES, sessionOf } from '../lib/lookback'
-import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
-import type { Trade } from '../types'
+import { computeStats, formatMoney, formatPct } from '../lib/trades'
+import { FACETS, csv, passesFacets, readFacets } from '../lib/facets'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
 import { LineChart, Columns, BarRows, SplitBar, CHART, useInView, type Row } from '../components/charts'
@@ -60,110 +58,6 @@ function rangeFor(key: RangeKey): { from: Date | null; to: Date | null } {
   }
 }
 
-/* ---- Filter menu ------------------------------------------------------- */
-
-// Each facet is one URL param (comma-separated values). Values inside a facet
-// are OR'ed (NQ or ES), facets are AND'ed (NQ and short). Every chart on the
-// page is computed from the trades that pass.
-type Opt = { v: string; label: string }
-interface Facet {
-  key: string
-  label: string
-  of: (t: Trade) => string | null
-  options: (trades: Trade[]) => Opt[]
-}
-const fixed = (opts: Opt[]) => () => opts
-/** Only the options that actually occur, in the given order. */
-const present = (of: (t: Trade) => string | null, order: Opt[]) => (trades: Trade[]) => {
-  const seen = new Set(trades.map(of))
-  return order.filter((o) => seen.has(o.v))
-}
-const LOOKBACK_ORDER = [...new Set([...LOOKBACKS['16:30'], ...LOOKBACKS['17:00']])]
-/** Every lookback in the journal (incl. variants like "פתיל 19:30 · 30 דקות"), in marker order. */
-const lookbackOptions = (trades: Trade[]): Opt[] => {
-  const rank = (v: string) => {
-    const i = LOOKBACK_ORDER.findIndex((m) => ` ${v} `.includes(` ${m} `))
-    return i < 0 ? LOOKBACK_ORDER.length : i
-  }
-  return [...new Set(trades.map((t) => t.lookback).filter((v) => v != null))]
-    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
-    .map((v) => ({ v, label: v }))
-}
-
-const FACETS: Facet[] = [
-  {
-    key: 'asset',
-    label: 'נכס',
-    // MNQ counts as NQ, MES as ES.
-    of: (t) => (cleanSymbol(t.symbol).endsWith('NQ') ? 'NQ' : cleanSymbol(t.symbol).endsWith('ES') ? 'ES' : null),
-    options: fixed([
-      { v: 'NQ', label: 'NQ' },
-      { v: 'ES', label: 'ES' },
-    ]),
-  },
-  {
-    key: 'side',
-    label: 'כיוון',
-    of: (t) => t.side,
-    options: fixed([
-      { v: 'LONG', label: 'לונג' },
-      { v: 'SHORT', label: 'שורט' },
-    ]),
-  },
-  {
-    key: 'session',
-    label: 'שעת הזדמנות',
-    of: sessionOf,
-    options: fixed(SESSION_TIMES.map((v) => ({ v, label: v }))),
-  },
-  {
-    key: 'result',
-    label: 'תוצאה',
-    of: (t) => t.status,
-    options: fixed([
-      { v: 'WIN', label: 'Win' },
-      { v: 'LOSS', label: 'Loss' },
-      { v: 'WASH', label: 'BE' },
-    ]),
-  },
-  { key: 'lb', label: 'Lookback', of: (t) => t.lookback, options: lookbackOptions },
-  {
-    key: 'bias',
-    label: 'ביאס',
-    of: (t) => t.bias,
-    options: present((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] }))),
-  },
-  {
-    key: 'zone',
-    label: 'אזור',
-    of: (t) => t.zone,
-    options: fixed([
-      { v: 'premium', label: 'Premium' },
-      { v: 'deadzone', label: 'Deadzone' },
-      { v: 'discount', label: 'Discount' },
-    ]),
-  },
-  {
-    key: 'liq',
-    label: 'נזילות',
-    of: (t) => t.liquidity,
-    options: fixed([
-      { v: 'buyside', label: 'Buyside' },
-      { v: 'sellside', label: 'Sellside' },
-      { v: 'none', label: 'לא נלקחה' },
-    ]),
-  },
-  {
-    key: 'ath',
-    label: 'ATH',
-    of: (t) => (t.tags?.includes('ATH') ? 'ath' : 'no'),
-    options: fixed([
-      { v: 'ath', label: 'ATH' },
-      { v: 'no', label: 'ללא ATH' },
-    ]),
-  },
-]
-const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 
 /* ---- Small building blocks ------------------------------------------- */
 
@@ -297,21 +191,9 @@ export default function Analytics() {
 
   // Filter menu selections live in the URL (back/refresh keep the view).
   const [searchParams, setSearchParams] = useSearchParams()
-  const facetSel = useMemo(
-    () => Object.fromEntries(FACETS.map((f) => [f.key, new Set(csv(searchParams.get(f.key)))])),
-    [searchParams],
-  )
+  const facetSel = useMemo(() => readFacets(searchParams), [searchParams])
   const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0)
-  const scoped = useMemo(
-    () =>
-      trades.filter((t) =>
-        FACETS.every((f) => {
-          const sel = facetSel[f.key]
-          return !sel.size || sel.has(f.of(t) ?? '')
-        }),
-      ),
-    [trades, facetSel],
-  )
+  const scoped = useMemo(() => trades.filter((t) => passesFacets(t, facetSel)), [trades, facetSel])
   function toggleFacet(key: string, v: string) {
     const next = new URLSearchParams(searchParams)
     const cur = new Set(csv(next.get(key)))

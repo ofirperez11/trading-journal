@@ -19,6 +19,7 @@ import { useTrades } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { downloadCsv } from '../lib/csv'
+import { FACETS, csv, passesFacets, readFacets } from '../lib/facets'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
@@ -30,7 +31,8 @@ const MONTHS_HE = [
 ]
 const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'Win', LOSS: 'Loss', WASH: 'BE' }
 const STATUS_TAG: Record<TradeStatus, string> = { WIN: 'tag-green', LOSS: 'tag-red', WASH: '' }
-const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
+// The shared analytics facets, minus side/result which have their own groups here.
+const EXTRA_FACETS = FACETS.filter((f) => f.key !== 'side' && f.key !== 'result')
 const LIQ_LABEL: Record<string, string> = { buyside: 'Buyside', sellside: 'Sellside', none: 'לא נלקחה' }
 const LIQ_TAG: Record<string, string> = { buyside: 'tag-blue', sellside: 'tag-orange', none: '' }
 const ZONE_LABEL: Record<string, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
@@ -60,6 +62,7 @@ export default function Trades() {
   const sideSel = useMemo(() => new Set(csv(searchParams.get('side')) as TradeSide[]), [searchParams])
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
   const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
+  const facetSel = useMemo(() => readFacets(searchParams, EXTRA_FACETS), [searchParams])
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -82,7 +85,9 @@ export default function Trades() {
     : months.filter((m) => m.startsWith(years[0] ?? ''))
   const multiYear = new Set(monthsForYear.map((m) => m.slice(0, 4))).size > 1
 
-  const activeCount = symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size
+  const activeCount =
+    symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size +
+    EXTRA_FACETS.reduce((n, f) => n + facetSel[f.key].size, 0)
   const qs = searchParams.toString() // current filters, for the trade's "back" target
   const backState = { backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }
 
@@ -95,6 +100,7 @@ export default function Trades() {
           if (sideSel.size && !sideSel.has(t.side)) return false
           if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
           if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
+          if (!passesFacets(t, facetSel, EXTRA_FACETS)) return false
           if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
           return true
         })
@@ -102,7 +108,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, query])
+  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -135,6 +141,7 @@ export default function Trades() {
       p.delete('side')
       p.delete('years')
       p.delete('months')
+      for (const f of EXTRA_FACETS) p.delete(f.key)
     })
   }
 
@@ -175,6 +182,10 @@ export default function Trades() {
     ...[...sideSel].map((v) => ({ key: 'side', val: v, label: sideLabel(v) })),
     ...[...yearSel].sort().map((v) => ({ key: 'years', val: v, label: v })),
     ...[...monthSel].sort().map((v) => ({ key: 'months', val: v, label: monthTitle(v) })),
+    ...EXTRA_FACETS.flatMap((f) => {
+      const opts = f.options(trades)
+      return [...facetSel[f.key]].map((v) => ({ key: f.key, val: v, label: `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}` }))
+    }),
   ]
 
   const facet = (on: boolean) =>
@@ -318,6 +329,19 @@ export default function Trades() {
               <button key={s} className={facet(sideSel.has(s))} onClick={() => toggleParam('side', s)}>{sideLabel(s)}</button>
             ))}
           </FacetGroup>
+          {EXTRA_FACETS.map((f) => {
+            const opts = f.options(trades)
+            if (!opts.length) return null
+            return (
+              <FacetGroup key={f.key} label={f.label}>
+                {opts.map((o) => (
+                  <button key={o.v} className={facet(facetSel[f.key].has(o.v))} onClick={() => toggleParam(f.key, o.v)}>
+                    {o.label}
+                  </button>
+                ))}
+              </FacetGroup>
+            )
+          })}
           <FacetGroup label="שנה">
             {years.map((y) => (
               <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>

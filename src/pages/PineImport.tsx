@@ -230,6 +230,7 @@ export default function PineImport() {
         hold_time: null,
         confidence: null,
         lookback: r.lookback || null,
+        lookback_size: r.t.lookbackSize,
         liquidity: r.liquidity,
         zone: r.zone,
         bias: r.bias,

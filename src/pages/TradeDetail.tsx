@@ -17,6 +17,7 @@ import {
   Target,
   ShieldAlert,
   Timer,
+  Ruler,
   Droplets,
   Layers,
   Sigma,
@@ -279,6 +280,9 @@ export default function TradeDetail() {
             ) : (
               <Empty />
             )}
+          </Prop>
+          <Prop icon={Ruler} label="גודל Lookback">
+            {trade.lookback_size != null ? <span className="num">{trade.lookback_size} נק׳</span> : <Empty />}
           </Prop>
           <Prop icon={Droplets} label="נזילות">
             {trade.liquidity ? <span className={`tag ${LIQ_TAG[trade.liquidity]}`}>{LIQ_LABEL[trade.liquidity]}</span> : <Empty />}

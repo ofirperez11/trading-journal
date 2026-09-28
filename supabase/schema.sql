@@ -75,6 +75,7 @@ create table if not exists public.trades (
   hold_time integer,           -- seconds
   confidence smallint,         -- 0-5
   lookback text,               -- entry-model time marker (e.g. '16:30')
+  lookback_size numeric,       -- lookback size in points (Pine import or manual)
   peak_price numeric,          -- deprecated (MFE) — kept for historical data, no longer written
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
   zone text,                   -- ICT: dealing-range position at entry ('premium' | 'deadzone' | 'discount')

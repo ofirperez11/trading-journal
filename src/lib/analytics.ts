@@ -26,6 +26,14 @@ export interface AssetStopStats {
   buckets: StopStat[]
 }
 
+/** Lookback-size breakdown for one index (micro + mini contracts together). */
+export interface LookbackSizeStats {
+  asset: 'NQ' | 'ES'
+  buckets: Bucket[] // win rate per size range (points)
+  avgWin: number | null // avg lookback size of winners
+  avgLoss: number | null // avg lookback size of losers
+}
+
 /** Expected stop sizes (points) per asset — trades snap to the nearest. */
 const STOP_SIZES: Record<string, number[]> = { MNQ: [15, 20], MES: [3, 4], YM: [] }
 const STOP_ASSETS = ['MNQ', 'MES', 'YM']
@@ -61,6 +69,7 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
+  lookbackSize: LookbackSizeStats[] // win rate by lookback size range, NQ and ES separately
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
@@ -284,9 +293,9 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     .sort((a, b) => b.value - a.value)
 
   // Win-rate buckets by a categorical key (bar length = win rate %).
-  function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[]): Bucket[] {
+  function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[], from: Trade[] = trades): Bucket[] {
     const g = new Map<string, { count: number; wins: number; losses: number }>()
-    for (const t of trades) {
+    for (const t of from) {
       const k = key(t)
       if (!k) continue
       const e = g.get(k) ?? { count: 0, wins: 0, losses: 0 }
@@ -303,6 +312,27 @@ export function computeAnalytics(trades: Trade[]): Analytics {
         return { label: o.label, value: Math.round(wr * 100), count: e.count, tone: (wr >= 0.5 ? 'win' : 'loss') as 'win' | 'loss' }
       })
   }
+
+  // Lookback size (points) → fixed ranges; only trades with a size count.
+  // NQ and ES apart (MNQ counts as NQ, MES as ES) — their point scales differ.
+  const sizeRange = (v: number) => (v < 1 ? '0-1' : v < 2 ? '1-2' : v < 3 ? '2-3' : '3+')
+  const SIZE_RANGES = [
+    { v: '0-1', label: '0–1 נק׳' },
+    { v: '1-2', label: '1–2 נק׳' },
+    { v: '2-3', label: '2–3 נק׳' },
+    { v: '3+', label: '3+ נק׳' },
+  ]
+  const avgSize = (ts: Trade[]): number | null =>
+    ts.length ? ts.reduce((s, t) => s + (t.lookback_size ?? 0), 0) / ts.length : null
+  const lookbackSize: LookbackSizeStats[] = (['NQ', 'ES'] as const).map((asset) => {
+    const ts = trades.filter((t) => t.lookback_size != null && cleanSymbol(t.symbol).endsWith(asset))
+    return {
+      asset,
+      buckets: winRateBuckets((t) => sizeRange(t.lookback_size ?? 0), SIZE_RANGES, ts),
+      avgWin: avgSize(ts.filter((t) => t.return_amount > 0)),
+      avgLoss: avgSize(ts.filter((t) => t.return_amount < 0)),
+    }
+  })
 
   // Only trades that were actually tagged count (untagged → excluded), so a
   // partly-tagged backtest isn't diluted by the trades nobody reviewed.
@@ -355,6 +385,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
+    lookbackSize,
     byLiquidity,
     byZone,
     byBias,

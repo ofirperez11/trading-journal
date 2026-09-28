@@ -205,6 +205,7 @@ export default function ScreenshotImport() {
       hold_time: null,
       confidence: null,
       lookback: form.lookback || null,
+      lookback_size: null,
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,

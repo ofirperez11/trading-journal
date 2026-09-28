@@ -26,6 +26,7 @@ export interface PineTrade {
   exit: number | null
   lookback: string | null // a marker from LOOKBACKS, e.g. '19:30' / 'פתיל 90'
   lookbackRaw: string
+  lookbackSize: number | null // "גודל Lookback: 3.50 נק'" — points
   bias: Bias | null
   baseRaw: string
   liquidity: Liquidity | null
@@ -221,6 +222,7 @@ function parseOne(chunk: string): PineTrade | null {
     exit,
     lookback,
     lookbackRaw,
+    lookbackSize: toNum(field(lines, 'גודל Lookback').match(/-?[\d.,]+/)?.[0]),
     bias,
     baseRaw,
     liquidity,

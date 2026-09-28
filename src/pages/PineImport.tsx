@@ -31,16 +31,24 @@ const LIQ: { v: Liquidity; label: string }[] = [
 const ZONE_LABEL: Record<Zone, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
 
 // A report for a trade that's already in the journal never creates a second
-// copy. It may only fill fields the existing trade has empty — never overwrite
-// what's there, and never touch identity, fills or P&L.
-const LOCKED_FIELDS = new Set<string>([
-  'id', 'user_id', 'account_id', 'date', 'symbol', 'market', 'side', 'status', 'qty',
-  'entry', 'exit', 'exits', 'entry_total', 'exit_total', 'return_amount', 'return_percent',
-  'r_multiple', 'hold_time', 'executions', 'images', 'created_at', 'updated_at',
+// copy. Instead it updates the existing trade with whatever differs — a moved
+// stop, a new lookback, chart move… — and the row lists each change (from → to)
+// so the user decides. Identity (who, when, what) is never touched, and the
+// user's own notes / tags are only filled when empty.
+const IDENTITY = new Set<string>([
+  'id', 'user_id', 'account_id', 'date', 'symbol', 'market', 'side', 'images', 'hold_time',
+  'entry_total', 'exit_total', 'return_percent', 'created_at', 'updated_at',
 ])
+const FILL_ONLY = new Set<string>(['notes', 'tags'])
+// Recomputed from prices × contracts: saved along with them, only P&L is listed.
+const DERIVED = new Set<string>(['exits', 'executions', 'status', 'r_multiple'])
 const FIELD_LABEL: Record<string, string> = {
+  entry: 'כניסה',
+  exit: 'יציאה',
+  qty: 'חוזים',
   target: 'יעד',
   stoploss: 'סטופ',
+  return_amount: 'P&L',
   lookback: 'Lookback',
   lookback_size: 'גודל Lookback',
   liquidity: 'נזילות',
@@ -52,16 +60,46 @@ const FIELD_LABEL: Record<string, string> = {
   notes: 'הערות',
 }
 const isEmpty = (v: unknown) => v == null || v === '' || (Array.isArray(v) && v.length === 0)
+const same = (a: unknown, b: unknown) =>
+  typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-6 : JSON.stringify(a) === JSON.stringify(b)
 
-/** Fields the report adds to an existing trade (only ones it has empty). */
-function newDataFor(existing: Trade, next: Trade): Partial<Trade> {
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(next)) {
-    if (LOCKED_FIELDS.has(k) || isEmpty(v)) continue
-    if (isEmpty((existing as unknown as Record<string, unknown>)[k])) out[k] = v
-  }
-  return out as Partial<Trade>
+interface Change {
+  key: string
+  label: string
+  from: string | null // null = the field was empty (an addition)
+  to: string | null // null = too long to show (chart move, notes, tags)
 }
+function show(key: string, v: unknown): string | null {
+  if (isEmpty(v)) return null
+  if (key === 'bias') return BIAS_FULL_LABEL[v as Bias]
+  if (key === 'zone') return ZONE_LABEL[v as Zone]
+  if (key === 'liquidity') return LIQ.find((o) => o.v === v)?.label ?? String(v)
+  if (key === 'week_of_month') return `שבוע ${v}`
+  if (key === 'return_amount') return formatMoney(v as number)
+  if (typeof v === 'object') return null
+  return String(v)
+}
+
+/** What the report would change on an existing trade: the patch to save and the list to show. */
+function changesFor(existing: Trade, next: Trade): { patch: Partial<Trade>; changes: Change[] } {
+  const old = existing as unknown as Record<string, unknown>
+  const patch: Record<string, unknown> = {}
+  const changes: Change[] = []
+  for (const [k, v] of Object.entries(next)) {
+    if (IDENTITY.has(k) || DERIVED.has(k) || isEmpty(v) || same(old[k], v)) continue
+    if (FILL_ONLY.has(k) && !isEmpty(old[k])) continue
+    patch[k] = v
+    const from = show(k, old[k])
+    changes.push({ key: k, label: FIELD_LABEL[k] ?? k, from: isEmpty(old[k]) ? null : (from ?? ''), to: show(k, v) })
+  }
+  // A price, stop or contract change re-derives the fills, result and R with it.
+  if (['entry', 'exit', 'stoploss', 'qty', 'return_amount'].some((k) => k in patch)) {
+    for (const k of DERIVED) patch[k] = (next as unknown as Record<string, unknown>)[k]
+  }
+  return { patch: patch as Partial<Trade>, changes }
+}
+const changeText = (c: Change) =>
+  c.from == null ? `נוסף: ${c.label}${c.to ? ` ${c.to}` : ''}` : c.to == null ? `${c.label} עודכן` : `${c.label}: ${c.from || '—'} → ${c.to}`
 
 // Editable copy of a parsed report (numbers as strings for the inputs).
 interface Row {
@@ -142,7 +180,7 @@ export default function PineImport() {
           stop: str(t.stop),
           target: str(t.target),
           exit: str(t.exit),
-          qty: defQty,
+          qty: existing ? String(existing.qty) : defQty, // compare like with like
           lookback: t.lookback ? formatLookback({ base: t.lookback, piece: pieceIn(t.lookbackRaw), tf: timeframeIn(t.lookbackRaw) }) : '',
           bias: t.bias,
           zone: t.zone,
@@ -195,7 +233,7 @@ export default function PineImport() {
   }
   function applyQtyToAll(q: string) {
     setDefQty(q)
-    setRows((rs) => rs && rs.map((r) => ({ ...r, qty: q })))
+    setRows((rs) => rs && rs.map((r) => (r.existing ? r : { ...r, qty: q })))
   }
 
   function calcRow(r: Row) {
@@ -253,9 +291,9 @@ export default function PineImport() {
   }
 
   /** For a row already in the journal: what it would add (empty → nothing to do). */
-  const updateFor = (r: Row) => (r.existing ? newDataFor(r.existing, buildTrades([r])[0]) : null)
+  const updateFor = (r: Row) => (r.existing ? changesFor(r.existing, buildTrades([r])[0]) : null)
 
-  const selected = rows?.filter((r) => r.on && (!r.existing || Object.keys(updateFor(r)!).length > 0)) ?? []
+  const selected = rows?.filter((r) => r.on && (!r.existing || updateFor(r)!.changes.length > 0)) ?? []
   const toAdd = selected.filter((r) => !r.existing)
   const toUpdate = selected.filter((r) => r.existing)
 
@@ -264,7 +302,7 @@ export default function PineImport() {
     const bad = toAdd.find((r) => num(r.entry) == null)
     if (bad) return setError(`חסר מחיר כניסה בעסקה של ${bad.t.day}`)
     if (toAdd.length) addTrades(buildTrades(toAdd))
-    for (const r of toUpdate) updateTrade(r.existing!.id, updateFor(r)!)
+    for (const r of toUpdate) updateTrade(r.existing!.id, updateFor(r)!.patch)
     navigate('/app/trades')
   }
 
@@ -364,9 +402,8 @@ export default function PineImport() {
 
           {rows.map((r, i) => {
             const calc = calcRow(r)
-            const adds = updateFor(r)
-            const addLabels = adds ? Object.keys(adds).map((k) => FIELD_LABEL[k] ?? k) : []
-            const locked = r.existing != null && addLabels.length === 0
+            const changes = updateFor(r)?.changes ?? []
+            const locked = r.existing != null && changes.length === 0
             const on = r.on && !locked
             const res = RESULT_TAG[r.t.result]
             const pnlTone = calc.pnl == null ? 'text-faint' : calc.pnl > 0 ? 'text-win' : calc.pnl < 0 ? 'text-loss' : 'text-muted'
@@ -397,14 +434,24 @@ export default function PineImport() {
                   </span>
                   {r.existing &&
                     (locked ? (
-                      <span className="tag tag-yellow !font-semibold">כבר ביומן · אין נתון חדש</span>
+                      <span className="tag tag-yellow !font-semibold">כבר ביומן · אין שינוי</span>
                     ) : (
-                      <span className="tag tag-blue !font-semibold">כבר ביומן · יתעדכן: {addLabels.join(', ')}</span>
+                      <span className="tag tag-blue !font-semibold">
+                        כבר ביומן · {changes.length === 1 ? 'שינוי אחד' : `${changes.length} שינויים`}
+                      </span>
                     ))}
                   <div className="flex-1" />
                   <span className={`num text-lg font-bold ${pnlTone}`}>{calc.pnl == null ? '—' : formatMoney(calc.pnl)}</span>
                   <span className="num text-sm text-muted">{formatR(calc.rMultiple)}</span>
                 </div>
+
+                {changes.length > 0 && (
+                  <ul className="flex flex-col gap-0.5 rounded-md bg-accent/[0.07] px-3 py-2 text-[13px] text-[#37352f]">
+                    {changes.map((c) => (
+                      <li key={c.key}>{changeText(c)}</li>
+                    ))}
+                  </ul>
+                )}
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-4">
                   <Info label="כניסה" value={r.entry} ltr />

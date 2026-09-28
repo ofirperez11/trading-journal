@@ -250,19 +250,25 @@ export function parsePineLogs(text: string): PineTrade[] {
   return [...out.values()].sort((a, b) => (a.day + a.session).localeCompare(b.day + b.session))
 }
 
-/** Human-readable notes block stored with the imported trade. */
+/** "… (שיא לונדון, שיא אסיה)" → "שיא לונדון, שיא אסיה" — the detail beyond the field. */
+const inParens = (s: string) =>
+  [...s.matchAll(/\(([^)]*)\)/g)]
+    .map((m) => m[1].trim())
+    .filter(Boolean)
+    .join(' · ')
+
+/**
+ * Notes stored with the imported trade — only what no trade field holds.
+ * Fill time, lookback, bias, week and stop/target are fields already; for
+ * liquidity and zone only the extra detail (which highs, % in range) is kept.
+ */
 export function pineNotes(t: PineTrade): string {
   const rows = [
     'יובא מ-Pine Logs (full auto NOD indicator)',
-    t.fillTime ? `שעת מילוי: ${t.fillTime}` : '',
-    t.lookbackRaw ? `Lookback: ${t.lookbackRaw}` : '',
-    t.baseRaw ? `בייס: ${t.baseRaw}` : '',
     t.dayKind ? `סוג יום: ${t.dayKind}` : '',
-    t.week ? `שבוע בחודש: ${t.week}` : '',
-    t.stopPts != null ? `סטופ: ${t.stopPts} נק'${t.rr ? ` · יחס ${t.rr}` : ''}` : '',
     t.beRaw ? `ברייק-איבן: ${t.beRaw}` : '',
-    t.liqRaw ? `נזילות: ${t.liqRaw}` : '',
-    t.zoneRaw ? `אזור: ${t.zoneRaw}` : '',
+    inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
+    inParens(t.zoneRaw) ? `מיקום בטווח: ${inParens(t.zoneRaw)}` : '',
     t.htfRaw ? `ביאס HTF: ${t.htfRaw}` : '',
   ]
   return rows.filter(Boolean).join('\n')

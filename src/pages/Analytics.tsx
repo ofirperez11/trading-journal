@@ -7,7 +7,7 @@ import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
 import { cleanSymbol, computeStats, formatMoney, formatPct } from '../lib/trades'
-import { LOOKBACKS, SESSION_TIMES } from '../lib/lookback'
+import { LOOKBACKS, SESSION_TIMES, sessionOf } from '../lib/lookback'
 import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Trade } from '../types'
 import { CountUp } from '../components/CountUp'
@@ -113,7 +113,7 @@ const FACETS: Facet[] = [
   {
     key: 'session',
     label: 'שעת הזדמנות',
-    of: (t) => t.date.slice(11, 16),
+    of: sessionOf,
     options: fixed(SESSION_TIMES.map((v) => ({ v, label: v }))),
   },
   {

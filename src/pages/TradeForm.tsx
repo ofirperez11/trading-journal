@@ -9,7 +9,7 @@ import { compressImage } from '../lib/image'
 import { TRADE_MARKS } from '../lib/marks'
 import { uploadTradeImages } from '../lib/uploadImages'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { SESSION_TIMES as TIMES, LOOKBACKS, PIECES, TIMEFRAMES, formatLookback, lookbackColor, parseLookback, timeframeLabel } from '../lib/lookback'
+import { SESSION_TIMES as TIMES, LOOKBACKS, PIECES, TIMEFRAMES, formatLookback, lookbackColor, parseLookback, sessionOf, timeframeLabel } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { PriceMap } from '../components/PriceMap'
@@ -67,7 +67,9 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
 
   const [form, setForm] = useState(() => ({
     day: (trade?.date ?? (presetDate ? `${presetDate}T00:00` : new Date().toISOString())).slice(0, 10),
-    time: (trade?.date?.slice(11, 16) === '17:00' ? '17:00' : '16:30') as (typeof TIMES)[number],
+    time: (trade ? sessionOf(trade) : null) ?? '16:30',
+    // The trade's actual time (a Pine trade's fill time, e.g. 17:01) — never replaced on save.
+    clock: trade?.date?.slice(11, 16) || ((trade ? sessionOf(trade) : null) ?? '16:30'),
     lookback: trade?.lookback ?? '',
     lookbackSize: trade?.lookback_size != null ? String(trade.lookback_size) : '',
     liquidity: trade?.liquidity ?? null,
@@ -98,7 +100,12 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     setForm((f) => {
       const parts = parseLookback(f.lookback)
       const idx = LOOKBACKS[f.time].indexOf(parts.base)
-      return { ...f, time: tm, lookback: idx >= 0 ? formatLookback({ ...parts, base: LOOKBACKS[tm][idx] }) : '' }
+      return {
+        ...f,
+        time: tm,
+        clock: f.clock === f.time ? tm : f.clock, // follow the session unless a fill time was set
+        lookback: idx >= 0 ? formatLookback({ ...parts, base: LOOKBACKS[tm][idx] }) : '',
+      }
     })
   }
   // The lookback value carries piece + timeframe ("פתיל 17:00 · 30 דקות"); neither is chosen by default.
@@ -114,7 +121,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     pv,
     stop: stopN,
     exits: form.exits,
-    dateTime: `${form.day}T${form.time}`,
+    dateTime: `${form.day}T${form.clock || form.time}`,
   })
   const { pnl, rMultiple, status } = calc
 
@@ -159,7 +166,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       // belong to the journal's owner so shared-journal entries stay visible to them.
       user_id: editing && trade ? trade.user_id : (active?.user_id ?? (user?.id as string) ?? 'demo-user'),
       account_id: editing && trade ? trade.account_id : active.id,
-      date: `${form.day}T${form.time}`,
+      date: `${form.day}T${form.clock || form.time}`,
       symbol: form.symbol,
       market: trade?.market ?? 'FUTURES',
       side: form.side,
@@ -272,7 +279,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                 <input type="date" dir="ltr" className="input" value={form.day} onChange={(e) => set('day', e.target.value)} />
               </label>
               <div className={field}>
-                <span className="field-label mb-0">שעה</span>
+                <span className="field-label mb-0">שעת הזדמנות</span>
                 <div className="flex gap-2">
                   {TIMES.map((tm) => (
                     <button key={tm} type="button" aria-pressed={form.time === tm} onClick={() => setTime(tm)} className={`num ${choice(form.time === tm, 'bg-ink text-white')}`}>
@@ -281,6 +288,10 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                   ))}
                 </div>
               </div>
+              <label className={field}>
+                <span className="field-label mb-0">שעת מילוי</span>
+                <input type="time" dir="ltr" className="input" value={form.clock} onChange={(e) => set('clock', e.target.value)} />
+              </label>
               <div className={`${field} sm:col-span-2`}>
                 <span className="field-label mb-0">Lookback (מודל כניסה)</span>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">

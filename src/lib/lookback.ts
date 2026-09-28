@@ -55,6 +55,21 @@ export function timeframeIn(text: string): Timeframe | null {
   return m && (TIMEFRAMES as readonly string[]).includes(m[1]) ? (m[1] as Timeframe) : null
 }
 
+/**
+ * The session (16:30 / 17:00) a trade belongs to. Its time is the fill time
+ * (e.g. 17:01), so: the time itself when it's a session time, else the session
+ * whose markers include its lookback, else by the time (from 17:00 on → 17:00).
+ */
+export function sessionOf(t: { date: string; lookback: string | null }): SessionTime | null {
+  const time = t.date.slice(11, 16)
+  if ((SESSION_TIMES as readonly string[]).includes(time)) return time as SessionTime
+  const base = t.lookback ? parseLookback(t.lookback).base : null
+  const byMarker = SESSION_TIMES.find((s) => base && base !== 'פתיל 90' && LOOKBACKS[s].includes(base))
+  if (byMarker) return byMarker
+  if (time.length < 5) return null
+  return time >= '17:00' ? '17:00' : time >= '16:30' ? '16:30' : null
+}
+
 // The session-open markers are blue; every other lookback is red (any variant).
 const BLUE_LOOKBACKS = new Set(['16:30', '4:30', '17:00', '5:00'])
 export function lookbackColor(lb: string): string {

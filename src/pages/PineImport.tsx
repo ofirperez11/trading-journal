@@ -81,6 +81,8 @@ interface Row {
 }
 
 const str = (n: number | null) => (n == null ? '' : String(n))
+/** The trade's time: the fill time ("16:41"), else the session time. */
+const fillClock = (t: PineTrade) => (t.fillTime ? t.fillTime.padStart(5, '0') : t.session)
 const num = (v: string) => {
   const n = Number(v)
   return v.trim() !== '' && Number.isFinite(n) ? n : null
@@ -126,7 +128,11 @@ export default function PineImport() {
     }
     setRows(
       parsed.map((t) => {
-        const existing = existingByKey.get(`${t.day}T${t.session}|${t.side}|${t.symbol}`) ?? null
+        // Trades imported before fill times were used sit at the session time.
+        const existing =
+          existingByKey.get(`${t.day}T${fillClock(t)}|${t.side}|${t.symbol}`) ??
+          existingByKey.get(`${t.day}T${t.session}|${t.side}|${t.symbol}`) ??
+          null
         return {
           t,
           on: t.result !== 'unfilled',
@@ -200,7 +206,7 @@ export default function PineImport() {
       pv,
       stop: num(r.stop),
       exits: r.exit ? [{ price: r.exit, qty: r.qty }] : [],
-      dateTime: `${r.t.day}T${r.t.session}`,
+      dateTime: `${r.t.day}T${fillClock(r.t)}`,
     })
   }
 
@@ -211,7 +217,7 @@ export default function PineImport() {
         id: crypto.randomUUID(),
         user_id: active?.user_id ?? (user?.id as string) ?? 'demo-user',
         account_id: active.id,
-        date: `${r.t.day}T${r.t.session}`,
+        date: `${r.t.day}T${fillClock(r.t)}`,
         symbol: r.t.symbol,
         market: 'FUTURES',
         side: r.t.side,

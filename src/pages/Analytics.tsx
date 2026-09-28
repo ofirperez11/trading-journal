@@ -78,10 +78,10 @@ const present = (of: (t: Trade) => string | null, order: Opt[]) => (trades: Trad
   return order.filter((o) => seen.has(o.v))
 }
 const LOOKBACK_ORDER = [...new Set([...LOOKBACKS['16:30'], ...LOOKBACKS['17:00']])]
-/** Every lookback in the journal (incl. variants like "19:30 גאפ"), in marker order. */
+/** Every lookback in the journal (incl. variants like "פתיל 19:30"), in marker order. */
 const lookbackOptions = (trades: Trade[]): Opt[] => {
   const rank = (v: string) => {
-    const i = LOOKBACK_ORDER.findIndex((m) => v === m || v.startsWith(m + ' '))
+    const i = LOOKBACK_ORDER.findIndex((m) => v === m || v.endsWith(' ' + m))
     return i < 0 ? LOOKBACK_ORDER.length : i
   }
   return [...new Set(trades.map((t) => t.lookback).filter((v) => v != null))]

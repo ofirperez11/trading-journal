@@ -44,6 +44,7 @@ const FIELD_LABEL: Record<string, string> = {
   lookback: 'Lookback',
   lookback_size: 'גודל Lookback',
   liquidity: 'נזילות',
+  week_of_month: 'שבוע בחודש',
   zone: 'אזור',
   bias: 'ביאס',
   chart_move: 'מהלך גרף',

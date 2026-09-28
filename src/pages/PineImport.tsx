@@ -8,7 +8,7 @@ import { useTrades, useTradeActions } from '../lib/useTrades'
 import { parsePineLogs, pineNotes, pineTags, type PineTrade } from '../lib/pineLog'
 import { computePartials } from '../lib/partials'
 import { cleanSymbol, formatMoney, formatR } from '../lib/trades'
-import { LOOKBACKS, PIECES, pieceIn, withPiece } from '../lib/lookback'
+import { LOOKBACKS, formatLookback, parseLookback, pieceIn, timeframeIn } from '../lib/lookback'
 import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Bias, Liquidity, Trade, Zone } from '../types'
 
@@ -100,7 +100,7 @@ export default function PineImport() {
           target: str(t.target),
           exit: str(t.exit),
           qty: defQty,
-          lookback: t.lookback ? withPiece(t.lookback, pieceIn(t.lookbackRaw)) : '',
+          lookback: t.lookback ? formatLookback({ base: t.lookback, piece: pieceIn(t.lookbackRaw), tf: timeframeIn(t.lookbackRaw) }) : '',
           bias: t.bias,
           zone: t.zone,
           liquidity: t.liquidity,
@@ -402,9 +402,15 @@ export default function PineImport() {
                     <Edit label="חוזים" value={r.qty} onChange={(v) => patch(i, { qty: v })} />
                     <label className="flex flex-col gap-1">
                       <span className="text-[12px] text-muted">Lookback</span>
-                      <select className="input !h-9" value={r.lookback} onChange={(e) => patch(i, { lookback: e.target.value })}>
+                      <select
+                        className="input !h-9"
+                        value={parseLookback(r.lookback).base}
+                        onChange={(e) =>
+                          patch(i, { lookback: e.target.value ? formatLookback({ ...parseLookback(r.lookback), base: e.target.value }) : '' })
+                        }
+                      >
                         <option value="">—</option>
-                        {LOOKBACKS[r.t.session].flatMap((lb) => [lb, ...PIECES.map((p) => withPiece(lb, p))]).map((lb) => (
+                        {LOOKBACKS[r.t.session].map((lb) => (
                           <option key={lb} value={lb}>{lb}</option>
                         ))}
                       </select>

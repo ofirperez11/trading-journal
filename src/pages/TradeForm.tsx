@@ -8,7 +8,7 @@ import { imageUrl, cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { compressImage } from '../lib/image'
 import { uploadTradeImages } from '../lib/uploadImages'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { SESSION_TIMES as TIMES, LOOKBACKS, PIECES, lookbackColor, splitPiece, withPiece } from '../lib/lookback'
+import { SESSION_TIMES as TIMES, LOOKBACKS, PIECES, TIMEFRAMES, formatLookback, lookbackColor, parseLookback, timeframeLabel } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { PriceMap } from '../components/PriceMap'
@@ -92,13 +92,13 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   // position (e.g. 10:30 ↔ 11:00), or clear it if none was chosen.
   function setTime(tm: (typeof TIMES)[number]) {
     setForm((f) => {
-      const { base, piece } = splitPiece(f.lookback)
-      const idx = LOOKBACKS[f.time].indexOf(base)
-      return { ...f, time: tm, lookback: idx >= 0 ? withPiece(LOOKBACKS[tm][idx], piece) : '' }
+      const parts = parseLookback(f.lookback)
+      const idx = LOOKBACKS[f.time].indexOf(parts.base)
+      return { ...f, time: tm, lookback: idx >= 0 ? formatLookback({ ...parts, base: LOOKBACKS[tm][idx] }) : '' }
     })
   }
-  // The lookback value carries the piece ("פתיל 17:00"); none is chosen by default.
-  const lb = splitPiece(form.lookback)
+  // The lookback value carries piece + timeframe ("פתיל 17:00 · 30 דקות"); neither is chosen by default.
+  const lb = parseLookback(form.lookback)
 
   // --- live auto-calculations -------------------------------------------
   const pv = POINT_VALUE[form.symbol] ?? 0
@@ -286,7 +286,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                         type="button"
                         dir="ltr"
                         aria-pressed={on}
-                        onClick={() => set('lookback', on ? '' : withPiece(marker, lb.piece))}
+                        onClick={() => set('lookback', on ? '' : formatLookback({ ...lb, base: marker }))}
                         className={`h-10 rounded-md text-sm font-semibold transition-all active:scale-[0.97] ${
                           on
                             ? blue
@@ -309,10 +309,24 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                       type="button"
                       aria-pressed={lb.piece === p}
                       disabled={!lb.base}
-                      onClick={() => set('lookback', withPiece(lb.base, lb.piece === p ? null : p))}
+                      onClick={() => set('lookback', formatLookback({ ...lb, piece: lb.piece === p ? null : p }))}
                       className={`${choice(lb.piece === p, 'bg-ink text-white')} disabled:opacity-40`}
                     >
                       {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-1 flex gap-2" role="group" aria-label="טיים פריים">
+                  {TIMEFRAMES.map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      aria-pressed={lb.tf === tf}
+                      disabled={!lb.base}
+                      onClick={() => set('lookback', formatLookback({ ...lb, tf: lb.tf === tf ? null : tf }))}
+                      className={`${choice(lb.tf === tf, 'bg-ink text-white')} disabled:opacity-40`}
+                    >
+                      {timeframeLabel(tf)}
                     </button>
                   ))}
                 </div>

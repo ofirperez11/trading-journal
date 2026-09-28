@@ -87,16 +87,17 @@ function resolveLookback(t: string, session: SessionTime): string | null {
   return list.includes(shifted) ? shifted : null
 }
 
-/** "6H (פתיל + גוף) + 3H (גוף)" → '6-3_wn'. */
+/** "6H (פתיל + גוף) + 3H (גוף)" → '6-3_wn'. The indicator may also write it in
+ * English: "3H (body) + 90m (wick + body)" — "wick" = פתיל, "90m" = "90 דק". */
 export function parseBias(base: string): Bias | null {
-  const w = (s: string) => (s.includes('פתיל') ? 'w' : 'n')
+  const w = (s: string) => (/פתיל|wick/i.test(s) ? 'w' : 'n')
   let m = base.match(/6H \(([^)]+)\) \+ 3H \(([^)]+)\)/)
   if (m) return `6-3_${w(m[1])}${w(m[2])}` as Bias
-  m = base.match(/3H \(([^)]+)\) \+ 90 דק \(([^)]+)\)/)
+  m = base.match(/3H \(([^)]+)\) \+ 90 ?(?:דק|m) \(([^)]+)\)/)
   if (m) return `3b90_${w(m[1])}${w(m[2])}` as Bias
-  m = base.match(/3H \(([^)]+)\) \+ פתיל 90/)
+  m = base.match(/3H \(([^)]+)\) \+ (?:פתיל 90|wick 90)/i)
   if (m) return `3w90_${w(m[1])}` as Bias
-  m = base.match(/6H \(([^)]+)\) \+ 90 דק \(([^)]+)\)/)
+  m = base.match(/6H \(([^)]+)\) \+ 90 ?(?:דק|m) \(([^)]+)\)/)
   if (m) return `6b90_${w(m[1])}${w(m[2])}` as Bias
   return null
 }

@@ -8,7 +8,7 @@ import { useTrades, useTradeActions } from '../lib/useTrades'
 import { parsePineLogs, pineNotes, pineTags, type PineTrade } from '../lib/pineLog'
 import { computePartials } from '../lib/partials'
 import { cleanSymbol, formatMoney, formatR } from '../lib/trades'
-import { LOOKBACKS, withGap } from '../lib/lookback'
+import { LOOKBACKS, PIECES, pieceIn, withPiece } from '../lib/lookback'
 import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Bias, Liquidity, Trade, Zone } from '../types'
 
@@ -100,7 +100,7 @@ export default function PineImport() {
           target: str(t.target),
           exit: str(t.exit),
           qty: defQty,
-          lookback: t.lookback ? withGap(t.lookback, t.lookbackRaw.includes('גאפ')) : '',
+          lookback: t.lookback ? withPiece(t.lookback, pieceIn(t.lookbackRaw)) : '',
           bias: t.bias,
           zone: t.zone,
           liquidity: t.liquidity,
@@ -404,7 +404,7 @@ export default function PineImport() {
                       <span className="text-[12px] text-muted">Lookback</span>
                       <select className="input !h-9" value={r.lookback} onChange={(e) => patch(i, { lookback: e.target.value })}>
                         <option value="">—</option>
-                        {LOOKBACKS[r.t.session].flatMap((lb) => [lb, withGap(lb, true)]).map((lb) => (
+                        {LOOKBACKS[r.t.session].flatMap((lb) => [lb, ...PIECES.map((p) => withPiece(lb, p))]).map((lb) => (
                           <option key={lb} value={lb}>{lb}</option>
                         ))}
                       </select>

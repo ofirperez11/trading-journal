@@ -8,7 +8,7 @@ import { imageUrl, cleanSymbol, formatMoney, formatR } from '../lib/trades'
 import { compressImage } from '../lib/image'
 import { uploadTradeImages } from '../lib/uploadImages'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor, splitGap, withGap } from '../lib/lookback'
+import { SESSION_TIMES as TIMES, LOOKBACKS, PIECES, lookbackColor, splitPiece, withPiece } from '../lib/lookback'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { PriceMap } from '../components/PriceMap'
@@ -92,13 +92,13 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   // position (e.g. 10:30 ↔ 11:00), or clear it if none was chosen.
   function setTime(tm: (typeof TIMES)[number]) {
     setForm((f) => {
-      const { base, gap } = splitGap(f.lookback)
+      const { base, piece } = splitPiece(f.lookback)
       const idx = LOOKBACKS[f.time].indexOf(base)
-      return { ...f, time: tm, lookback: idx >= 0 ? withGap(LOOKBACKS[tm][idx], gap) : '' }
+      return { ...f, time: tm, lookback: idx >= 0 ? withPiece(LOOKBACKS[tm][idx], piece) : '' }
     })
   }
-  // The lookback value carries the gap flag ("19:30 גאפ"); a new pick starts as not-gap.
-  const lb = splitGap(form.lookback)
+  // The lookback value carries the piece ("פתיל 17:00"); none is chosen by default.
+  const lb = splitPiece(form.lookback)
 
   // --- live auto-calculations -------------------------------------------
   const pv = POINT_VALUE[form.symbol] ?? 0
@@ -286,7 +286,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                         type="button"
                         dir="ltr"
                         aria-pressed={on}
-                        onClick={() => set('lookback', on ? '' : marker)}
+                        onClick={() => set('lookback', on ? '' : withPiece(marker, lb.piece))}
                         className={`h-10 rounded-md text-sm font-semibold transition-all active:scale-[0.97] ${
                           on
                             ? blue
@@ -302,13 +302,19 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                     )
                   })}
                 </div>
-                <div className="mt-1 flex gap-2" role="group" aria-label="גאפ">
-                  <button type="button" aria-pressed={!lb.gap} disabled={!lb.base} onClick={() => set('lookback', lb.base)} className={`${choice(!lb.gap, 'bg-ink text-white')} disabled:opacity-40`}>
-                    לא גאפ
-                  </button>
-                  <button type="button" aria-pressed={lb.gap} disabled={!lb.base} onClick={() => set('lookback', withGap(lb.base, true))} className={`${choice(lb.gap, 'bg-ink text-white')} disabled:opacity-40`}>
-                    גאפ
-                  </button>
+                <div className="mt-1 flex gap-2" role="group" aria-label="גאפ / פתיל / גוף">
+                  {PIECES.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      aria-pressed={lb.piece === p}
+                      disabled={!lb.base}
+                      onClick={() => set('lookback', withPiece(lb.base, lb.piece === p ? null : p))}
+                      className={`${choice(lb.piece === p, 'bg-ink text-white')} disabled:opacity-40`}
+                    >
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

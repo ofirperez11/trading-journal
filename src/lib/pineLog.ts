@@ -40,10 +40,46 @@ export interface PineTrade {
   beRaw: string
   htfRaw: string
   chartMove: ChartMove | null // "מהלך גרף" block — for/against points per timeframe
+  extras: string[] // report lines the journal doesn't read (new indicator data) — kept in the notes
   warnings: string[]
 }
 
 const SEP = /═{5,}/
+
+// Report lines the journal reads into trade fields (or summarises in the notes).
+// Any other "label: value" line — e.g. a new line the indicator starts writing —
+// is copied to the notes as is, so new data is never lost.
+const KNOWN_LABELS = [
+  'תאריך',
+  'שעת כניסה',
+  'בייס',
+  'Lookback',
+  'Lookback פתיל / גוף',
+  'גודל Lookback',
+  'סוג יום',
+  'שבוע בחודש',
+  'סימבול',
+  'כיוון',
+  'מחיר כניסה',
+  'סטופ',
+  'מחיר יציאה',
+  'תוצאה',
+  'ברייק-איבן',
+  'נזילות שנלקחה',
+  'אזור (Dealing Range)',
+  'ביאס (HTF 6H/3H)',
+  'מהלך גרף (לפי סגירת נר)',
+]
+function extraLines(lines: string[]): string[] {
+  return lines.filter(
+    (l) =>
+      l.includes(':') &&
+      !l.startsWith('📝') && // the header
+      !/^\[\d{4}-\d{2}-\d{2}T/.test(l) && // Pine Logs timestamp
+      !/^\d+\s*דק/.test(l) && // "מהלך גרף" rows
+      !KNOWN_LABELS.some((k) => l.startsWith(k + ':')),
+  )
+}
 // Invisible direction marks (RLM/LRM, embeddings, isolates) that Pine Logs puts
 // at the start of Hebrew lines — they break the "label:" / "📝" prefix checks.
 const BIDI_MARKS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g
@@ -235,6 +271,7 @@ function parseOne(chunk: string): PineTrade | null {
     week: field(lines, 'שבוע בחודש'),
     beRaw: field(lines, 'ברייק-איבן'),
     htfRaw: field(lines, 'ביאס (HTF 6H/3H)'),
+    extras: extraLines(lines),
     chartMove: parseChartMove(lines),
     warnings,
   }
@@ -262,7 +299,7 @@ const inParens = (s: string) =>
  * Notes stored with the imported trade — only what no trade field holds.
  * Fill time, lookback, bias, week, day kind (a tag) and stop/target are fields
  * already; for liquidity and zone only the extra detail (which highs, % in
- * range) is kept.
+ * range) is kept. Report lines the journal doesn't know are appended as is.
  */
 export function pineNotes(t: PineTrade): string {
   const rows = [
@@ -271,6 +308,7 @@ export function pineNotes(t: PineTrade): string {
     inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
     inParens(t.zoneRaw) ? `מיקום בטווח: ${inParens(t.zoneRaw)}` : '',
     t.htfRaw ? `ביאס HTF: ${t.htfRaw}` : '',
+    ...t.extras,
   ]
   return rows.filter(Boolean).join('\n')
 }

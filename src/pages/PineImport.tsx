@@ -199,6 +199,7 @@ export default function PineImport() {
         confidence: null,
         lookback: r.lookback || null,
         liquidity: r.liquidity,
+        week_of_month: [1, 2, 3, 4, 5].includes(Number(r.t.week)) ? Number(r.t.week) : null,
         zone: r.zone,
         bias: r.bias,
         tags: pineTags(r.t),

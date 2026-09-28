@@ -53,6 +53,7 @@ export interface Trade {
   confidence: number | null // 0-5
   lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
   liquidity: Liquidity | null // which side's liquidity was taken
+  week_of_month: number | null // week of the month, 1–5
   zone: Zone | null // dealing-range position at entry
   bias: Bias | null // higher-timeframe bias pair used
   tags: string[] | null

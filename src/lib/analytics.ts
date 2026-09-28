@@ -49,6 +49,7 @@ export interface Analytics extends Stats {
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
+  byWeekOfMonth: Bucket[] // win rate by week of the month (1–5) — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
   // day-level
@@ -297,6 +298,10 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     { v: 'sellside', label: 'Sellside' },
     { v: 'none', label: 'לא נלקחה' },
   ])
+  const byWeekOfMonth = winRateBuckets(
+    (t) => (t.week_of_month != null ? String(t.week_of_month) : null),
+    [1, 2, 3, 4, 5].map((w) => ({ v: String(w), label: `שבוע ${w}` })),
+  )
   // Win rate by side × zone (Long vs Short in each dealing-range zone).
   const byZone = winRateBuckets((t) => (t.zone ? `${t.side}·${t.zone}` : null), [
     { v: 'LONG·premium', label: 'Long · Premium' },
@@ -325,6 +330,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     rDistribution,
     byLookback,
     byLiquidity,
+    byWeekOfMonth,
     byZone,
     byBias,
     tradingDays,

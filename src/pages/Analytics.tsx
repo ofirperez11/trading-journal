@@ -559,6 +559,18 @@ export default function Analytics() {
             <Columns items={hours} format={money} height={160} />
           </Block>
         </div>
+        <Block
+          className="mt-3"
+          title="אחוז הצלחה לפי שבוע בחודש"
+          desc="אחוז ההצלחה בכל שבוע בחודש (שבוע 1 עד 5), לפי מה שסומן בעסקה או יובא מ-Pine Logs. נספרות רק עסקאות שיש בהן שבוע. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
+          hint={<span className="tag">אחוז הצלחה</span>}
+        >
+          {a.byWeekOfMonth.length ? (
+            <BarRows rows={winRateRows(a.byWeekOfMonth)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+          ) : (
+            <EmptyNote text="עדיין לא סומן שבוע בחודש בעסקאות. בחרו שבוע באזור ההקשר בטופס העסקה, או ייבאו מ-Pine Logs." />
+          )}
+        </Block>
       </Section>
 
       {/* ---- 4. What works ---- */}

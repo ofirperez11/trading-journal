@@ -77,6 +77,7 @@ create table if not exists public.trades (
   lookback text,               -- entry-model time marker (e.g. '16:30')
   peak_price numeric,          -- deprecated (MFE) — kept for historical data, no longer written
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
+  week_of_month smallint,      -- week of the month (1-5), from the Pine report or picked in the form
   zone text,                   -- ICT: dealing-range position at entry ('premium' | 'deadzone' | 'discount')
   bias text,                   -- ICT: HTF bias pair (e.g. '6h-3h', '3h-90', '3h-wick90', '6h-90')
   tags text[],

@@ -222,17 +222,29 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     [base, added, edited, deleted],
   )
 
-  function persistAdded(next: Trade[]) {
-    setAdded(next)
-    localStorage.setItem(M_ADDED, JSON.stringify(next))
+  // Demo layers update from the latest state (not this render's copy), so
+  // several mutations in one tick — e.g. an import that adds new trades and
+  // updates existing ones — don't overwrite each other.
+  function persistAdded(fn: (prev: Trade[]) => Trade[]) {
+    setAdded((prev) => {
+      const next = fn(prev)
+      localStorage.setItem(M_ADDED, JSON.stringify(next))
+      return next
+    })
   }
-  function persistEdited(next: Edits) {
-    setEdited(next)
-    localStorage.setItem(M_EDITED, JSON.stringify(next))
+  function persistEdited(fn: (prev: Edits) => Edits) {
+    setEdited((prev) => {
+      const next = fn(prev)
+      localStorage.setItem(M_EDITED, JSON.stringify(next))
+      return next
+    })
   }
-  function persistDeleted(next: string[]) {
-    setDeleted(next)
-    localStorage.setItem(M_DELETED, JSON.stringify(next))
+  function persistDeleted(fn: (prev: string[]) => string[]) {
+    setDeleted((prev) => {
+      const next = fn(prev)
+      localStorage.setItem(M_DELETED, JSON.stringify(next))
+      return next
+    })
   }
 
   function addTrade(trade: Trade) {
@@ -245,11 +257,10 @@ export function TradesProvider({ children }: { children: ReactNode }) {
         .then(({ error }) => error && setError(error.message))
       return
     }
-    persistAdded([trade, ...added])
+    persistAdded((prev) => [trade, ...prev])
   }
 
-  // Batch insert — a loop of addTrade would lose all but the last in demo mode
-  // (each call spreads the same stale `added`).
+  // Batch insert — one DB round trip for an import instead of one per trade.
   function addTrades(trades: Trade[]) {
     if (!trades.length) return
     if (isSupabaseConfigured) {
@@ -261,7 +272,7 @@ export function TradesProvider({ children }: { children: ReactNode }) {
         .then(({ error }) => error && setError(error.message))
       return
     }
-    persistAdded([...trades, ...added])
+    persistAdded((prev) => [...trades, ...prev])
   }
 
   function updateTrade(id: string, patch: Partial<Trade>) {
@@ -281,9 +292,9 @@ export function TradesProvider({ children }: { children: ReactNode }) {
       return
     }
     if (added.some((t) => t.id === id)) {
-      persistAdded(added.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+      persistAdded((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
     } else {
-      persistEdited({ ...edited, [id]: { ...edited[id], ...patch } })
+      persistEdited((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
     }
   }
 
@@ -299,15 +310,16 @@ export function TradesProvider({ children }: { children: ReactNode }) {
       return
     }
     if (added.some((t) => t.id === id)) {
-      persistAdded(added.filter((t) => t.id !== id))
+      persistAdded((prev) => prev.filter((t) => t.id !== id))
       return
     }
-    if (!deleted.includes(id)) persistDeleted([...deleted, id])
-    if (edited[id]) {
-      const next = { ...edited }
+    persistDeleted((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    persistEdited((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
       delete next[id]
-      persistEdited(next)
-    }
+      return next
+    })
   }
 
   return (

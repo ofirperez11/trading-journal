@@ -30,11 +30,44 @@ const LIQ: { v: Liquidity; label: string }[] = [
 ]
 const ZONE_LABEL: Record<Zone, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
 
+// A report for a trade that's already in the journal never creates a second
+// copy. It may only fill fields the existing trade has empty — never overwrite
+// what's there, and never touch identity, fills or P&L.
+const LOCKED_FIELDS = new Set<string>([
+  'id', 'user_id', 'account_id', 'date', 'symbol', 'market', 'side', 'status', 'qty',
+  'entry', 'exit', 'exits', 'entry_total', 'exit_total', 'return_amount', 'return_percent',
+  'r_multiple', 'hold_time', 'executions', 'images', 'created_at', 'updated_at',
+])
+const FIELD_LABEL: Record<string, string> = {
+  target: 'יעד',
+  stoploss: 'סטופ',
+  lookback: 'Lookback',
+  lookback_size: 'גודל Lookback',
+  liquidity: 'נזילות',
+  week_of_month: 'שבוע בחודש',
+  zone: 'אזור',
+  bias: 'ביאס',
+  chart_move: 'מהלך גרף',
+  tags: 'תגיות',
+  notes: 'הערות',
+}
+const isEmpty = (v: unknown) => v == null || v === '' || (Array.isArray(v) && v.length === 0)
+
+/** Fields the report adds to an existing trade (only ones it has empty). */
+function newDataFor(existing: Trade, next: Trade): Partial<Trade> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(next)) {
+    if (LOCKED_FIELDS.has(k) || isEmpty(v)) continue
+    if (isEmpty((existing as unknown as Record<string, unknown>)[k])) out[k] = v
+  }
+  return out as Partial<Trade>
+}
+
 // Editable copy of a parsed report (numbers as strings for the inputs).
 interface Row {
   t: PineTrade
   on: boolean
-  exists: boolean // already in this journal (same day, session, side, symbol)
+  existing: Trade | null // already in this journal (same day, session, side, symbol)
   editing: boolean
   entry: string
   stop: string
@@ -65,7 +98,7 @@ export default function PineImport() {
   const { user } = useAuth()
   const { active } = useJournals()
   const { trades } = useTrades()
-  const { addTrades } = useTradeActions()
+  const { addTrades, updateTrade } = useTradeActions()
   const navigate = useNavigate()
 
   const [text, setText] = useState('')
@@ -74,10 +107,14 @@ export default function PineImport() {
   const [dragging, setDragging] = useState(false)
   const [defQty, setDefQty] = useState(readQty)
 
-  const existingKeys = useMemo(
-    () => new Set(trades.map((t) => `${t.date.slice(0, 16)}|${t.side}|${cleanSymbol(t.symbol)}`)),
-    [trades],
-  )
+  const existingByKey = useMemo(() => {
+    const m = new Map<string, Trade>()
+    for (const t of trades) {
+      const k = `${t.date.slice(0, 16)}|${t.side}|${cleanSymbol(t.symbol)}`
+      if (!m.has(k)) m.set(k, t)
+    }
+    return m
+  }, [trades])
 
   function load(raw: string) {
     setError(null)
@@ -89,11 +126,11 @@ export default function PineImport() {
     }
     setRows(
       parsed.map((t) => {
-        const exists = existingKeys.has(`${t.day}T${t.session}|${t.side}|${t.symbol}`)
+        const existing = existingByKey.get(`${t.day}T${t.session}|${t.side}|${t.symbol}`) ?? null
         return {
           t,
-          on: !exists && t.result !== 'unfilled',
-          exists,
+          on: t.result !== 'unfilled',
+          existing,
           editing: false,
           entry: str(t.entry),
           stop: str(t.stop),
@@ -167,13 +204,8 @@ export default function PineImport() {
     })
   }
 
-  const selected = rows?.filter((r) => r.on) ?? []
-
-  function save() {
-    if (!rows || !selected.length) return
-    const bad = selected.find((r) => num(r.entry) == null)
-    if (bad) return setError(`חסר מחיר כניסה בעסקה של ${bad.t.day}`)
-    const out: Trade[] = selected.map((r) => {
+  function buildTrades(rs: Row[]): Trade[] {
+    return rs.map((r) => {
       const calc = calcRow(r)
       return {
         id: crypto.randomUUID(),
@@ -209,7 +241,21 @@ export default function PineImport() {
         images: null,
       }
     })
-    addTrades(out)
+  }
+
+  /** For a row already in the journal: what it would add (empty → nothing to do). */
+  const updateFor = (r: Row) => (r.existing ? newDataFor(r.existing, buildTrades([r])[0]) : null)
+
+  const selected = rows?.filter((r) => r.on && (!r.existing || Object.keys(updateFor(r)!).length > 0)) ?? []
+  const toAdd = selected.filter((r) => !r.existing)
+  const toUpdate = selected.filter((r) => r.existing)
+
+  function save() {
+    if (!rows || !selected.length) return
+    const bad = toAdd.find((r) => num(r.entry) == null)
+    if (bad) return setError(`חסר מחיר כניסה בעסקה של ${bad.t.day}`)
+    if (toAdd.length) addTrades(buildTrades(toAdd))
+    for (const r of toUpdate) updateTrade(r.existing!.id, updateFor(r)!)
     navigate('/app/trades')
   }
 
@@ -309,21 +355,26 @@ export default function PineImport() {
 
           {rows.map((r, i) => {
             const calc = calcRow(r)
+            const adds = updateFor(r)
+            const addLabels = adds ? Object.keys(adds).map((k) => FIELD_LABEL[k] ?? k) : []
+            const locked = r.existing != null && addLabels.length === 0
+            const on = r.on && !locked
             const res = RESULT_TAG[r.t.result]
             const pnlTone = calc.pnl == null ? 'text-faint' : calc.pnl > 0 ? 'text-win' : calc.pnl < 0 ? 'text-loss' : 'text-muted'
             return (
               <section
                 key={r.t.key}
-                className={`panel block-in flex flex-col gap-3 p-4 transition-opacity ${r.on ? '' : 'opacity-60'}`}
+                className={`panel block-in flex flex-col gap-3 p-4 transition-opacity ${on ? '' : 'opacity-60'}`}
                 style={{ '--i': Math.min(i + 1, 8) } as React.CSSProperties}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="checkbox"
                     className="h-4 w-4 accent-[#2383e2]"
-                    checked={r.on}
+                    checked={on}
+                    disabled={locked}
                     onChange={(e) => patch(i, { on: e.target.checked })}
-                    aria-label="לשמור את העסקה הזו"
+                    aria-label={r.existing ? 'לעדכן את העסקה הקיימת' : 'לשמור את העסקה הזו'}
                   />
                   <span className="num font-semibold" dir="ltr">
                     {r.t.day.split('-').reverse().join('.')}
@@ -335,7 +386,12 @@ export default function PineImport() {
                     {res.label}
                     {r.t.resultPts != null && <span className="num" dir="ltr">{r.t.resultPts > 0 ? '+' : ''}{r.t.resultPts}</span>}
                   </span>
-                  {r.exists && <span className="tag tag-yellow !font-semibold">כבר ביומן</span>}
+                  {r.existing &&
+                    (locked ? (
+                      <span className="tag tag-yellow !font-semibold">כבר ביומן · אין נתון חדש</span>
+                    ) : (
+                      <span className="tag tag-blue !font-semibold">כבר ביומן · יתעדכן: {addLabels.join(', ')}</span>
+                    ))}
                   <div className="flex-1" />
                   <span className={`num text-lg font-bold ${pnlTone}`}>{calc.pnl == null ? '—' : formatMoney(calc.pnl)}</span>
                   <span className="num text-sm text-muted">{formatR(calc.rMultiple)}</span>
@@ -435,7 +491,11 @@ export default function PineImport() {
 
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
             <button onClick={save} disabled={!selected.length} className="btn-primary w-full !py-2 lg:w-auto">
-              <Check className="h-4 w-4" /> שמור {selected.length} {selected.length === 1 ? 'עסקה' : 'עסקאות'} ליומן
+              <Check className="h-4 w-4" />
+              {toAdd.length > 0 && `שמור ${toAdd.length} ${toAdd.length === 1 ? 'עסקה' : 'עסקאות'} ליומן`}
+              {toAdd.length > 0 && toUpdate.length > 0 && ' · '}
+              {toUpdate.length > 0 && `עדכן ${toUpdate.length} ${toUpdate.length === 1 ? 'קיימת' : 'קיימות'}`}
+              {!selected.length && 'אין מה לשמור'}
             </button>
           </div>
         </div>

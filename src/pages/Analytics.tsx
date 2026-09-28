@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
+import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
 import { computeStats, formatMoney, formatPct } from '../lib/trades'
 import { CountUp } from '../components/CountUp'
@@ -643,6 +644,54 @@ export default function Analytics() {
             <BarRows rows={winRateRows(a.byBias)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
           ) : (
             <EmptyNote text="עדיין לא תויג שדה הביאס בעסקאות. סמנו ביאס בעסקאות כדי לראות את הפילוח." />
+          )}
+        </Block>
+        <Block
+          className="mt-3"
+          title="מהלך גרף לפי טיימפריים"
+          desc="כמה נקודות המחיר הלך בעד העסקה ונגדה בכל גרף (לפי סגירת נר), בממוצע, בנפרד לעסקאות מנצחות ולמפסידות. עוזר לראות באיזה טיימפריים המנצחות רצות בלי לחזור, וכמה המפסידות הספיקו ללכת בעדכם לפני שנסגרו. נספרות רק עסקאות שיובאו מ-Pine Logs עם נתון מהלך גרף."
+          hint={<span className="tag">ממוצע בנקודות</span>}
+        >
+          {a.chartMove.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="h-8 text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th />
+                    <th colSpan={2} className="border-b border-border !font-semibold text-win">
+                      מנצחות
+                    </th>
+                    <th colSpan={2} className="border-b border-border !font-semibold text-loss">
+                      מפסידות
+                    </th>
+                  </tr>
+                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th>גרף</th>
+                    <th className="!text-left">בעד</th>
+                    <th className="!text-left">נגד</th>
+                    <th className="!text-left">בעד</th>
+                    <th className="!text-left">נגד</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {a.chartMove.map((r) => (
+                    <tr key={r.tf} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                      <td className="font-medium">{CHART_MOVE_LABEL[r.tf]}</td>
+                      <td className="num text-left">{r.win ? r.win.for.toFixed(2) : '—'}</td>
+                      <td className="num text-left text-muted">{r.win ? r.win.against.toFixed(2) : '—'}</td>
+                      <td className="num text-left">{r.loss ? r.loss.for.toFixed(2) : '—'}</td>
+                      <td className="num text-left text-muted">{r.loss ? r.loss.against.toFixed(2) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[12px] text-muted">
+                מבוסס על <span className="num">{Math.max(...a.chartMove.map((r) => r.win?.count ?? 0))}</span> מנצחות ו-
+                <span className="num">{Math.max(...a.chartMove.map((r) => r.loss?.count ?? 0))}</span> מפסידות עם נתון מהלך גרף.
+              </p>
+            </div>
+          ) : (
+            <EmptyNote text="עדיין אין עסקאות עם נתון מהלך גרף. הוא נשמר אוטומטית בעסקאות שמיובאות מ-Pine Logs." />
           )}
         </Block>
       </Section>

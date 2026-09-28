@@ -208,6 +208,7 @@ export default function ScreenshotImport() {
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
+      chart_move: null,
       tags: null,
       notes: form.notes.trim() || null,
       mood: null,

@@ -20,6 +20,15 @@ export type Bias =
   // 6 → body-90 (edge case)
   | '6b90_nn' | '6b90_nw' | '6b90_wn' | '6b90_ww'
 
+/** Chart timeframes (minutes) tracked by the "chart move" field. */
+export type ChartMoveTf = '1' | '2' | '5' | '15' | '30'
+/** Points price moved for / against the trade on one timeframe (by candle close). */
+export interface MoveSplit {
+  for: number
+  against: number
+}
+export type ChartMove = Partial<Record<ChartMoveTf, MoveSplit>>
+
 /** A single fill that makes up a trade. */
 export interface Execution {
   price: number
@@ -55,6 +64,7 @@ export interface Trade {
   liquidity: Liquidity | null // which side's liquidity was taken
   zone: Zone | null // dealing-range position at entry
   bias: Bias | null // higher-timeframe bias pair used
+  chart_move: ChartMove | null // for/against points per timeframe — Pine import only
   tags: string[] | null
   notes: string | null
   mood: string | null

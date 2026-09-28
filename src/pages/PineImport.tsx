@@ -233,6 +233,7 @@ export default function PineImport() {
         liquidity: r.liquidity,
         zone: r.zone,
         bias: r.bias,
+        chart_move: r.t.chartMove,
         tags: pineTags(r.t),
         notes: pineNotes(r.t),
         mood: null,

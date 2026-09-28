@@ -1,6 +1,7 @@
-import type { Trade } from '../types'
+import type { ChartMoveTf, Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
+import { CHART_MOVE_TFS } from './chartMove'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.
@@ -33,6 +34,18 @@ function nearest(arr: number[], v: number): number {
   return arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
 }
 
+/** Average for / against points on one timeframe, for one group of trades. */
+export interface MoveAvg {
+  for: number
+  against: number
+  count: number
+}
+export interface ChartMoveRow {
+  tf: ChartMoveTf
+  win: MoveAvg | null
+  loss: MoveAvg | null
+}
+
 export interface Analytics extends Stats {
   stopByAsset: Record<string, AssetStopStats>
   expectancy: number // avg P&L per trade
@@ -51,6 +64,7 @@ export interface Analytics extends Stats {
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
+  chartMove: ChartMoveRow[] // avg for/against per timeframe, winners vs losers — trades with data only
   // day-level
   tradingDays: number
   winningDays: number
@@ -308,6 +322,23 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   ])
   const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] })))
 
+  // Chart move: average for/against points per timeframe, winners vs losers.
+  // Only trades that carry the data count (it comes from the Pine import).
+  const avgMove = (ts: Trade[], tf: ChartMoveTf): MoveAvg | null => {
+    const ms = ts.map((t) => t.chart_move?.[tf]).filter((m) => m != null)
+    if (!ms.length) return null
+    return {
+      for: ms.reduce((s, m) => s + m.for, 0) / ms.length,
+      against: ms.reduce((s, m) => s + m.against, 0) / ms.length,
+      count: ms.length,
+    }
+  }
+  const moveWins = trades.filter((t) => t.chart_move && t.return_amount > 0)
+  const moveLosses = trades.filter((t) => t.chart_move && t.return_amount < 0)
+  const chartMove = CHART_MOVE_TFS.map((tf) => ({ tf, win: avgMove(moveWins, tf), loss: avgMove(moveLosses, tf) })).filter(
+    (r) => r.win || r.loss,
+  )
+
   return {
     ...stats,
     stopByAsset,
@@ -327,6 +358,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byLiquidity,
     byZone,
     byBias,
+    chartMove,
     tradingDays,
     winningDays,
     losingDays,

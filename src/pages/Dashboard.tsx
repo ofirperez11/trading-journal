@@ -26,6 +26,7 @@ import {
   cleanSymbol,
   imageUrl,
 } from '../lib/trades'
+import { sessionOf } from '../lib/lookback'
 import { EquityCurve } from '../components/EquityCurve'
 import { CountUp } from '../components/CountUp'
 import type { Trade } from '../types'
@@ -613,7 +614,7 @@ function RecentTrades({ trades }: { trades: Trade[] }) {
                         </span>
                       </td>
                       <td className="px-2">
-                        {time && <span className={`tag num ${time === '16:30' ? 'tag-yellow' : 'tag-orange'}`}>{time}</span>}
+                        {time && <span className={`tag num ${sessionOf(t) === '16:30' ? 'tag-yellow' : 'tag-orange'}`}>{time}</span>}
                       </td>
                       <td className="px-2">
                         <span className={`tag tag-${tone === 'gray' ? 'gray' : tone}`}>{resultLabel[tone]}</span>

@@ -1,11 +1,15 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X, SlidersHorizontal } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
-import { computeStats, formatMoney, formatPct } from '../lib/trades'
+import { cleanSymbol, computeStats, formatMoney, formatPct } from '../lib/trades'
+import { LOOKBACKS, SESSION_TIMES } from '../lib/lookback'
+import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
+import type { Trade } from '../types'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
 import { LineChart, Columns, BarRows, SplitBar, CHART, useInView, type Row } from '../components/charts'
@@ -55,6 +59,111 @@ function rangeFor(key: RangeKey): { from: Date | null; to: Date | null } {
       }
   }
 }
+
+/* ---- Filter menu ------------------------------------------------------- */
+
+// Each facet is one URL param (comma-separated values). Values inside a facet
+// are OR'ed (NQ or ES), facets are AND'ed (NQ and short). Every chart on the
+// page is computed from the trades that pass.
+type Opt = { v: string; label: string }
+interface Facet {
+  key: string
+  label: string
+  of: (t: Trade) => string | null
+  options: (trades: Trade[]) => Opt[]
+}
+const fixed = (opts: Opt[]) => () => opts
+/** Only the options that actually occur, in the given order. */
+const present = (of: (t: Trade) => string | null, order: Opt[]) => (trades: Trade[]) => {
+  const seen = new Set(trades.map(of))
+  return order.filter((o) => seen.has(o.v))
+}
+const LOOKBACK_ORDER = [...new Set([...LOOKBACKS['16:30'], ...LOOKBACKS['17:00']])]
+/** Every lookback in the journal (incl. variants like "פתיל 19:30 · 30 דקות"), in marker order. */
+const lookbackOptions = (trades: Trade[]): Opt[] => {
+  const rank = (v: string) => {
+    const i = LOOKBACK_ORDER.findIndex((m) => ` ${v} `.includes(` ${m} `))
+    return i < 0 ? LOOKBACK_ORDER.length : i
+  }
+  return [...new Set(trades.map((t) => t.lookback).filter((v) => v != null))]
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .map((v) => ({ v, label: v }))
+}
+
+const FACETS: Facet[] = [
+  {
+    key: 'asset',
+    label: 'נכס',
+    // MNQ counts as NQ, MES as ES.
+    of: (t) => (cleanSymbol(t.symbol).endsWith('NQ') ? 'NQ' : cleanSymbol(t.symbol).endsWith('ES') ? 'ES' : null),
+    options: fixed([
+      { v: 'NQ', label: 'NQ' },
+      { v: 'ES', label: 'ES' },
+    ]),
+  },
+  {
+    key: 'side',
+    label: 'כיוון',
+    of: (t) => t.side,
+    options: fixed([
+      { v: 'LONG', label: 'לונג' },
+      { v: 'SHORT', label: 'שורט' },
+    ]),
+  },
+  {
+    key: 'session',
+    label: 'שעת הזדמנות',
+    of: (t) => t.date.slice(11, 16),
+    options: fixed(SESSION_TIMES.map((v) => ({ v, label: v }))),
+  },
+  {
+    key: 'result',
+    label: 'תוצאה',
+    of: (t) => t.status,
+    options: fixed([
+      { v: 'WIN', label: 'Win' },
+      { v: 'LOSS', label: 'Loss' },
+      { v: 'WASH', label: 'BE' },
+    ]),
+  },
+  { key: 'lb', label: 'Lookback', of: (t) => t.lookback, options: lookbackOptions },
+  {
+    key: 'bias',
+    label: 'ביאס',
+    of: (t) => t.bias,
+    options: present((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] }))),
+  },
+  {
+    key: 'zone',
+    label: 'אזור',
+    of: (t) => t.zone,
+    options: fixed([
+      { v: 'premium', label: 'Premium' },
+      { v: 'deadzone', label: 'Deadzone' },
+      { v: 'discount', label: 'Discount' },
+    ]),
+  },
+  {
+    key: 'liq',
+    label: 'נזילות',
+    of: (t) => t.liquidity,
+    options: fixed([
+      { v: 'buyside', label: 'Buyside' },
+      { v: 'sellside', label: 'Sellside' },
+      { v: 'none', label: 'לא נלקחה' },
+    ]),
+  },
+  {
+    key: 'ath',
+    label: 'ATH',
+    of: (t) => (t.tags?.includes('ATH') ? 'ath' : 'no'),
+    options: fixed([
+      { v: 'ath', label: 'ATH' },
+      { v: 'no', label: 'ללא ATH' },
+    ]),
+  },
+]
+const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 
 /* ---- Small building blocks ------------------------------------------- */
 
@@ -184,6 +293,38 @@ export default function Analytics() {
   const [customMonths, setCustomMonths] = useState<Set<string>>(new Set())
   const [showRange, setShowRange] = useState(false)
   const [custYear, setCustYear] = useState<string | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Filter menu selections live in the URL (back/refresh keep the view).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const facetSel = useMemo(
+    () => Object.fromEntries(FACETS.map((f) => [f.key, new Set(csv(searchParams.get(f.key)))])),
+    [searchParams],
+  )
+  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0)
+  const scoped = useMemo(
+    () =>
+      trades.filter((t) =>
+        FACETS.every((f) => {
+          const sel = facetSel[f.key]
+          return !sel.size || sel.has(f.of(t) ?? '')
+        }),
+      ),
+    [trades, facetSel],
+  )
+  function toggleFacet(key: string, v: string) {
+    const next = new URLSearchParams(searchParams)
+    const cur = new Set(csv(next.get(key)))
+    cur.has(v) ? cur.delete(v) : cur.add(v)
+    if (cur.size) next.set(key, [...cur].join(','))
+    else next.delete(key)
+    setSearchParams(next, { replace: true })
+  }
+  function clearFacets() {
+    const next = new URLSearchParams(searchParams)
+    for (const f of FACETS) next.delete(f.key)
+    setSearchParams(next, { replace: true })
+  }
 
   const usingCustom = customMonths.size > 0
   const years = useMemo(
@@ -198,16 +339,16 @@ export default function Analytics() {
 
   const { from, to } = usingCustom ? { from: null, to: null } : rangeFor(range)
   const filtered = useMemo(() => {
-    if (usingCustom) return trades.filter((t) => customMonths.has(t.date.slice(0, 7)))
-    return filterTradesByRange(trades, from, to)
-  }, [trades, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (usingCustom) return scoped.filter((t) => customMonths.has(t.date.slice(0, 7)))
+    return filterTradesByRange(scoped, from, to)
+  }, [scoped, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
   const a = useMemo(() => computeAnalytics(filtered), [filtered])
   const prev = useMemo(() => {
     if (usingCustom || !from || !to) return null
     const span = to.getTime() - from.getTime()
-    const pTrades = filterTradesByRange(trades, new Date(from.getTime() - span), new Date(from.getTime() - 1))
+    const pTrades = filterTradesByRange(scoped, new Date(from.getTime() - span), new Date(from.getTime() - 1))
     return pTrades.length ? computeStats(pTrades) : null
-  }, [trades, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scoped, range, customMonths]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentLabel = usingCustom
     ? customMonths.size === 1
@@ -267,6 +408,17 @@ export default function Analytics() {
             <X className="h-4 w-4" />
           </button>
         )}
+        <button
+          onClick={() => setShowFilters((s) => !s)}
+          aria-expanded={showFilters}
+          className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm transition-colors ${
+            activeCount > 0 ? 'border-accent/40 bg-accent/[0.07] font-semibold text-accent' : 'border-border hover:bg-surface'
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="hidden sm:inline">סינון</span>
+          {activeCount > 0 && <span className="num rounded bg-accent px-1.5 text-xs font-bold text-white">{activeCount}</span>}
+        </button>
         <span className="mr-auto hidden text-[13px] text-muted sm:inline">
           <span className="num font-semibold text-ink">{filtered.length}</span> עסקאות
           {prev && ' · מול התקופה הקודמת'}
@@ -295,6 +447,43 @@ export default function Analytics() {
           </div>
         </div>
       )}
+      {showFilters && (
+        <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] max-h-[60vh] overflow-y-auto pb-1 pt-3">
+          <div className="grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
+            {FACETS.map((f) => {
+              const opts = f.options(trades)
+              if (!opts.length) return null
+              return (
+                <div key={f.key}>
+                  <div className="mb-2 text-xs font-semibold text-muted">{f.label}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {opts.map((o) => {
+                      const on = facetSel[f.key].has(o.v)
+                      return (
+                        <button
+                          key={o.v}
+                          onClick={() => toggleFacet(f.key, o.v)}
+                          aria-pressed={on}
+                          className={`tag cursor-pointer !px-2.5 !py-0.5 !text-[13px] transition-colors ${on ? '!bg-ink !text-white' : 'hover:!bg-[#d9d8d5]'}`}
+                        >
+                          {o.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+            {activeCount > 0 && (
+              <div className="sm:col-span-2">
+                <button onClick={clearFacets} className="text-[13px] text-muted hover:text-loss">
+                  נקה סינון
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -311,7 +500,7 @@ export default function Analytics() {
         {header}
         <div className="callout mt-8">
           <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-[#cb912f]" />
-          אין עסקאות בטווח שנבחר. נסה טווח רחב יותר.
+          {activeCount > 0 ? 'אין עסקאות שתואמות לסינון ולטווח שנבחרו. נסה להסיר חלק מהסינונים.' : 'אין עסקאות בטווח שנבחר. נסה טווח רחב יותר.'}
         </div>
       </div>
     )

@@ -1,6 +1,6 @@
 import type { ChartMoveTf, Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
-import { hasMark } from './marks'
+import { DAY_KINDS, dayKindOf } from './dayKind'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
 import { CHART_MOVE_TFS } from './chartMove'
 
@@ -74,7 +74,7 @@ export interface Analytics extends Stats {
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byWeekOfMonth: Bucket[] // win rate by week of the month (1–5) — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
-  byAth: Bucket[] // win rate of trades marked ATH vs the rest
+  byDayKind: Bucket[] // win rate by day kind (Main / Semi / ATH) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
   chartMove: ChartMoveRow[] // avg for/against per timeframe, winners vs losers — trades with data only
   // day-level
@@ -357,11 +357,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     { v: 'SHORT·deadzone', label: 'Short · Deadzone' },
     { v: 'SHORT·discount', label: 'Short · Discount' },
   ])
-  // ATH is a yes/no mark, so every trade counts (unmarked = not ATH).
-  const byAth = winRateBuckets((t) => (hasMark(t, 'ATH') ? 'ath' : 'no'), [
-    { v: 'ath', label: 'ATH' },
-    { v: 'no', label: 'ללא ATH' },
-  ])
+  const byDayKind = winRateBuckets(dayKindOf, DAY_KINDS.map((k) => ({ v: k, label: k })))
   const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] })))
 
   // Chart move: average for/against points per timeframe, winners vs losers.
@@ -401,7 +397,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byLiquidity,
     byWeekOfMonth,
     byZone,
-    byAth,
+    byDayKind,
     byBias,
     chartMove,
     tradingDays,

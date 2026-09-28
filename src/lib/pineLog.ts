@@ -1,6 +1,7 @@
 import type { Bias, ChartMove, Liquidity, TradeSide, Zone } from '../types'
 import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
 import { parseChartMove } from './chartMove'
+import { toDayKind } from './dayKind'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
 // TradingView's Pine Logs. Accepts text pasted straight from Pine Logs or the
@@ -259,13 +260,13 @@ const inParens = (s: string) =>
 
 /**
  * Notes stored with the imported trade — only what no trade field holds.
- * Fill time, lookback, bias, week and stop/target are fields already; for
- * liquidity and zone only the extra detail (which highs, % in range) is kept.
+ * Fill time, lookback, bias, week, day kind (a tag) and stop/target are fields
+ * already; for liquidity and zone only the extra detail (which highs, % in
+ * range) is kept.
  */
 export function pineNotes(t: PineTrade): string {
   const rows = [
     'יובא מ-Pine Logs (full auto NOD indicator)',
-    t.dayKind ? `סוג יום: ${t.dayKind}` : '',
     t.beRaw ? `ברייק-איבן: ${t.beRaw}` : '',
     inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
     inParens(t.zoneRaw) ? `מיקום בטווח: ${inParens(t.zoneRaw)}` : '',
@@ -281,6 +282,7 @@ export function pineTags(t: PineTrade): string[] {
   if (piece) tags.push(`LB ${piece}`)
   const tf = t.lookbackRaw.match(/(\d+)ד/)
   if (tf) tags.push(`LB ${tf[1]}m`)
-  if (t.dayKind) tags.push(t.dayKind.replace(/\s*[🤖🏔🔘]/gu, '').trim())
+  const kind = toDayKind(t.dayKind.replace(/\s*[🤖🏔🔘]/gu, ''))
+  if (kind) tags.push(kind)
   return tags
 }

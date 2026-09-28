@@ -2,6 +2,7 @@ import type { Trade } from '../types'
 import { cleanSymbol } from './trades'
 import { LOOKBACKS, SESSION_TIMES, sessionOf } from './lookback'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
+import { DAY_KINDS, dayKindOf } from './dayKind'
 
 // Filter menu facets. Each facet is one URL param (comma-separated values).
 // Values inside a facet are OR'ed (NQ or ES), facets are AND'ed (NQ and
@@ -96,13 +97,10 @@ export const FACETS: Facet[] = [
     ]),
   },
   {
-    key: 'ath',
-    label: 'ATH',
-    of: (t) => (t.tags?.includes('ATH') ? 'ath' : 'no'),
-    options: fixed([
-      { v: 'ath', label: 'ATH' },
-      { v: 'no', label: 'ללא ATH' },
-    ]),
+    key: 'day',
+    label: 'סוג יום',
+    of: dayKindOf,
+    options: fixed(DAY_KINDS.map((k) => ({ v: k, label: k }))),
   },
   {
     key: 'week',

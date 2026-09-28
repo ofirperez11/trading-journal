@@ -741,14 +741,14 @@ export default function Analytics() {
         </div>
         <Block
           className="mt-3"
-          title="אחוז הצלחה לפי ATH"
-          desc="אחוז ההצלחה של עסקאות שסומן בהן ATH (בווי מעל ההערות בטופס העסקה) מול כל שאר העסקאות. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
+          title="אחוז הצלחה לפי סוג יום"
+          desc="אחוז ההצלחה לפי סוג היום: Main, Semi או ATH. נקבע מ-Pine Logs או נבחר בטופס העסקה, מעל ההערות. נספרות רק עסקאות שיש בהן סוג יום. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
           hint={<span className="tag">אחוז הצלחה</span>}
         >
-          {a.byAth.some((b) => b.label === 'ATH') ? (
-            <BarRows rows={winRateRows(a.byAth)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+          {a.byDayKind.length ? (
+            <BarRows rows={winRateRows(a.byDayKind)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
           ) : (
-            <EmptyNote text="עדיין לא סומן ATH באף עסקה. סמנו את הווי ATH מעל ההערות בטופס העסקה כדי לראות את ההשוואה." />
+            <EmptyNote text="עדיין אין עסקאות עם סוג יום. בחרו Main / Semi / ATH מעל ההערות בטופס העסקה, או ייבאו מ-Pine Logs." />
           )}
         </Block>
         <Block

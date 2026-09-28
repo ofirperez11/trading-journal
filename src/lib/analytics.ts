@@ -1,7 +1,7 @@
 import type { Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
-import { BIASES, BIAS_FULL_LABEL } from './bias'
 import { hasMark } from './marks'
+import { BIASES, BIAS_FULL_LABEL } from './bias'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.

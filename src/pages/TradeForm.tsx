@@ -174,13 +174,13 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
-      chart_move: trade?.chart_move ?? null,
       tags: trade?.tags ?? null,
       notes: form.notes.trim() || null,
       mood: trade?.mood ?? null,
       discipline_score: trade?.discipline_score ?? null,
       executions: calc.executions ?? trade?.executions ?? null,
       images: finalImages,
+      chart_move: trade?.chart_move ?? null,
     }
 
     if (editing && trade) {

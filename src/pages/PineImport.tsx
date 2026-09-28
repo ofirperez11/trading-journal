@@ -232,6 +232,7 @@ export default function PineImport() {
         lookback: r.lookback || null,
         lookback_size: r.t.lookbackSize,
         liquidity: r.liquidity,
+        week_of_month: [1, 2, 3, 4, 5].includes(Number(r.t.week)) ? Number(r.t.week) : null,
         zone: r.zone,
         bias: r.bias,
         chart_move: r.t.chartMove,

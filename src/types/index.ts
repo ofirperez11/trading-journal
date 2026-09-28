@@ -63,6 +63,7 @@ export interface Trade {
   lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
   lookback_size: number | null // lookback size in points (Pine import or manual)
   liquidity: Liquidity | null // which side's liquidity was taken
+  week_of_month: number | null // week of the month, 1–5
   zone: Zone | null // dealing-range position at entry
   bias: Bias | null // higher-timeframe bias pair used
   chart_move: ChartMove | null // for/against points per timeframe — Pine import only

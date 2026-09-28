@@ -78,6 +78,7 @@ create table if not exists public.trades (
   lookback_size numeric,       -- lookback size in points (Pine import or manual)
   peak_price numeric,          -- deprecated (MFE) — kept for historical data, no longer written
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
+  week_of_month smallint,      -- week of the month (1-5), from the Pine report or picked in the form
   zone text,                   -- ICT: dealing-range position at entry ('premium' | 'deadzone' | 'discount')
   bias text,                   -- ICT: HTF bias pair (e.g. '6h-3h', '3h-90', '3h-wick90', '6h-90')
   chart_move jsonb,            -- for/against points per timeframe, e.g. {"1":{"for":60.75,"against":0}} (Pine import)

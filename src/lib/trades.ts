@@ -73,6 +73,7 @@ export function normalizeTrade(raw: Record<string, unknown>): Trade {
     lookback: raw.lookback ? String(raw.lookback) : null,
     lookback_size: num(raw.lookback_size),
     liquidity: (raw.liquidity as Trade['liquidity']) ?? null,
+    week_of_month: num(raw.week_of_month),
     zone: (raw.zone as Trade['zone']) ?? null,
     bias: (raw.bias as Trade['bias']) ?? null,
     chart_move: normalizeChartMove(raw.chart_move),

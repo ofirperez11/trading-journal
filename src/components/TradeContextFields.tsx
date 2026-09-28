@@ -2,6 +2,7 @@ import type { Liquidity, Zone, Bias } from '../types'
 import { BIASES, BIAS_GROUPS } from '../lib/bias'
 
 // ICT context selectors shared by the manual and image trade forms:
+//  - week of the month (1–5) — manual form only (shown when onWeek is passed)
 //  - which side's liquidity was taken (buyside / sellside)
 //  - dealing-range position at entry (premium / deadzone / discount)
 
@@ -25,23 +26,44 @@ const ON: Record<'accent' | 'win' | 'loss' | 'muted', string> = {
   muted: 'border-transparent bg-tag-gray font-semibold text-tag-gray-fg',
 }
 
+export const WEEKS = [1, 2, 3, 4, 5] as const
+
 export function TradeContextFields({
   liquidity,
   zone,
   bias,
+  week,
   onLiquidity,
   onZone,
   onBias,
+  onWeek,
 }: {
   liquidity: Liquidity | null
   zone: Zone | null
   bias: Bias | null
+  week?: number | null
   onLiquidity: (v: Liquidity | null) => void
   onZone: (v: Zone | null) => void
   onBias: (v: Bias | null) => void
+  onWeek?: (v: number | null) => void
 }) {
   return (
     <>
+      {onWeek && (
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <span className="field-label mb-0">שבוע בחודש</span>
+          <div className="flex gap-2">
+            {WEEKS.map((w) => {
+              const on = week === w
+              return (
+                <button key={w} type="button" aria-pressed={on} onClick={() => onWeek(on ? null : w)} className={`${BTN} ${on ? ON.accent : OFF}`}>
+                  שבוע {w}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-1.5 sm:col-span-2">
         <span className="field-label mb-0">נזילות שנלקחה</span>
         <div className="flex gap-2">

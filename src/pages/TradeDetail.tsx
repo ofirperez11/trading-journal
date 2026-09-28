@@ -9,6 +9,7 @@ import {
   BookMarked,
   Check,
   Calendar,
+  CalendarDays,
   Clock,
   ArrowUpDown,
   Crosshair,
@@ -290,6 +291,9 @@ export default function TradeDetail() {
           </Prop>
           <Prop icon={Layers} label="אזור">
             {trade.zone ? <span className={`tag ${ZONE_TAG[trade.zone]}`}>{ZONE_LABEL[trade.zone]}</span> : <Empty />}
+          </Prop>
+          <Prop icon={CalendarDays} label="שבוע בחודש">
+            {trade.week_of_month != null ? <span className="tag">שבוע {trade.week_of_month}</span> : <Empty />}
           </Prop>
           <Prop icon={Compass} label="ביאס">
             {trade.bias ? <span className="tag tag-purple">{BIAS_FULL_LABEL[trade.bias]}</span> : <Empty />}

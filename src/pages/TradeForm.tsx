@@ -71,6 +71,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     lookback: trade?.lookback ?? '',
     lookbackSize: trade?.lookback_size != null ? String(trade.lookback_size) : '',
     liquidity: trade?.liquidity ?? null,
+    week: trade?.week_of_month ?? null,
     zone: trade?.zone ?? null,
     bias: trade?.bias ?? null,
     symbol: seedSymbol,
@@ -179,6 +180,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       lookback: form.lookback || null,
       lookback_size: num(form.lookbackSize),
       liquidity: form.liquidity,
+      week_of_month: form.week,
       zone: form.zone,
       bias: form.bias,
       tags: form.tags.length ? form.tags : null,
@@ -405,9 +407,11 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                 liquidity={form.liquidity}
                 zone={form.zone}
                 bias={form.bias}
+                week={form.week}
                 onLiquidity={(v) => set('liquidity', v)}
                 onZone={(v) => set('zone', v)}
                 onBias={(v) => set('bias', v)}
+                onWeek={(v) => set('week', v)}
               />
             </div>
           </FormSection>

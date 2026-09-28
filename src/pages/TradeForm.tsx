@@ -9,6 +9,7 @@ import { compressImage } from '../lib/image'
 import { uploadTradeImages } from '../lib/uploadImages'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { SESSION_TIMES as TIMES, LOOKBACKS, lookbackColor } from '../lib/lookback'
+import { TRADE_MARKS } from '../lib/marks'
 import { computePartials, seedExits } from '../lib/partials'
 import { ExitsField } from '../components/ExitsField'
 import { PriceMap } from '../components/PriceMap'
@@ -78,6 +79,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
     target: trade?.target != null ? String(trade.target) : '',
     stoploss: trade?.stoploss != null ? String(trade.stoploss) : '',
     notes: trade?.notes ?? '',
+    tags: trade?.tags ?? [],
   }))
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<string[]>(trade?.images ?? [])
@@ -174,7 +176,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       liquidity: form.liquidity,
       zone: form.zone,
       bias: form.bias,
-      tags: trade?.tags ?? null,
+      tags: form.tags.length ? form.tags : null,
       notes: form.notes.trim() || null,
       mood: trade?.mood ?? null,
       discipline_score: trade?.discipline_score ?? null,
@@ -390,6 +392,27 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                 )}
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} disabled={uploading} />
               </label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="סימונים">
+              {TRADE_MARKS.map((m) => {
+                const on = form.tags.includes(m)
+                return (
+                  <label
+                    key={m}
+                    className={`flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors ${
+                      on ? 'border-accent/40 bg-accent/[0.07] font-semibold text-accent' : 'border-border text-[#5f5e5b] hover:bg-surface'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[#2383e2]"
+                      checked={on}
+                      onChange={(e) => set('tags', e.target.checked ? [...form.tags, m] : form.tags.filter((x) => x !== m))}
+                    />
+                    {m}
+                  </label>
+                )
+              })}
             </div>
             <label className={`${field} mt-4`}>
               <span className="field-label mb-0">הערות</span>

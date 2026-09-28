@@ -1,6 +1,7 @@
 import type { Trade } from '../types'
 import { computeStats, cleanSymbol, type Stats } from './trades'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
+import { hasMark } from './marks'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.
@@ -50,6 +51,7 @@ export interface Analytics extends Stats {
   byLookback: Bucket[] // performance per entry-model (lookback)
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byZone: Bucket[] // win rate by side × zone (Long/Short in each zone) — tagged trades only
+  byAth: Bucket[] // win rate of trades marked ATH vs the rest
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
   // day-level
   tradingDays: number
@@ -306,6 +308,11 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     { v: 'SHORT·deadzone', label: 'Short · Deadzone' },
     { v: 'SHORT·discount', label: 'Short · Discount' },
   ])
+  // ATH is a yes/no mark, so every trade counts (unmarked = not ATH).
+  const byAth = winRateBuckets((t) => (hasMark(t, 'ATH') ? 'ath' : 'no'), [
+    { v: 'ath', label: 'ATH' },
+    { v: 'no', label: 'ללא ATH' },
+  ])
   const byBias = winRateBuckets((t) => t.bias, BIASES.map((b) => ({ v: b.v, label: BIAS_FULL_LABEL[b.v] })))
 
   return {
@@ -326,6 +333,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byLookback,
     byLiquidity,
     byZone,
+    byAth,
     byBias,
     tradingDays,
     winningDays,

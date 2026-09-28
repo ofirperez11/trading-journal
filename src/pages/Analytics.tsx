@@ -635,6 +635,18 @@ export default function Analytics() {
         </div>
         <Block
           className="mt-3"
+          title="אחוז הצלחה לפי ATH"
+          desc="אחוז ההצלחה של עסקאות שסומן בהן ATH (בווי מעל ההערות בטופס העסקה) מול כל שאר העסקאות. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
+          hint={<span className="tag">אחוז הצלחה</span>}
+        >
+          {a.byAth.some((b) => b.label === 'ATH') ? (
+            <BarRows rows={winRateRows(a.byAth)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+          ) : (
+            <EmptyNote text="עדיין לא סומן ATH באף עסקה. סמנו את הווי ATH מעל ההערות בטופס העסקה כדי לראות את ההשוואה." />
+          )}
+        </Block>
+        <Block
+          className="mt-3"
           title="אחוז הצלחה לפי ביאס"
           desc="אחוז ההצלחה לפי זוג ה-HTF (הביאס) שסומן בעסקה. נספרות רק עסקאות שסימנתם בהן ביאס. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%. עוזר לזהות אילו זוגות ביאס הכי מדויקים ומאילו כדאי להיזהר."
           hint={<span className="tag">אחוז הצלחה</span>}

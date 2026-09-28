@@ -31,6 +31,7 @@ import { useJournals } from '../lib/journals'
 import { formatMoney, imageUrl, formatR, formatTradeDateTime, cleanSymbol } from '../lib/trades'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
+import { TRADE_MARKS, hasMark } from '../lib/marks'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -286,6 +287,17 @@ export default function TradeDetail() {
           </Prop>
           <Prop icon={Compass} label="ביאס">
             {trade.bias ? <span className="tag tag-purple">{BIAS_FULL_LABEL[trade.bias]}</span> : <Empty />}
+          </Prop>
+          <Prop icon={Check} label="סימונים">
+            {TRADE_MARKS.some((m) => hasMark(trade, m)) ? (
+              <span className="flex flex-wrap gap-1">
+                {TRADE_MARKS.filter((m) => hasMark(trade, m)).map((m) => (
+                  <span key={m} className="tag tag-blue">{m}</span>
+                ))}
+              </span>
+            ) : (
+              <Empty />
+            )}
           </Prop>
           <Prop icon={Sigma} label="R-Multiple">
             <span className="num font-semibold">{formatR(trade.r_multiple)}</span>

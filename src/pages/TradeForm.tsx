@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ImagePlus, X, Loader2 } from 'lucide-react'
+import { ArrowRight, ImagePlus, X, Loader2, ChevronDown } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { useTrade, useTradeActions } from '../lib/useTrades'
@@ -89,6 +89,7 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
   const [images, setImages] = useState<string[]>(trade?.images ?? [])
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showClock, setShowClock] = useState(false) // fill time is tucked away until opened
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -287,11 +288,26 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  aria-expanded={showClock}
+                  onClick={() => setShowClock((v) => !v)}
+                  className="flex items-center gap-1 self-start text-[13px] text-muted hover:text-ink"
+                >
+                  שעת מילוי <span className="num">{form.clock || '—'}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showClock ? 'rotate-180' : ''}`} />
+                </button>
+                {showClock && (
+                  <input
+                    type="time"
+                    dir="ltr"
+                    aria-label="שעת מילוי"
+                    className="input"
+                    value={form.clock}
+                    onChange={(e) => set('clock', e.target.value)}
+                  />
+                )}
               </div>
-              <label className={field}>
-                <span className="field-label mb-0">שעת מילוי</span>
-                <input type="time" dir="ltr" className="input" value={form.clock} onChange={(e) => set('clock', e.target.value)} />
-              </label>
               <div className={`${field} sm:col-span-2`}>
                 <span className="field-label mb-0">Lookback (מודל כניסה)</span>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">

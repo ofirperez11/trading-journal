@@ -1,6 +1,7 @@
-import type { Bias, ChartMove, Liquidity, TradeSide, Zone } from '../types'
+import type { Bias, ChartMove, Liquidity, PineLevel, TradeSide, Zone } from '../types'
 import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
 import { parseChartMove } from './chartMove'
+import { LB_TOUCH_ROW, LEVEL_ROW, parseLbTouch, parseLevels } from './levels'
 import { toDayKind } from './dayKind'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
@@ -46,6 +47,9 @@ export interface PineTrade {
   noBePoints: number | null // "תוצאה בלי ברייק-איבן: טרגט +60" → 60
   htfRaw: string
   chartMove: ChartMove | null // "מהלך גרף" block — for/against points per timeframe
+  lbTouch: boolean | null // "נגיעה בלוקבק לפני 16:30: כן (08:33)"
+  lbTouchTime: string | null
+  levels: PineLevel[] | null // "יעדים (מרחק מהכניסה)" block
   extras: string[] // report lines the journal doesn't read (new indicator data) — kept in the notes
   warnings: string[]
 }
@@ -77,6 +81,8 @@ const KNOWN_LABELS = [
   'ביאס (HTF 6H/3H)',
   'מהלך גרף (לפי סגירת נר)',
   'MFE / MAE', // matched as a prefix — the label carries a note in parentheses
+  'מהלך גרף מהכניסה עד סוף היום (לפי סגירת נר)',
+  'יעדים (מרחק מהכניסה)', // its rows are read by parseLevels
 ]
 /** The "MFE / MAE (…): בעד 17.25 · נגד 15.00 · נגד עד השיא 8.75" line → points. */
 function excursions(lines: string[]): { mfe: number | null; mae: number | null; maeToPeak: number | null } {
@@ -103,6 +109,8 @@ function extraLines(lines: string[]): string[] {
       !l.startsWith('📝') && // the header
       !/^\[\d{4}-\d{2}-\d{2}T/.test(l) && // Pine Logs timestamp
       !/^\d+\s*דק/.test(l) && // "מהלך גרף" rows
+      !LEVEL_ROW.test(l) && // "יעדים" rows
+      !LB_TOUCH_ROW.test(l) &&
       !KNOWN_LABELS.some((k) => l.startsWith(k + ':') || (k === 'MFE / MAE' && l.startsWith(k))),
   )
 }
@@ -320,6 +328,8 @@ function parseOne(chunk: string): PineTrade | null {
     htfRaw: field(lines, 'ביאס (HTF 6H/3H)'),
     extras: extraLines(lines),
     chartMove: parseChartMove(lines),
+    ...parseLbTouch(lines),
+    levels: parseLevels(lines),
     warnings,
   }
 }

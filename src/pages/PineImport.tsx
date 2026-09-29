@@ -62,6 +62,9 @@ const FIELD_LABEL: Record<string, string> = {
   zone: 'אזור',
   bias: 'ביאס',
   chart_move: 'מהלך גרף',
+  lb_touch: 'נגיעה בלוקבק',
+  lb_touch_time: 'שעת נגיעה בלוקבק',
+  pine_levels: 'יעדים',
   tags: 'תגיות',
   notes: 'הערות',
 }
@@ -82,6 +85,7 @@ function show(key: string, v: unknown): string | null {
   if (key === 'liquidity') return LIQ.find((o) => o.v === v)?.label ?? String(v)
   if (key === 'week_of_month') return `שבוע ${v}`
   if (key === 'return_amount') return formatMoney(v as number)
+  if (typeof v === 'boolean') return v ? 'כן' : 'לא'
   if (typeof v === 'object') return null
   return String(v)
 }
@@ -292,6 +296,9 @@ export default function PineImport() {
         zone: r.zone,
         bias: r.bias,
         chart_move: r.t.chartMove,
+        lb_touch: r.t.lbTouch,
+        lb_touch_time: r.t.lbTouchTime,
+        pine_levels: r.t.levels,
         tags: pineTags(r.t),
         notes: pineNotes(r.t),
         mood: null,

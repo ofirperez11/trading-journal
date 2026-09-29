@@ -30,6 +30,8 @@ import {
   ChevronLeft,
   Compass,
   Activity,
+  Hand,
+  Flag,
 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
@@ -39,6 +41,7 @@ import { lookbackColor } from '../lib/lookback'
 import { dayKindOf } from '../lib/dayKind'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { CHART_MOVE_LABEL, CHART_MOVE_TFS } from '../lib/chartMove'
+import { ahead } from '../lib/levels'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -290,6 +293,20 @@ export default function TradeDetail() {
           <Prop icon={Ruler} label="גודל Lookback">
             {trade.lookback_size != null ? <span className="num">{trade.lookback_size} נק׳</span> : <Empty />}
           </Prop>
+          <Prop icon={Hand} label="נגיעה בלוקבק">
+            {trade.lb_touch == null ? (
+              <Empty />
+            ) : (
+              <span className="text-sm">
+                {trade.lb_touch ? 'כן' : 'לא'}
+                {trade.lb_touch && trade.lb_touch_time && (
+                  <span className="text-muted">
+                    {' · '}ב-<span className="num">{trade.lb_touch_time}</span>
+                  </span>
+                )}
+              </span>
+            )}
+          </Prop>
           <Prop icon={ShieldCheck} label="ברייק-איבן">
             {trade.be_triggered == null ? (
               <Empty />
@@ -368,6 +385,51 @@ export default function TradeDetail() {
                         <td>{CHART_MOVE_LABEL[tf]}</td>
                         <td className={`num text-left font-medium ${m.for > 0 ? 'text-win' : 'text-muted'}`}>{m.for.toFixed(2)}</td>
                         <td className={`num text-left font-medium ${m.against > 0 ? 'text-loss' : 'text-muted'}`}>{m.against.toFixed(2)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Levels around the entry — distance, side, reached (Pine import) */}
+          {trade.pine_levels && (
+            <div className="mt-5">
+              <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold">
+                <Flag className="h-4 w-4 text-faint" /> יעדים
+                <span className="text-[13px] font-normal text-muted">מרחק מהכניסה</span>
+              </h2>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th>רמה</th>
+                    <th className="!text-left">מחיר</th>
+                    <th className="!text-left">מרחק</th>
+                    <th>צד</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trade.pine_levels.map((l) => {
+                    const on = ahead(trade, l)
+                    const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
+                    return (
+                      <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                        <td dir="ltr" className="text-right">{l.name}</td>
+                        <td className="num text-left">{l.price.toFixed(2)}</td>
+                        <td className="num text-left">
+                          {l.points.toFixed(2)}
+                          {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
+                        </td>
+                        <td className="text-[13px]">
+                          {on ? (
+                            <span className="text-win">
+                              בכיוון העסקה{trade.mfe != null && trade.mfe >= l.points && <span className="text-muted"> · הגיע</span>}
+                            </span>
+                          ) : (
+                            <span className="text-muted">נגד העסקה</span>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}

@@ -11,6 +11,7 @@ import { useGlobalFilter } from '../lib/globalFilter'
 import { MIN_WHATIF, whatIfGrid } from '../lib/whatIf'
 import { breakevenStats } from '../lib/breakeven'
 import { tradeDays } from '../lib/tradeDays'
+import { levelStats } from '../lib/levels'
 import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
@@ -324,6 +325,80 @@ function Breakeven({ trades }: { trades: Parameters<typeof breakevenStats>[0] })
         </>
       ) : (
         <EmptyNote text="עדיין אין עסקאות עם נתון ברייק-איבן. הוא נשמר אוטומטית מהשורה 'ברייק-איבן' בדוח של Pine Logs." />
+      )}
+    </Block>
+  )
+}
+
+/** Pine's levels around the entry (Td, Tny, …) and the lookback touch — how the trades did around them. */
+function Levels({ trades }: { trades: Parameters<typeof levelStats>[0] }) {
+  const rows = useMemo(() => levelStats(trades), [trades])
+  const touch = useMemo(() => {
+    const g = (v: boolean) => {
+      const ts = trades.filter((t) => t.lb_touch === v)
+      const w = ts.filter((t) => t.return_amount > 0).length
+      const l = ts.filter((t) => t.return_amount < 0).length
+      return { count: ts.length, winRate: w + l ? w / (w + l) : null }
+    }
+    return { yes: g(true), no: g(false) }
+  }, [trades])
+  const pct = (v: number | null) => (v == null ? '—' : `${Math.round(v * 100)}%`)
+  const hasTouch = touch.yes.count + touch.no.count > 0
+  return (
+    <Block
+      className="mt-3"
+      title="יעדים ונגיעה בלוקבק"
+      desc="מהדוח של Pine. לכל רמה (Td, Tny, T23, נזילות 5m…): בכמה עסקאות היא הייתה בכיוון העסקה, כמה רחוק (ב-R של הסטופ), כמה פעמים המחיר הגיע אליה בזמן העסקה (לפי ה-MFE), ואחוז ההצלחה כשהרמה הייתה לפני היעד שלך (בדרך) מול אחריו (יש מקום עד היעד). נגיעה בלוקבק = האם המחיר נגע בלוקבק לפני שעת ההזדמנות."
+    >
+      {rows.length || hasTouch ? (
+        <>
+          {hasTouch && (
+            <p className="text-[14px]">
+              נגיעה בלוקבק לפני ההזדמנות: <b>כן</b> <b className="num">{pct(touch.yes.winRate)}</b> הצלחה (
+              <span className="num">{touch.yes.count}</span>) · <b>לא</b> <b className="num">{pct(touch.no.winRate)}</b> הצלחה (
+              <span className="num">{touch.no.count}</span>)
+            </p>
+          )}
+          {rows.length > 0 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th>רמה</th>
+                    <th className="!text-left">בכיוון העסקה</th>
+                    <th className="!text-left">מרחק ממוצע</th>
+                    <th className="!text-left">המחיר הגיע</th>
+                    <th className="!text-left">לפני היעד</th>
+                    <th className="!text-left">אחרי היעד</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((x) => (
+                    <tr key={x.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                      <td dir="ltr" className="text-right font-medium">{x.name}</td>
+                      <td className="num text-left">
+                        {x.ahead}/{x.trades}
+                      </td>
+                      <td className="num text-left">{x.avgR == null ? '—' : `${x.avgR.toFixed(1)}R`}</td>
+                      <td className="num text-left">{x.reachKnown ? pct(x.reached / x.reachKnown) : '—'}</td>
+                      <td className="num text-left">
+                        {pct(x.before.winRate)} <span className="text-faint">({x.before.n})</span>
+                      </td>
+                      <td className="num text-left">
+                        {pct(x.after.winRate)} <span className="text-faint">({x.after.n})</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-3 text-[13px] text-muted">
+            "לפני היעד" / "אחרי היעד" — אחוז הצלחה (בסוגריים: עסקאות שהוכרעו) כשהרמה בכיוון העסקה הייתה קרובה מהיעד שלך, מול רחוקה ממנו או בדיוק עליו.
+          </p>
+        </>
+      ) : (
+        <EmptyNote text="עדיין אין עסקאות עם יעדים או נגיעה בלוקבק. הם נשמרים אוטומטית מהשורות 'יעדים (מרחק מהכניסה)' ו'נגיעה בלוקבק' בדוח של Pine Logs." />
       )}
     </Block>
   )
@@ -1038,6 +1113,7 @@ export default function Analytics() {
         </div>
         <WhatIf trades={filtered} />
         <Breakeven trades={filtered} />
+        <Levels trades={filtered} />
       </Section>
 
       {/* ---- 5. Risk & stops ---- */}

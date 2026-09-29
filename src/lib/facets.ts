@@ -108,6 +108,18 @@ export const FACETS: Facet[] = [
     of: (t) => (t.week_of_month != null ? String(t.week_of_month) : null),
     options: fixed([1, 2, 3, 4, 5].map((w) => ({ v: String(w), label: `שבוע ${w}` }))),
   },
+  {
+    key: 'lbtouch',
+    label: 'נגיעה בלוקבק',
+    of: (t) => (t.lb_touch == null ? null : t.lb_touch ? 'yes' : 'no'),
+    options: present(
+      (t) => (t.lb_touch == null ? null : t.lb_touch ? 'yes' : 'no'),
+      [
+        { v: 'yes', label: 'נגע לפני ההזדמנות' },
+        { v: 'no', label: 'לא נגע' },
+      ],
+    ),
+  },
 ]
 export const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 

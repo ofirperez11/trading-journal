@@ -8,6 +8,7 @@ import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analy
 import { computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { useGlobalFilter } from '../lib/globalFilter'
+import { MIN_WHATIF, whatIfGrid } from '../lib/whatIf'
 import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
@@ -177,6 +178,62 @@ function Block({
 
 function EmptyNote({ text }: { text: string }) {
   return <div className="py-6 text-center text-sm leading-relaxed text-muted">{text}</div>
+}
+
+/** "מה אם": every stop × target combination, replayed from each trade's MFE / MAE. */
+function WhatIf({ trades }: { trades: Parameters<typeof whatIfGrid>[0] }) {
+  const w = useMemo(() => whatIfGrid(trades), [trades])
+  const fmt = (r: number) => `${r > 0 ? '+' : ''}${r.toFixed(2)}R`
+  return (
+    <Block
+      className="mt-3"
+      title="מה אם: יעד וסטופ"
+      desc="כל עסקה משוחזרת מה-MFE / MAE שלה (מ-Pine), ב-R של הסטופ המקורי שלה, כך ש-NQ ו-ES נספרים יחד. שורה = גודל סטופ (פי כמה מהמקורי), עמודה = יעד ב-R. בכל תא: התוחלת לעסקה ב-R ואחוז ההצלחה. ניצחון = ה-MFE הגיע ליעד לפני שה'נגד עד השיא' עבר את הסטופ; הפסד = ה-MAE עבר את הסטופ; אחרת העסקה נסגרה כמו שנסגרה. כשאי אפשר לדעת (למשל יעד רחוק מהיעד המקורי שכבר נלקח) — נספר 0R. כשגם יעד וגם סטופ היו אפשריים — נספר הפסד. התא הטוב ביותר מודגש."
+      hint={<span className="tag">{w.n} עסקאות</span>}
+    >
+      {w.cells.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="h-8 border-b border-border text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                <th className="text-right">סטופ \ יעד</th>
+                {w.cells[0].map((c) => (
+                  <th key={c.targetR} className="num !text-left">{c.targetR}R</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {w.cells.map((row) => (
+                <tr key={row[0].stopMult} className="border-b border-[#f1f0ed] [&>td]:px-1.5 [&>td]:py-1.5">
+                  <td className="whitespace-nowrap text-[13px]">
+                    ×{row[0].stopMult}
+                    {row[0].stopMult === 1 && <span className="text-muted"> (המקורי)</span>}
+                  </td>
+                  {row.map((c) => {
+                    const top = w.best === c
+                    return (
+                      <td key={c.targetR} className={`text-left ${top ? 'rounded bg-tag-green' : ''}`}>
+                        <div className={`num font-semibold ${c.expectancy > 0 ? 'text-win' : c.expectancy < 0 ? 'text-loss' : 'text-muted'}`}>{fmt(c.expectancy)}</div>
+                        <div className="num text-[11px] text-muted">{Math.round(c.winRate * 100)}%</div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {w.best && (
+            <p className="mt-3 text-[13px] text-muted">
+              הכי טוב: סטופ <b className="num text-ink">×{w.best.stopMult}</b> ויעד <b className="num text-ink">{w.best.targetR}R</b> —{' '}
+              <b className="num text-ink">{fmt(w.best.expectancy)}</b> לעסקה, <b className="num text-ink">{Math.round(w.best.winRate * 100)}%</b> הצלחה.
+            </p>
+          )}
+        </div>
+      ) : (
+        <EmptyNote text={`צריך לפחות ${MIN_WHATIF} עסקאות עם MFE / MAE, סטופ ויציאה. הם נשמרים אוטומטית מהשורה "MFE / MAE" בדוח של Pine Logs.`} />
+      )}
+    </Block>
+  )
 }
 
 /* ---- Page ------------------------------------------------------------ */
@@ -813,6 +870,7 @@ export default function Analytics() {
             )
           })}
         </div>
+        <WhatIf trades={filtered} />
       </Section>
 
       {/* ---- 5. Risk & stops ---- */}

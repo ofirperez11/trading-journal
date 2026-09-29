@@ -23,6 +23,12 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
 
   if (!journal) return null
   const shares = journal.shares ?? []
+  // Quick share: people this user already shares their other journals with
+  // (already loaded with the journals — no extra query), minus this journal's.
+  const here = new Set(shares.map((s) => s.email.toLowerCase()))
+  const known = [
+    ...new Set(journals.flatMap((j) => (j.shares ?? []).map((s) => s.email.toLowerCase())).filter((e) => !here.has(e))),
+  ].sort()
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -89,6 +95,27 @@ export function ShareDialog({ journalId, onClose }: { journalId: string; onClose
           </button>
         </form>
         {error && <p className="mt-2 text-sm text-loss">{error}</p>}
+
+        {known.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[13px] font-semibold text-muted">שיתוף מהיר</div>
+            <p className="mt-0.5 text-[12px] text-faint">אנשים ששיתפת איתם יומנים אחרים · לחיצה משתפת ב{roleLabel[role]}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {known.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => shareJournal(journalId, e, role)}
+                  aria-label={`שתף עם ${e} ב${roleLabel[role]}`}
+                  className="tag cursor-pointer !px-2.5 !py-1 !text-[13px] transition-colors hover:!bg-[#d9d8d5]"
+                >
+                  <UserPlus className="h-3.5 w-3.5 opacity-60" />
+                  <span dir="ltr">{e}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-5">
           <div className="text-[13px] font-semibold text-muted">משותף עם</div>

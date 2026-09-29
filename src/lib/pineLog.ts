@@ -1,7 +1,7 @@
 import type { Bias, ChartMove, Liquidity, PineLevel, TradeSide, Zone } from '../types'
 import { LOOKBACKS, SESSION_TIMES, type SessionTime } from './lookback'
 import { parseChartMove } from './chartMove'
-import { LB_TOUCH_ROW, LEVEL_ROW, parseLbTouch, parseLevels } from './levels'
+import { EMPTY_LEVEL_ROW, LB_TOUCH_ROW, LEVEL_ROW, parseLbTouch, parseLevels } from './levels'
 import { toDayKind } from './dayKind'
 
 // Parser for the trade reports that the "full auto NOD indicator" writes to
@@ -59,6 +59,11 @@ const SEP = /═{5,}/
 // Report lines the journal reads into trade fields (or summarises in the notes).
 // Any other "label: value" line — e.g. a new line the indicator starts writing —
 // is copied to the notes as is, so new data is never lost.
+// "נזילות שנשרפה לפני הכניסה (15 דק'): Sell Side: כן (שפל לונדון)" — the liquidity
+// line of newer reports (swept in the 15 minutes before the entry); the tail varies.
+const LIQ_BURNED = 'נזילות שנשרפה'
+// Labels matched as a prefix — they carry a note in parentheses.
+const PREFIX_LABELS = ['MFE / MAE', LIQ_BURNED]
 const KNOWN_LABELS = [
   'תאריך',
   'שעת כניסה',
@@ -77,6 +82,7 @@ const KNOWN_LABELS = [
   'ברייק-איבן',
   'תוצאה בלי ברייק-איבן',
   'נזילות שנלקחה',
+  LIQ_BURNED, // newer wording, matched as a prefix
   'אזור (Dealing Range)',
   'אזור (P&D)', // the same line, newer indicator wording
   'ביאס (HTF 6H/3H)',
@@ -112,8 +118,9 @@ function extraLines(lines: string[]): string[] {
       !/^\[\d{4}-\d{2}-\d{2}T/.test(l) && // Pine Logs timestamp
       !/^\d+\s*דק/.test(l) && // "מהלך גרף" rows
       !LEVEL_ROW.test(l) && // "יעדים" rows
+      !EMPTY_LEVEL_ROW.test(l) && // …and ones with no value ("T23: —")
       !LB_TOUCH_ROW.test(l) &&
-      !KNOWN_LABELS.some((k) => l.startsWith(k + ':') || (k === 'MFE / MAE' && l.startsWith(k))),
+      !KNOWN_LABELS.some((k) => l.startsWith(k + ':') || (PREFIX_LABELS.includes(k) && l.startsWith(k))),
   )
 }
 // Invisible direction marks (RLM/LRM, embeddings, isolates) that Pine Logs puts
@@ -121,6 +128,11 @@ function extraLines(lines: string[]): string[] {
 const BIDI_MARKS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g
 
 /** Value of a "label: value" line; strips a trailing CSV quote. */
+/** Value of the line that starts with the prefix — for labels whose tail varies. */
+function prefixField(lines: string[], prefix: string): string {
+  const line = lines.find((l) => l.startsWith(prefix))
+  return line ? line.slice(line.indexOf(':') + 1).trim() : ''
+}
 function field(lines: string[], label: string): string {
   const line = lines.find((l) => l.startsWith(label + ':'))
   if (!line) return ''
@@ -288,7 +300,7 @@ function parseOne(chunk: string): PineTrade | null {
   const bias = parseBias(baseRaw)
   if (baseRaw && baseRaw !== '—' && !bias) warnings.push('זוג הביאס לא זוהה')
 
-  const liqRaw = field(lines, 'נזילות שנלקחה')
+  const liqRaw = field(lines, 'נזילות שנלקחה') || prefixField(lines, LIQ_BURNED)
   const { liquidity, guessed } = parseLiquidity(liqRaw, side)
 
   const zoneRaw = field(lines, 'אזור (Dealing Range)') || field(lines, 'אזור (P&D)')

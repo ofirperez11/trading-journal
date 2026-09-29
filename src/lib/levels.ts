@@ -9,6 +9,8 @@ import type { PineLevel, Trade } from '../types'
 
 /** A level row of the report: name, price, distance in points, above / below the entry. */
 export const LEVEL_ROW = /^(.+?):\s*(-?[\d.,]+)\s*·\s*([\d.,]+)\s*נק['׳]?\s*(מעל|מתחת)/
+/** A level the report has no value for this time: "T23: —". */
+export const EMPTY_LEVEL_ROW = /^[^:]+:\s*[—-]\s*$/
 /** "נגיעה בלוקבק לפני 16:30: כן (08:33)" — the session in the label varies. */
 export const LB_TOUCH_ROW = /^נגיעה בלוקבק(?:\s+לפני\s+\d{1,2}:\d{2})?\s*:\s*(.*)$/
 

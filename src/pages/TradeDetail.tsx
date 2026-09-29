@@ -393,53 +393,69 @@ export default function TradeDetail() {
             </div>
           )}
 
-          {/* Levels around the entry — distance, side, reached (Pine import) */}
+          {/* Levels around the entry — distance, side, when price got there (Pine import) */}
           {trade.pine_levels && (
             <div className="mt-5">
               <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold">
                 <Flag className="h-4 w-4 text-faint" /> יעדים
-                <span className="text-[13px] font-normal text-muted">מרחק מהכניסה</span>
+                <span className="text-[13px] font-normal text-muted">מרחק וזמן מהכניסה</span>
               </h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
-                    <th>רמה</th>
-                    <th className="!text-left">מחיר</th>
-                    <th className="!text-left">מרחק</th>
-                    <th>צד</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trade.pine_levels.map((l) => {
-                    const on = ahead(trade, l)
-                    const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
-                    return (
-                      <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
-                        <td dir="ltr" className="text-right">{l.name}</td>
-                        <td className="num text-left">{l.price.toFixed(2)}</td>
-                        <td className="num text-left">
-                          {l.points.toFixed(2)}
-                          {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
-                        </td>
-                        <td className="text-[13px]">
-                          {!on ? (
-                            <span className="text-muted">נגד העסקה</span>
-                          ) : !isTarget(trade, l) ? (
-                            <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
-                          ) : (
-                            <span className="text-win">
-                              יעד
-                              {reachedBy(trade, l) && (
-                                <span className="text-muted"> · {reachedBy(trade, l) === 'trade' ? 'הגיע בעסקה' : 'הגיע עד סוף היום'}</span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead>
+                    <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                      <th>רמה</th>
+                      <th className="!text-left">מחיר</th>
+                      <th className="!text-left">מרחק</th>
+                      <th>צד</th>
+                      <th>הגיע</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trade.pine_levels.map((l) => {
+                      const on = ahead(trade, l)
+                      const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
+                      // Older reports have no time — fall back to MFE / chart move for targets.
+                      const old = !l.reach && on && isTarget(trade, l) ? reachedBy(trade, l) : null
+                      return (
+                        <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                          <td dir="ltr" className="text-right">{l.name}</td>
+                          <td className="num text-left">{l.price.toFixed(2)}</td>
+                          <td className="num text-left">
+                            {l.points.toFixed(2)}
+                            {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
+                          </td>
+                          <td className="text-[13px]">
+                            {!on ? (
+                              <span className="text-muted">נגד העסקה</span>
+                            ) : !isTarget(trade, l) ? (
+                              <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
+                            ) : (
+                              <span className="text-win">יעד</span>
+                            )}
+                          </td>
+                          <td className="text-[13px]">
+                            {l.reach ? (
+                              l.reach.minutes != null ? (
+                                <span>
+                                  אחרי <span className="num">{l.reach.minutes}</span> דק׳
+                                  {l.reach.at && <span className="num text-muted"> ({l.reach.at})</span>}
+                                </span>
+                              ) : (
+                                <span className="text-muted">לא הגיע</span>
+                              )
+                            ) : old ? (
+                              <span className="text-muted">{old === 'trade' ? 'בעסקה' : 'עד סוף היום'}</span>
+                            ) : (
+                              <span className="text-faint">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

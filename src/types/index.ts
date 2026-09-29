@@ -34,6 +34,8 @@ export interface PineLevel {
   price: number
   points: number // distance from the entry
   above: boolean // above the entry (else below)
+  /** When price got there: minutes after the entry and the clock time; minutes null = it didn't. Absent in older reports. */
+  reach?: { minutes: number | null; at: string | null }
 }
 
 /** A single fill that makes up a trade. */

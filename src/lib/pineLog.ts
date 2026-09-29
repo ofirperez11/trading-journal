@@ -83,6 +83,7 @@ const KNOWN_LABELS = [
   'MFE / MAE', // matched as a prefix — the label carries a note in parentheses
   'מהלך גרף מהכניסה עד סוף היום (לפי סגירת נר)',
   'יעדים (מרחק מהכניסה)', // its rows are read by parseLevels
+  'יעדים (מרחק וזמן מהכניסה)', // the same block with the time price got there
 ]
 /** The "MFE / MAE (…): בעד 17.25 · נגד 15.00 · נגד עד השיא 8.75" line → points. */
 function excursions(lines: string[]): { mfe: number | null; mae: number | null; maeToPeak: number | null } {

@@ -1,8 +1,10 @@
 import type { PineLevel, Trade } from '../types'
 
-// Pine's "יעדים (מרחק מהכניסה)" block — price levels around the entry
-// (Td, Tny, T23, Buy Side 5m, …) with their distance, one per row:
-//   "Td: 29755.00 · 73.50 נק' מתחת"
+// Pine's "יעדים (מרחק וזמן מהכניסה)" block — price levels around the entry
+// (Td, Tny, T23, Buy Side 5m, …) with their distance and when price got
+// there, one per row (older reports have no time):
+//   "Td: 29755.00 · 73.50 נק' מתחת · הגיע אחרי 31 דק' (17:01)"
+//   "Buy Side 5m: 29853.00 · 24.50 נק' מעל · לא הגיע"
 // and the "נגיעה בלוקבק לפני 16:30: כן (08:33)" line. Pine import only.
 
 /** A level row of the report: name, price, distance in points, above / below the entry. */
@@ -18,7 +20,13 @@ export function parseLevels(lines: string[]): PineLevel[] | null {
     if (!m) return []
     const price = num(m[2])
     const points = num(m[3])
-    return Number.isFinite(price) && Number.isFinite(points) ? [{ name: m[1].trim(), price, points, above: m[4] === 'מעל' }] : []
+    if (!Number.isFinite(price) || !Number.isFinite(points)) return []
+    const level: PineLevel = { name: m[1].trim(), price, points, above: m[4] === 'מעל' }
+    const rest = l.slice(m[0].length)
+    const after = rest.match(/הגיע אחרי\s*(\d+(?:\.\d+)?)\s*דק/)
+    if (/לא הגיע/.test(rest)) level.reach = { minutes: null, at: null }
+    else if (after) level.reach = { minutes: num(after[1]), at: rest.match(/\((\d{1,2}:\d{2})\)/)?.[1] ?? null }
+    return [level]
   })
   return out.length ? out : null
 }
@@ -38,12 +46,24 @@ export function normalizeLevels(raw: unknown): PineLevel[] | null {
     const m = v as Record<string, unknown>
     const price = Number(m.price)
     const points = Number(m.points)
-    return typeof m.name === 'string' && Number.isFinite(price) && Number.isFinite(points)
-      ? [{ name: m.name, price, points, above: m.above === true }]
-      : []
+    if (typeof m.name !== 'string' || !Number.isFinite(price) || !Number.isFinite(points)) return []
+    const level: PineLevel = { name: m.name, price, points, above: m.above === true }
+    if (m.reach && typeof m.reach === 'object') {
+      const r = m.reach as Record<string, unknown>
+      level.reach = {
+        minutes: typeof r.minutes === 'number' && Number.isFinite(r.minutes) ? r.minutes : null,
+        at: typeof r.at === 'string' ? r.at : null,
+      }
+    }
+    return [level]
   })
   return out.length ? out : null
 }
+
+// The stats count a level as reached only within this many minutes of the entry.
+export const REACH_WINDOW_MIN = 30
+/** Reached within the window — or null when the report has no time for it. */
+export const reachedInWindow = (l: PineLevel) => (l.reach ? l.reach.minutes != null && l.reach.minutes <= REACH_WINDOW_MIN : null)
 
 /** Is the level on the trade's side — where the trade goes to profit? */
 export const ahead = (t: Trade, l: PineLevel) => (t.side === 'LONG') === l.above
@@ -78,8 +98,8 @@ export interface LevelStats {
   on: number // trades where it was a target (trade's side, 1:3+)
   of: number // trades with levels reported
   avgR: number | null // its distance, in R (targets only)
-  reached: number // targets that price got to by the end of the day
-  reachKnown: number // targets with an MFE or a chart move
+  reached: number // targets price got to within REACH_WINDOW_MIN of the entry
+  reachKnown: number // targets whose report says when (or that it didn't)
   withIt: { n: number; winRate: number | null } // win rate when it was a target
   without: { n: number; winRate: number | null } // …and when it wasn't (missing, the other side, under 1:3)
 }
@@ -99,13 +119,13 @@ export function levelStats(trades: Trade[]): LevelStats[] {
         const r = levelR(t, l)
         return r == null ? [] : [r]
       })
-      const known = on.filter(({ t }) => t.mfe != null || eodFor(t) != null)
+      const known = on.filter(({ l }) => reachedInWindow(l) != null)
       return {
         name,
         on: on.length,
         of: reported.length,
         avgR: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null,
-        reached: known.filter(({ t, l }) => reachedBy(t, l) != null).length,
+        reached: known.filter(({ l }) => reachedInWindow(l)).length,
         reachKnown: known.length,
         withIt: rate(on.map(({ t }) => t)),
         without: rate(reported.filter((t) => !target(t))),

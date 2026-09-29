@@ -88,6 +88,9 @@ create table if not exists public.trades (
   zone text,                   -- ICT: dealing-range position at entry ('premium' | 'deadzone' | 'discount')
   bias text,                   -- ICT: HTF bias pair (e.g. '6h-3h', '3h-90', '3h-wick90', '6h-90')
   chart_move jsonb,            -- for/against points per timeframe, e.g. {"1":{"for":60.75,"against":0}} (Pine import)
+  lb_touch boolean,            -- price touched the lookback before the session (Pine)
+  lb_touch_time text,          -- when it touched, 'HH:MM' Israel time (Pine)
+  pine_levels jsonb,           -- levels around the entry, e.g. [{"name":"Td","price":29755,"points":73.5,"above":false}] (Pine import)
   tags text[],
   notes text,
   mood text,

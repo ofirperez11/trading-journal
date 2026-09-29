@@ -3,6 +3,7 @@ import { cleanSymbol } from './trades'
 import { LOOKBACKS, SESSION_TIMES, sessionOf } from './lookback'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
 import { DAY_KINDS, dayKindOf } from './dayKind'
+import { targetFacetOf } from './levels'
 
 // Filter menu facets. Each facet is one URL param (comma-separated values).
 // Values inside a facet are OR'ed (NQ or ES), facets are AND'ed (NQ and
@@ -108,6 +109,36 @@ export const FACETS: Facet[] = [
     of: (t) => (t.week_of_month != null ? String(t.week_of_month) : null),
     options: fixed([1, 2, 3, 4, 5].map((w) => ({ v: String(w), label: `שבוע ${w}` }))),
   },
+  {
+    key: 'lbtouch',
+    label: 'נגיעה בלוקבק',
+    of: (t) => (t.lb_touch == null ? null : t.lb_touch ? 'yes' : 'no'),
+    options: present(
+      (t) => (t.lb_touch == null ? null : t.lb_touch ? 'yes' : 'no'),
+      [
+        { v: 'yes', label: 'נגע לפני ההזדמנות' },
+        { v: 'no', label: 'לא נגע' },
+      ],
+    ),
+  },
+  // Pine's levels as targets (trade's side, 1:3 or more) — one facet per level the indicator writes.
+  ...(
+    [
+      ['tgt_td', 'Td'],
+      ['tgt_tny', 'Tny'],
+      ['tgt_t23', 'T23'],
+      ['tgt_bs5', 'Buy Side 5m'],
+      ['tgt_ss5', 'Sell Side 5m'],
+    ] as const
+  ).map(([key, name]) => ({
+    key,
+    label: `${name} כיעד (1:3+)`,
+    of: targetFacetOf(name),
+    options: present(targetFacetOf(name), [
+      { v: 'yes', label: 'כן' },
+      { v: 'no', label: 'לא' },
+    ]),
+  })),
 ]
 export const csv = (s: string | null) => (s ? s.split(',').filter(Boolean) : [])
 

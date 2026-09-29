@@ -204,6 +204,9 @@ function TradeFormInner({ trade, editing }: { trade: Trade | null; editing: bool
       executions: calc.executions ?? trade?.executions ?? null,
       images: finalImages,
       chart_move: trade?.chart_move ?? null,
+      lb_touch: trade?.lb_touch ?? null,
+      lb_touch_time: trade?.lb_touch_time ?? null,
+      pine_levels: trade?.pine_levels ?? null,
     }
 
     if (editing && trade) {

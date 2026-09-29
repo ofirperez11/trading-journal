@@ -28,6 +28,15 @@ export interface MoveSplit {
   against: number
 }
 export type ChartMove = Partial<Record<ChartMoveTf, MoveSplit>>
+/** A level around the entry from the Pine report ("Td: 29755.00 · 73.50 נק' מתחת"). */
+export interface PineLevel {
+  name: string // Td / Tny / T23 / Buy Side 5m / …
+  price: number
+  points: number // distance from the entry
+  above: boolean // above the entry (else below)
+  /** When price got there: minutes after the entry and the clock time; minutes null = it didn't. Absent in older reports. */
+  reach?: { minutes: number | null; at: string | null }
+}
 
 /** A single fill that makes up a trade. */
 export interface Execution {
@@ -73,6 +82,9 @@ export interface Trade {
   zone: Zone | null // dealing-range position at entry
   bias: Bias | null // higher-timeframe bias pair used
   chart_move: ChartMove | null // for/against points per timeframe — Pine import only
+  lb_touch: boolean | null // price touched the lookback before the session (Pine)
+  lb_touch_time: string | null // when it touched, "HH:MM" Israel time (Pine)
+  pine_levels: PineLevel[] | null // levels around the entry with their distance — Pine import only
   tags: string[] | null
   notes: string | null
   mood: string | null

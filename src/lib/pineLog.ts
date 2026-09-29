@@ -41,7 +41,9 @@ export interface PineTrade {
   zoneRaw: string
   dayKind: string
   week: string
-  beRaw: string
+  beTriggered: boolean | null // "ברייק-איבן: הופעל אחרי 9 דק'" → true, "לא" → false
+  beMinutes: number | null
+  noBePoints: number | null // "תוצאה בלי ברייק-איבן: טרגט +60" → 60
   htfRaw: string
   chartMove: ChartMove | null // "מהלך גרף" block — for/against points per timeframe
   extras: string[] // report lines the journal doesn't read (new indicator data) — kept in the notes
@@ -69,6 +71,7 @@ const KNOWN_LABELS = [
   'מחיר יציאה',
   'תוצאה',
   'ברייק-איבן',
+  'תוצאה בלי ברייק-איבן',
   'נזילות שנלקחה',
   'אזור (Dealing Range)',
   'ביאס (HTF 6H/3H)',
@@ -84,6 +87,13 @@ function excursions(lines: string[]): { mfe: number | null; mae: number | null; 
     mae: toNum(value.match(/נגד(?!\s*עד)\s*(-?[\d.,]+)/)?.[1]),
     maeToPeak: toNum(value.match(/נגד עד השיא\s*(-?[\d.,]+)/)?.[1]),
   }
+}
+
+/** "הופעל אחרי 9 דק'" → triggered after 9 min; "לא" → not triggered; anything else → unknown. */
+function breakeven(raw: string): { beTriggered: boolean | null; beMinutes: number | null } {
+  if (raw.includes('הופעל')) return { beTriggered: true, beMinutes: toNum(raw.match(/(\d+(?:\.\d+)?)\s*דק/)?.[1]) }
+  if (raw.trim() === 'לא') return { beTriggered: false, beMinutes: null }
+  return { beTriggered: null, beMinutes: null }
 }
 
 function extraLines(lines: string[]): string[] {
@@ -286,7 +296,8 @@ function parseOne(chunk: string): PineTrade | null {
     zoneRaw,
     dayKind: field(lines, 'סוג יום'),
     week: field(lines, 'שבוע בחודש'),
-    beRaw: field(lines, 'ברייק-איבן'),
+    ...breakeven(field(lines, 'ברייק-איבן')),
+    noBePoints: toNum(field(lines, 'תוצאה בלי ברייק-איבן').match(/([+-]?\d+(?:\.\d+)?)\s*$/)?.[1]),
     htfRaw: field(lines, 'ביאס (HTF 6H/3H)'),
     extras: extraLines(lines),
     chartMove: parseChartMove(lines),
@@ -314,14 +325,13 @@ const inParens = (s: string) =>
 
 /**
  * Notes stored with the imported trade — only what no trade field holds.
- * Fill time, lookback, bias, week, day kind (a tag) and stop/target are fields
+ * Fill time, lookback, bias, week, day kind (a tag), break-even and stop/target are fields
  * already; for liquidity and zone only the extra detail (which highs, % in
  * range) is kept. Report lines the journal doesn't know are appended as is.
  */
 export function pineNotes(t: PineTrade): string {
   const rows = [
     'יובא מ-Pine Logs (full auto NOD indicator)',
-    t.beRaw ? `ברייק-איבן: ${t.beRaw}` : '',
     inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
     inParens(t.zoneRaw) ? `מיקום בטווח: ${inParens(t.zoneRaw)}` : '',
     t.htfRaw ? `ביאס HTF: ${t.htfRaw}` : '',

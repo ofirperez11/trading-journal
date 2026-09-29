@@ -9,6 +9,7 @@ import { computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { useGlobalFilter } from '../lib/globalFilter'
 import { MIN_WHATIF, whatIfGrid } from '../lib/whatIf'
+import { breakevenStats } from '../lib/breakeven'
 import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
@@ -231,6 +232,97 @@ function WhatIf({ trades }: { trades: Parameters<typeof whatIfGrid>[0] }) {
         </div>
       ) : (
         <EmptyNote text={`צריך לפחות ${MIN_WHATIF} עסקאות עם MFE / MAE, סטופ ויציאה. הם נשמרים אוטומטית מהשורה "MFE / MAE" בדוח של Pine Logs.`} />
+      )}
+    </Block>
+  )
+}
+
+/** Break-even: how often it kicks in, what it did to the result, and — when Pine reports it — what it cost or saved. */
+function Breakeven({ trades }: { trades: Parameters<typeof breakevenStats>[0] }) {
+  const b = useMemo(() => breakevenStats(trades), [trades])
+  const r = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}R`)
+  const pct = (v: number | null) => (v == null ? '—' : `${Math.round(v * 100)}%`)
+  return (
+    <Block
+      className="mt-3"
+      title="ניתוח ברייק-איבן"
+      desc="מהשורה 'ברייק-איבן' בדוח של Pine: באילו עסקאות הברייק-איבן הופעל, איך הן נגמרו, ותוך כמה דקות הוא הופעל. 'הגיעו לפני כן' = כמה עסקאות שחזרו ל-0 הלכו קודם בעדך (MFE ב-R). מה היה קורה בלי ברייק-איבן אי אפשר לחשב מה-MFE/MAE (הם נגמרים ביציאה) — רק האינדיקטור יודע, דרך השורה 'תוצאה בלי ברייק-איבן'."
+    >
+      {b ? (
+        <>
+          <p className="text-[14px]">
+            הופעל ב-<b className="num">{b.on.count}</b> מתוך <b className="num">{b.on.count + b.off.count}</b> עסקאות: <b className="num">{b.endedAtBe}</b> חזרו ל-0,{' '}
+            <b className="num">{b.wonAnyway}</b> בכל זאת הגיעו לרווח.
+            {b.beExitMfeR != null && (
+              <>
+                {' '}אלה שחזרו ל-0 הגיעו לפני כן בממוצע ל-<b className="num">{r(b.beExitMfeR)}</b> בעדך.
+              </>
+            )}
+          </p>
+          <table className="mt-3 w-full text-sm">
+            <thead>
+              <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                <th />
+                <th className="!text-left">עסקאות</th>
+                <th className="!text-left">אחוז הצלחה</th>
+                <th className="!text-left">R ממוצע</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  ['הופעל', b.on],
+                  ['לא הופעל', b.off],
+                ] as const
+              ).map(([label, g]) => (
+                <tr key={label} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                  <td className="font-medium">{label}</td>
+                  <td className="num text-left">{g.count}</td>
+                  <td className="num text-left">{pct(g.winRate)}</td>
+                  <td className="num text-left">{r(g.avgR)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {b.byMinutes.length > 0 && (
+            <table className="mt-4 w-full text-sm">
+              <thead>
+                <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                  <th>הופעל אחרי</th>
+                  <th className="!text-left">עסקאות</th>
+                  <th className="!text-left">חזרו ל-0</th>
+                  <th className="!text-left">הגיעו לרווח</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b.byMinutes.map((m) => (
+                  <tr key={m.label} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                    <td>{m.label}</td>
+                    <td className="num text-left">{m.count}</td>
+                    <td className="num text-left">{m.endedAtBe}</td>
+                    <td className="num text-left">{m.won}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="mt-3 text-[13px] text-muted">
+            {b.without ? (
+              <>
+                לפי Pine, ב-<b className="num text-ink">{b.without.count}</b> עסקאות עם ברייק-איבן: <b className="num text-ink">{r(b.without.withR)}</b> איתו מול{' '}
+                <b className="num text-ink">{r(b.without.withoutR)}</b> בלעדיו — הברייק-איבן{' '}
+                <b className={`num ${b.without.withR >= b.without.withoutR ? 'text-win' : 'text-loss'}`}>
+                  {b.without.withR >= b.without.withoutR ? 'חסך' : 'עלה'} {Math.abs(b.without.withR - b.without.withoutR).toFixed(2)}R
+                </b>
+                .
+              </>
+            ) : (
+              'כדי לדעת כמה הברייק-איבן חסך או עלה — הוסיפו לדוח של Pine את השורה "תוצאה בלי ברייק-איבן: טרגט +60".'
+            )}
+          </p>
+        </>
+      ) : (
+        <EmptyNote text="עדיין אין עסקאות עם נתון ברייק-איבן. הוא נשמר אוטומטית מהשורה 'ברייק-איבן' בדוח של Pine Logs." />
       )}
     </Block>
   )
@@ -871,6 +963,7 @@ export default function Analytics() {
           })}
         </div>
         <WhatIf trades={filtered} />
+        <Breakeven trades={filtered} />
       </Section>
 
       {/* ---- 5. Risk & stops ---- */}

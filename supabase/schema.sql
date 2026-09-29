@@ -79,6 +79,9 @@ create table if not exists public.trades (
   mfe numeric,                 -- max favorable excursion during the trade, points (Pine)
   mae numeric,                 -- max adverse excursion during the trade, points (Pine)
   mae_to_peak numeric,         -- adverse move before the MFE peak, points (Pine)
+  be_triggered boolean,        -- did the break-even stop kick in (Pine)
+  be_minutes numeric,          -- minutes after entry it kicked in (Pine)
+  no_be_points numeric,        -- the trade's result without break-even, points (Pine)
   peak_price numeric,          -- deprecated (MFE) — kept for historical data, no longer written
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
   week_of_month smallint,      -- week of the month (1-5), from the Pine report or picked in the form

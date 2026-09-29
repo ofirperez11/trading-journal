@@ -20,6 +20,7 @@ import {
   Timer,
   Ruler,
   Gauge,
+  ShieldCheck,
   Droplets,
   Layers,
   Sigma,
@@ -288,6 +289,20 @@ export default function TradeDetail() {
           </Prop>
           <Prop icon={Ruler} label="גודל Lookback">
             {trade.lookback_size != null ? <span className="num">{trade.lookback_size} נק׳</span> : <Empty />}
+          </Prop>
+          <Prop icon={ShieldCheck} label="ברייק-איבן">
+            {trade.be_triggered == null ? (
+              <Empty />
+            ) : (
+              <span className="text-sm">
+                {trade.be_triggered ? (trade.be_minutes != null ? `הופעל אחרי ${trade.be_minutes} דק׳` : 'הופעל') : 'לא הופעל'}
+                {trade.no_be_points != null && (
+                  <span className="text-muted">
+                    {' · '}בלעדיו <span className="num">{trade.no_be_points > 0 ? '+' : ''}{trade.no_be_points}</span> נק׳
+                  </span>
+                )}
+              </span>
+            )}
           </Prop>
           <Prop icon={Gauge} label="MFE / MAE">
             {trade.mfe != null || trade.mae != null ? (

@@ -348,7 +348,7 @@ function Levels({ trades }: { trades: Parameters<typeof levelStats>[0] }) {
     <Block
       className="mt-3"
       title="יעדים ונגיעה בלוקבק"
-      desc="מהדוח של Pine. לכל רמה (Td, Tny, T23, נזילות 5m…): בכמה עסקאות היא הייתה בכיוון העסקה, כמה רחוק (ב-R של הסטופ), כמה פעמים המחיר הגיע אליה בזמן העסקה (לפי ה-MFE), ואחוז ההצלחה כשהרמה הייתה לפני היעד שלך (בדרך) מול אחריו (יש מקום עד היעד). נגיעה בלוקבק = האם המחיר נגע בלוקבק לפני שעת ההזדמנות."
+      desc="מהדוח של Pine. רמה נחשבת יעד רק כשהיא בכיוון העסקה ובמרחק של 1:3 ומעלה (פי 3 מהסטופ) — רמות קרובות יותר לא נספרות כאן ולא במסננים (בדף העסקה הן מסומנות 'פחות מ-1:3'). לכל רמה: בכמה עסקאות היא הייתה יעד, כמה רחוק בממוצע (ב-R), כמה פעמים המחיר הגיע אליה עד סוף היום (בעסקה לפי ה-MFE, אחריה לפי מהלך הגרף), ואחוז ההצלחה כשהיא הייתה יעד מול כשלא. נגיעה בלוקבק = האם המחיר נגע בלוקבק לפני שעת ההזדמנות."
     >
       {rows.length || hasTouch ? (
         <>
@@ -365,11 +365,11 @@ function Levels({ trades }: { trades: Parameters<typeof levelStats>[0] }) {
                 <thead>
                   <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
                     <th>רמה</th>
-                    <th className="!text-left">בכיוון העסקה</th>
+                    <th className="!text-left">יעד 1:3+</th>
                     <th className="!text-left">מרחק ממוצע</th>
                     <th className="!text-left">המחיר הגיע</th>
-                    <th className="!text-left">לפני היעד</th>
-                    <th className="!text-left">אחרי היעד</th>
+                    <th className="!text-left">הצלחה כיעד</th>
+                    <th className="!text-left">הצלחה בלי</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -377,15 +377,15 @@ function Levels({ trades }: { trades: Parameters<typeof levelStats>[0] }) {
                     <tr key={x.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
                       <td dir="ltr" className="text-right font-medium">{x.name}</td>
                       <td className="num text-left">
-                        {x.ahead}/{x.trades}
+                        {x.on}/{x.of}
                       </td>
                       <td className="num text-left">{x.avgR == null ? '—' : `${x.avgR.toFixed(1)}R`}</td>
                       <td className="num text-left">{x.reachKnown ? pct(x.reached / x.reachKnown) : '—'}</td>
                       <td className="num text-left">
-                        {pct(x.before.winRate)} <span className="text-faint">({x.before.n})</span>
+                        {pct(x.withIt.winRate)} <span className="text-faint">({x.withIt.n})</span>
                       </td>
                       <td className="num text-left">
-                        {pct(x.after.winRate)} <span className="text-faint">({x.after.n})</span>
+                        {pct(x.without.winRate)} <span className="text-faint">({x.without.n})</span>
                       </td>
                     </tr>
                   ))}
@@ -394,7 +394,7 @@ function Levels({ trades }: { trades: Parameters<typeof levelStats>[0] }) {
             </div>
           )}
           <p className="mt-3 text-[13px] text-muted">
-            "לפני היעד" / "אחרי היעד" — אחוז הצלחה (בסוגריים: עסקאות שהוכרעו) כשהרמה בכיוון העסקה הייתה קרובה מהיעד שלך, מול רחוקה ממנו או בדיוק עליו.
+            רק רמות בכיוון העסקה במרחק 1:3 ומעלה. "הצלחה כיעד" / "הצלחה בלי" — אחוז הצלחה (בסוגריים: עסקאות שהוכרעו) כשהרמה הייתה יעד, מול כשלא הייתה (חסרה, בצד השני, או פחות מ-1:3).
           </p>
         </>
       ) : (

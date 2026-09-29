@@ -41,7 +41,7 @@ import { lookbackColor } from '../lib/lookback'
 import { dayKindOf } from '../lib/dayKind'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { CHART_MOVE_LABEL, CHART_MOVE_TFS } from '../lib/chartMove'
-import { ahead } from '../lib/levels'
+import { ahead, isTarget, reachedBy } from '../lib/levels'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -422,12 +422,17 @@ export default function TradeDetail() {
                           {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
                         </td>
                         <td className="text-[13px]">
-                          {on ? (
-                            <span className="text-win">
-                              בכיוון העסקה{trade.mfe != null && trade.mfe >= l.points && <span className="text-muted"> · הגיע</span>}
-                            </span>
-                          ) : (
+                          {!on ? (
                             <span className="text-muted">נגד העסקה</span>
+                          ) : !isTarget(trade, l) ? (
+                            <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
+                          ) : (
+                            <span className="text-win">
+                              יעד
+                              {reachedBy(trade, l) && (
+                                <span className="text-muted"> · {reachedBy(trade, l) === 'trade' ? 'הגיע בעסקה' : 'הגיע עד סוף היום'}</span>
+                              )}
+                            </span>
                           )}
                         </td>
                       </tr>

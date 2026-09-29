@@ -49,7 +49,24 @@ export function normalizeLevels(raw: unknown): PineLevel[] | null {
 export const ahead = (t: Trade, l: PineLevel) => (t.side === 'LONG') === l.above
 
 const risk = (t: Trade) => (t.stoploss == null ? 0 : Math.abs(t.entry - t.stoploss))
-const targetPts = (t: Trade) => (t.target == null ? null : Math.abs(t.target - t.entry))
+/** The level's distance in R of the trade's stop, or null without a stop. */
+export const levelR = (t: Trade, l: PineLevel) => (risk(t) ? l.points / risk(t) : null)
+
+// A level counts as a target only on the trade's side and at least 1:3 away —
+// closer ones are shown on the trade page (marked) but left out of the stats
+// and filters.
+export const MIN_TARGET_R = 3
+export const isTarget = (t: Trade, l: PineLevel) => ahead(t, l) && (levelR(t, l) ?? 0) >= MIN_TARGET_R - 1e-9
+
+/** How far price went for the trade by the end of the day (1-minute closes, "מהלך גרף"). */
+const eodFor = (t: Trade) => t.chart_move?.['1']?.for ?? null
+/** Did price get to the level — during the trade (MFE) or later that day (chart move)? */
+export function reachedBy(t: Trade, l: PineLevel): 'trade' | 'eod' | null {
+  if (t.mfe != null && t.mfe >= l.points) return 'trade'
+  const eod = eodFor(t)
+  return eod != null && eod >= l.points ? 'eod' : null
+}
+
 const rate = (ts: Trade[]) => {
   const w = ts.filter((t) => t.return_amount > 0).length
   const l = ts.filter((t) => t.return_amount < 0).length
@@ -58,38 +75,45 @@ const rate = (ts: Trade[]) => {
 
 export interface LevelStats {
   name: string
-  trades: number // trades that report this level
-  ahead: number // …with it on the trade's side
-  avgR: number | null // its distance, in R of the trade's stop (ahead only)
-  reached: number // ahead and the MFE got there during the trade
-  reachKnown: number // ahead, with an MFE
-  /** Ahead and closer than the trade's target — it stands in the way. */
-  before: { n: number; winRate: number | null }
-  /** Ahead and at / past the target — room to the target. */
-  after: { n: number; winRate: number | null }
+  on: number // trades where it was a target (trade's side, 1:3+)
+  of: number // trades with levels reported
+  avgR: number | null // its distance, in R (targets only)
+  reached: number // targets that price got to by the end of the day
+  reachKnown: number // targets with an MFE or a chart move
+  withIt: { n: number; winRate: number | null } // win rate when it was a target
+  without: { n: number; winRate: number | null } // …and when it wasn't (missing, the other side, under 1:3)
 }
 
-/** Per level name (most reported first): where it sits and how the trades did around it. */
+/** Per level name (most often a target first): how far it was and how the trades did with / without it. */
 export function levelStats(trades: Trade[]): LevelStats[] {
-  const names = new Map<string, number>()
-  for (const t of trades) for (const l of t.pine_levels ?? []) names.set(l.name, (names.get(l.name) ?? 0) + 1)
-  return [...names.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([name]) => {
-      const rows = trades.flatMap((t) => (t.pine_levels ?? []).filter((l) => l.name === name).map((l) => ({ t, l })))
-      const on = rows.filter(({ t, l }) => ahead(t, l))
-      const rs = on.flatMap(({ t, l }) => (risk(t) ? [l.points / risk(t)] : []))
-      const withMfe = on.filter(({ t }) => t.mfe != null)
-      const withTarget = on.filter(({ t }) => targetPts(t) != null)
+  const reported = trades.filter((t) => t.pine_levels?.length)
+  const names = [...new Set(reported.flatMap((t) => t.pine_levels!.map((l) => l.name)))]
+  return names
+    .map((name) => {
+      const target = (t: Trade) => t.pine_levels!.find((l) => l.name === name && isTarget(t, l)) ?? null
+      const on = reported.flatMap((t) => {
+        const l = target(t)
+        return l ? [{ t, l }] : []
+      })
+      const rs = on.flatMap(({ t, l }) => {
+        const r = levelR(t, l)
+        return r == null ? [] : [r]
+      })
+      const known = on.filter(({ t }) => t.mfe != null || eodFor(t) != null)
       return {
         name,
-        trades: rows.length,
-        ahead: on.length,
+        on: on.length,
+        of: reported.length,
         avgR: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null,
-        reached: withMfe.filter(({ t, l }) => t.mfe! >= l.points).length,
-        reachKnown: withMfe.length,
-        before: rate(withTarget.filter(({ t, l }) => l.points < targetPts(t)! - 1e-6).map(({ t }) => t)),
-        after: rate(withTarget.filter(({ t, l }) => l.points >= targetPts(t)! - 1e-6).map(({ t }) => t)),
+        reached: known.filter(({ t, l }) => reachedBy(t, l) != null).length,
+        reachKnown: known.length,
+        withIt: rate(on.map(({ t }) => t)),
+        without: rate(reported.filter((t) => !target(t))),
       }
     })
+    .sort((a, b) => b.on - a.on)
 }
+
+/** Filter value: "yes" = the level was a target, "no" = it wasn't; null without levels reported. */
+export const targetFacetOf = (name: string) => (t: Trade) =>
+  !t.pine_levels?.length ? null : t.pine_levels.some((l) => l.name === name && isTarget(t, l)) ? 'yes' : 'no'

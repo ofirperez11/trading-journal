@@ -1,8 +1,11 @@
-import { useState, type ReactNode } from 'react'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { SlidersHorizontal, Trophy, X } from 'lucide-react'
 import type { Trade } from '../types'
 import { FACETS, RANGE_FACETS, rangeStops } from '../lib/facets'
 import { useGlobalFilter } from '../lib/globalFilter'
+import { MIN_TRADES, bestFilters } from '../lib/bestFilters'
+import { firstTradesOnly } from '../lib/firstTrade'
+import { formatR } from '../lib/trades'
 import { FirstTradeToggle } from './FirstTradeToggle'
 import { RangeFilter } from './RangeFilter'
 
@@ -44,6 +47,7 @@ export function GlobalFilterPanel({ trades, children }: { trades: Trade[]; child
     <div className="grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
       <p className="text-[12px] text-muted sm:col-span-2">הסינון חל על כל העמודים: דשבורד, עסקאות, אנליטיקה ולוח שנה.</p>
       <FirstTradeToggle on={g.firstOnly} onChange={g.setFirstOnly} />
+      <BestFilters trades={trades} />
       {children}
       {FACETS.map((f) => {
         const opts = f.options(trades)
@@ -117,6 +121,56 @@ export function GlobalFilterBar({ trades, className = '' }: { trades: Trade[]; c
       {open && (
         <div className="mt-3 animate-[fade-up_.3s_var(--ease-out-expo)_both]">
           <GlobalFilterPanel trades={trades} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** "הכי מצליח": the 5 filters (one value or a pair) with the highest win rate; a click applies one. */
+function BestFilters({ trades }: { trades: Trade[] }) {
+  const g = useGlobalFilter()
+  const [open, setOpen] = useState(false)
+  // Searched on every trade (the first-trade rule still applies) — not on the current selection.
+  const best = useMemo(() => (open ? bestFilters(g.firstOnly ? firstTradesOnly(trades) : trades) : []), [open, trades, g.firstOnly])
+  return (
+    <div className="sm:col-span-2">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors ${
+          open ? 'border-accent/40 bg-accent/[0.07] font-semibold text-accent' : 'border-border hover:bg-surface'
+        }`}
+      >
+        <Trophy className="h-4 w-4" />
+        הכי מצליח
+      </button>
+      {open && (
+        <div className="mt-2 rounded-md border border-border bg-bg p-2">
+          <p className="px-1 pb-1.5 text-[12px] text-muted">
+            הסינונים (ערך אחד או צמד) עם אחוז ההצלחה הגבוה ביותר, מתוך קבוצות של {MIN_TRADES} עסקאות לפחות. לחיצה מפעילה את הסינון.
+          </p>
+          {best.length === 0 ? (
+            <p className="px-1 py-2 text-sm text-muted">אין עדיין מספיק עסקאות: צריך לפחות {MIN_TRADES} באותה קבוצה.</p>
+          ) : (
+            <ol className="flex flex-col gap-1">
+              {best.map((b, i) => (
+                <li key={b.picks.map((p) => p.key + p.v).join('&')}>
+                  <button
+                    onClick={() => g.select(b.picks)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-right text-sm transition-colors hover:bg-surface"
+                  >
+                    <span className="num w-4 shrink-0 text-faint">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate">{b.picks.map((p) => p.label).join(' + ')}</span>
+                    <span className={`num shrink-0 font-semibold ${b.winRate >= 0.5 ? 'text-win' : 'text-loss'}`}>{Math.round(b.winRate * 100)}%</span>
+                    <span className="num shrink-0 text-[12px] text-muted">
+                      {b.count} עסקאות{b.avgR != null ? ` · ${formatR(Math.round(b.avgR * 100) / 100)}` : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       )}
     </div>

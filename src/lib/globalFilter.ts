@@ -68,6 +68,13 @@ export function useGlobalFilter(trades: Trade[] = NONE) {
         else p.delete(key)
       }),
     setRange: (key: string, r: [number, number] | null) => edit((p) => (r ? p.set(key, `${r[0]}-${r[1]}`) : p.delete(key))),
+    /** Replace the whole selection with exactly these facet values (e.g. a "הכי מצליח" pick). */
+    select: (picks: { key: string; v: string }[]) =>
+      edit((p) => {
+        for (const f of FACETS) p.delete(f.key)
+        for (const f of RANGE_FACETS) p.delete(f.key)
+        for (const pick of picks) p.set(pick.key, pick.v)
+      }),
     clear: () =>
       edit((p) => {
         for (const f of FACETS) p.delete(f.key)

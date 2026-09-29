@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { JournalSwitcher } from './JournalSwitcher'
+import { setUnit, useUnit, type Unit } from '../lib/unit'
 import { DashboardCover } from './DashboardCover'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
@@ -75,6 +76,12 @@ export default function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [navOpen])
 
+  const unit = useUnit()
+  const UNITS: { v: Unit; label: string }[] = [
+    { v: 'usd', label: '$ דולרים' },
+    { v: 'pts', label: 'נקודות' },
+  ]
+
   const itemClass = ({ isActive }: { isActive: boolean }) =>
     `flex h-[30px] items-center gap-2 rounded-md px-2 text-sm transition-colors ${
       isActive ? 'bg-black/[0.055] font-semibold text-ink' : 'text-[#5f5e5b] hover:bg-black/[0.04]'
@@ -129,6 +136,21 @@ export default function AppShell() {
           מצב הדגמה: הנתונים נשמרים רק בדפדפן הזה.
         </div>
       )}
+      {/* Show every P&L in dollars or in points (src/lib/unit.ts) — a standing choice. */}
+      <div role="group" aria-label="הצגת רווח והפסד" className="mx-1 mb-2 flex gap-0.5 rounded-lg bg-[#f1f0ed] p-0.5">
+        {UNITS.map((u) => (
+          <button
+            key={u.v}
+            aria-pressed={unit === u.v}
+            onClick={() => setUnit(u.v)}
+            className={`h-7 flex-1 rounded-md text-[13px] transition-colors ${
+              unit === u.v ? 'bg-bg font-semibold text-ink shadow-[0_0_0_1px_#e3e2e0,0_1px_2px_rgba(15,15,15,.06)]' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {u.label}
+          </button>
+        ))}
+      </div>
       <nav aria-label="כלים" className="flex flex-col gap-0.5">
         {utility.map((item) => (
           <NavLink key={item.to} to={item.to} className={itemClass}>

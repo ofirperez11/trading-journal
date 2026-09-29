@@ -6,7 +6,8 @@ import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
-import { computeStats, formatMoney, formatPct } from '../lib/trades'
+import { computeStats, formatPct } from '../lib/trades'
+import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
 import { SizeRangeFilter } from '../components/SizeRangeFilter'
 import { FirstTradeToggle } from '../components/FirstTradeToggle'
@@ -36,7 +37,7 @@ const WEEKDAY_FULL: Record<string, string> = {
 const monthLabel = (ym: string) => `${MONTHS_HE[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`
 /** "02/26" → "פבר׳ 26" */
 const shortMonth = (mmYY: string) => `${MONTHS_SHORT[Number(mmYY.slice(0, 2)) - 1]} ${mmYY.slice(3)}`
-const money = (v: number) => formatMoney(v)
+const money = (v: number) => formatPnl(v) // $ or points, per the journal's unit switch
 const pctOf = (b: Bucket) => (b.winRate != null ? `${Math.round(b.winRate * 100)}%` : '—')
 
 function rangeFor(key: RangeKey): { from: Date | null; to: Date | null } {
@@ -122,7 +123,7 @@ function Delta({ value, money: isMoney, suffix = '' }: { value: number; money?: 
       dir="ltr"
     >
       {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-      {isMoney ? formatMoney(value) : `${up ? '+' : ''}${value.toFixed(Math.abs(value) >= 10 ? 0 : 1)}${suffix}`}
+      {isMoney ? formatPnl(value) : `${up ? '+' : ''}${value.toFixed(Math.abs(value) >= 10 ? 0 : 1)}${suffix}`}
     </span>
   )
 }
@@ -185,7 +186,10 @@ function EmptyNote({ text }: { text: string }) {
 
 export default function Analytics() {
   const { active } = useJournals()
-  const { trades, loading } = useTrades()
+  const { trades: rawTrades, loading } = useTrades()
+  const unit = useUnit()
+  // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
+  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
   const [range, setRange] = useState<RangeKey>('all')
   const [customMonths, setCustomMonths] = useState<Set<string>>(new Set())
   const [showRange, setShowRange] = useState(false)
@@ -465,7 +469,7 @@ export default function Analytics() {
             { label: 'רווח גולמי', value: a.grossProfit, color: CHART.win },
             { label: 'הפסד גולמי', value: a.grossLoss, color: CHART.loss },
           ]}
-          format={(v) => formatMoney(v, false)}
+          format={(v) => formatPnl(v, false)}
           compact
         />
       ),
@@ -479,7 +483,7 @@ export default function Analytics() {
       body: (
         <p className="text-[13px] leading-relaxed text-muted">
           על פני <b className="num text-ink">{a.totalTrades}</b> עסקאות ב-<b className="num text-ink">{a.tradingDays}</b> ימי מסחר, ממוצע
-          של <b className="num text-ink">{formatMoney(a.avgDailyPnl)}</b> ליום.
+          של <b className="num text-ink">{formatPnl(a.avgDailyPnl)}</b> ליום.
         </p>
       ),
     },
@@ -494,7 +498,7 @@ export default function Analytics() {
             { label: 'ניצחון ממוצע', value: a.avgWin, color: CHART.win },
             { label: 'הפסד ממוצע', value: a.avgLoss, color: CHART.loss },
           ]}
-          format={(v) => formatMoney(v, false)}
+          format={(v) => formatPnl(v, false)}
           compact
         />
       ),
@@ -502,17 +506,17 @@ export default function Analytics() {
   ]
 
   const facts = [
-    { k: 'ניצחון ממוצע', v: formatMoney(a.avgWin), c: 'text-win' },
-    { k: 'הפסד ממוצע', v: formatMoney(-a.avgLoss), c: 'text-loss' },
+    { k: 'ניצחון ממוצע', v: formatPnl(a.avgWin), c: 'text-win' },
+    { k: 'הפסד ממוצע', v: formatPnl(-a.avgLoss), c: 'text-loss' },
     { k: 'Payoff', v: a.payoff ? a.payoff.toFixed(2) : '—' },
-    { k: 'Drawdown מקסימלי', v: formatMoney(-a.maxDrawdown), c: 'text-loss' },
-    { k: 'העסקה הטובה', v: formatMoney(a.bestTrade), c: 'text-win' },
-    { k: 'העסקה הגרועה', v: formatMoney(a.worstTrade), c: 'text-loss' },
+    { k: 'Drawdown מקסימלי', v: formatPnl(-a.maxDrawdown), c: 'text-loss' },
+    { k: 'העסקה הטובה', v: formatPnl(a.bestTrade), c: 'text-win' },
+    { k: 'העסקה הגרועה', v: formatPnl(a.worstTrade), c: 'text-loss' },
     { k: 'רצף ניצחונות', v: `${a.maxWinStreak}` },
     { k: 'רצף הפסדים', v: `${a.maxLossStreak}` },
     { k: 'ימי מסחר', v: `${a.tradingDays}` },
     { k: 'אחוז ימים ירוקים', v: formatPct(a.dayWinRate) },
-    { k: 'ממוצע יומי', v: formatMoney(a.avgDailyPnl), c: a.avgDailyPnl >= 0 ? 'text-win' : 'text-loss' },
+    { k: 'ממוצע יומי', v: formatPnl(a.avgDailyPnl), c: a.avgDailyPnl >= 0 ? 'text-win' : 'text-loss' },
     { k: 'ימים ירוקים / אדומים', v: `${a.winningDays} / ${a.losingDays}` },
   ]
 
@@ -546,7 +550,7 @@ export default function Analytics() {
             {[
               ['עסקאות', `${a.totalTrades}`],
               ['חודשים ירוקים', `${greenMonths} / ${months.length}`],
-              ['Drawdown מקס׳', formatMoney(-a.maxDrawdown)],
+              ['Drawdown מקס׳', formatPnl(-a.maxDrawdown)],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between border-b border-border py-2">
                 <dt className="text-muted">{k}</dt>
@@ -565,7 +569,7 @@ export default function Analytics() {
           <div className="mb-2 mt-5 flex items-center gap-1.5">
             <h3 className="text-[13px] font-semibold text-[#5f5e5b]">Drawdown · מתחת לשיא</h3>
             <InfoPopover text="כמה החשבון נמצא מתחת לשיא הגבוה ביותר שלו, בכל נקודת זמן. זה מדד הכאב: ככל שהגרף רדוד יותר, ניהול הסיכון טוב יותר. הנקודה המסומנת היא הירידה הגדולה ביותר שחווית." />
-            <span className="tag tag-red num mr-auto">מקס׳ {formatMoney(-a.maxDrawdown)}</span>
+            <span className="tag tag-red num mr-auto">מקס׳ {formatPnl(-a.maxDrawdown)}</span>
           </div>
           <LineChart data={a.drawdown} labels={a.equityLabels} format={money} height={90} color={CHART.loss} mode="underwater" />
         </div>
@@ -617,7 +621,7 @@ export default function Analytics() {
         insight={
           bestMonth && bestDay && bestHour ? (
             <>
-              החודש הכי טוב: <b>{bestMonth.label}</b> (<span className="num">{formatMoney(bestMonth.value)}</span>). היום הכי רווחי: <b>{WEEKDAY_FULL[bestDay.label] ?? bestDay.label}</b>.
+              החודש הכי טוב: <b>{bestMonth.label}</b> (<span className="num">{formatPnl(bestMonth.value)}</span>). היום הכי רווחי: <b>{WEEKDAY_FULL[bestDay.label] ?? bestDay.label}</b>.
               השעה הכי רווחית: <b className="num">{bestHour.label}</b>.
             </>
           ) : undefined

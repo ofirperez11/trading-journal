@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
-import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
+import { formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
+import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { downloadCsv } from '../lib/csv'
 import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
 import { SizeRangeFilter } from '../components/SizeRangeFilter'
@@ -51,7 +52,10 @@ const Dash = () => <span className="text-[#d3d1cb]">—</span>
 type View = 'table' | 'gallery'
 
 export default function Trades() {
-  const { trades, loading } = useTrades()
+  const { trades: rawTrades, loading } = useTrades()
+  const unit = useUnit()
+  // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
+  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
   const { active } = useJournals()
   const [showFilters, setShowFilters] = useState(false)
 
@@ -157,7 +161,7 @@ export default function Trades() {
 
   // Export the currently-visible (filtered) rows to CSV.
   function exportCsv() {
-    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'ביאס', 'R', 'P&L', 'הערות']
+    const headers = ['תאריך', 'שעה', 'סימבול', 'כיוון', 'סטטוס', 'כניסה', 'יציאה', 'יציאה 2', 'כמות', 'יעד', 'סטופ', 'Lookback', 'נזילות', 'אזור', 'ביאס', 'R', unit === 'pts' ? 'P&L (נק׳)' : 'P&L', 'הערות']
     const data = rows.map((t) => [
       `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`,
       t.date.slice(11, 16),
@@ -240,10 +244,10 @@ export default function Trades() {
         style={{ '--i': 1 } as React.CSSProperties}
       >
         {[
-          { k: 'P&L נטו', v: formatMoney(summary.netPnl), c: pnlCls(summary.netPnl) },
+          { k: 'P&L נטו', v: formatPnl(summary.netPnl), c: pnlCls(summary.netPnl) },
           { k: 'אחוז הצלחה', v: rows.length ? formatPct(summary.winRate) : '—', sub: `${summary.wins}W · ${summary.losses}L` },
           { k: 'R ממוצע', v: summary.avgR != null ? formatR(summary.avgR) : '—' },
-          { k: 'תוחלת לעסקה', v: rows.length ? formatMoney(summary.expectancy) : '—', c: pnlCls(summary.expectancy) },
+          { k: 'תוחלת לעסקה', v: rows.length ? formatPnl(summary.expectancy) : '—', c: pnlCls(summary.expectancy) },
         ].map((s) => (
           <div key={s.k} className="flex flex-col gap-0.5 bg-bg px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
             <span className="text-[13px] text-muted">{s.k}</span>
@@ -424,7 +428,7 @@ export default function Trades() {
                             <span className="font-semibold">{monthTitle(g.ym)}</span>
                             <span className="num text-muted">{g.trades.length}</span>
                             <span className={`tag num !font-semibold ${g.net > 0 ? 'tag-green' : g.net < 0 ? 'tag-red' : ''}`}>
-                              {formatMoney(g.net)}
+                              {formatPnl(g.net)}
                             </span>
                           </div>
                         </td>
@@ -446,7 +450,7 @@ export default function Trades() {
                 <div className="flex items-center gap-2 px-1 pb-1.5 pt-4 text-sm">
                   <span className="font-semibold">{monthTitle(g.ym)}</span>
                   <span className="num text-muted">{g.trades.length}</span>
-                  <span className={`tag num mr-auto !font-semibold ${g.net > 0 ? 'tag-green' : g.net < 0 ? 'tag-red' : ''}`}>{formatMoney(g.net)}</span>
+                  <span className={`tag num mr-auto !font-semibold ${g.net > 0 ? 'tag-green' : g.net < 0 ? 'tag-red' : ''}`}>{formatPnl(g.net)}</span>
                 </div>
                 {g.trades.map((t) => (
                   <Link
@@ -467,7 +471,7 @@ export default function Trades() {
                       </div>
                     </div>
                     <div className="text-left">
-                      <div className={`num font-bold ${pnlCls(t.return_amount)}`}>{formatMoney(t.return_amount)}</div>
+                      <div className={`num font-bold ${pnlCls(t.return_amount)}`}>{formatPnl(t.return_amount)}</div>
                       <div className="num text-xs text-muted">{formatR(t.r_multiple)}</div>
                     </div>
                   </Link>
@@ -529,7 +533,7 @@ function TableRow({ t, backState, delay }: { t: Trade; backState: object; delay:
         )}
       </td>
       <td className="num text-left text-[#5f5e5b]">{t.r_multiple != null ? formatR(t.r_multiple) : <Dash />}</td>
-      <td className={`num text-left font-semibold ${pnlCls(t.return_amount)}`}>{formatMoney(t.return_amount)}</td>
+      <td className={`num text-left font-semibold ${pnlCls(t.return_amount)}`}>{formatPnl(t.return_amount)}</td>
     </tr>
   )
 }
@@ -567,7 +571,7 @@ function Gallery({ rows, backState }: { rows: Trade[]; backState: object }) {
                 <span className="truncate font-semibold">
                   {cleanSymbol(t.symbol)} · <span className="num">{dateShort(t.date)}</span>
                 </span>
-                <span className={`num shrink-0 font-bold ${pnlCls(t.return_amount)}`}>{formatMoney(t.return_amount)}</span>
+                <span className={`num shrink-0 font-bold ${pnlCls(t.return_amount)}`}>{formatPnl(t.return_amount)}</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <span className={`tag ${sideTag(t.side)}`}>{sideLabel(t.side)}</span>

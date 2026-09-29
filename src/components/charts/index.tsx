@@ -81,6 +81,13 @@ export const compactMoney = (v: number) => {
   if (a >= 1000) return `${s}$${(a / 1000).toFixed(a >= 10000 || a % 1000 === 0 ? 0 : 1)}K`
   return `${s}$${Math.round(a)}`
 }
+/** Axis form for points (the journal's "show in points" mode): "120", "-1.2K". */
+export const compactPoints = (v: number) => {
+  const a = Math.abs(v)
+  const s = v < 0 ? '-' : ''
+  if (a >= 1000) return `${s}${(a / 1000).toFixed(a >= 10000 || a % 1000 === 0 ? 0 : 1)}K`
+  return `${s}${Math.round(a)}`
+}
 
 /** Floating tooltip, clamped inside its chart. */
 function Tip({ x, y, width, children }: { x: number; y: number; width: number; children: ReactNode }) {
@@ -180,7 +187,7 @@ export function LineChart({
               <g key={t}>
                 <line x1={padL} x2={W - padR} y1={yOf(t)} y2={yOf(t)} stroke={t === 0 ? '#dcdad5' : CHART.grid} />
                 <text x={padL - 8} y={yOf(t) + 4} textAnchor="end" fontSize="11" fill={CHART.axis} className="tabular-nums">
-                  {compactMoney(t)}
+                  {compactLike(format, t)}
                 </text>
               </g>
             ))}
@@ -410,10 +417,10 @@ export function Columns({
   )
 }
 
-// Axis ticks use the compact money form when the formatter is a money formatter.
+// Axis ticks use the compact money / points form when the formatter is one.
 function compactLike(format: (v: number) => string, t: number) {
   const s = format(1000)
-  return s.includes('$') ? compactMoney(t) : format(t)
+  return s.includes('$') ? compactMoney(t) : s.includes('נק׳') ? compactPoints(t) : format(t)
 }
 
 /* ---- Horizontal bar rows ------------------------------------------------ */

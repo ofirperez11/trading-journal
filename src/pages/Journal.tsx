@@ -3,7 +3,8 @@ import { Check, Loader2, PenLine, Plus, Lightbulb } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useTrades } from '../lib/useTrades'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { formatMoney, formatPct } from '../lib/trades'
+import { formatPct } from '../lib/trades'
+import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { PageTitle } from '../components/PageTitle'
 
 // Discipline / emotional journal — one entry per day.
@@ -44,7 +45,10 @@ const loadDemo = (): Entry[] => {
 
 export default function Journal() {
   const { user } = useAuth()
-  const { trades } = useTrades()
+  const { trades: rawTrades } = useTrades()
+  const unit = useUnit()
+  // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
+  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
   const [entries, setEntries] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<Entry>(empty())
@@ -183,11 +187,11 @@ export default function Journal() {
               <span className="flex flex-wrap items-baseline gap-x-3 text-[15px]">
                 <span>
                   <span className="text-[12px] font-normal text-muted">עקבת </span>
-                  <span className="num text-win">{stats.avgKept != null ? formatMoney(stats.avgKept) : '—'}</span>
+                  <span className="num text-win">{stats.avgKept != null ? formatPnl(stats.avgKept) : '—'}</span>
                 </span>
                 <span>
                   <span className="text-[12px] font-normal text-muted">חרגת </span>
-                  <span className="num text-loss">{stats.avgBroken != null ? formatMoney(stats.avgBroken) : '—'}</span>
+                  <span className="num text-loss">{stats.avgBroken != null ? formatPnl(stats.avgBroken) : '—'}</span>
                 </span>
               </span>
             ),
@@ -203,7 +207,7 @@ export default function Journal() {
         <div className="callout mt-3 !text-sm">
           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[#cb912f]" />
           <span>
-            בימים שעקבת אחרי הכללים הרווחת בממוצע <b className="num">{formatMoney(stats.avgKept - stats.avgBroken)}</b> יותר מבימים שחרגת.
+            בימים שעקבת אחרי הכללים הרווחת בממוצע <b className="num">{formatPnl(stats.avgKept - stats.avgBroken)}</b> יותר מבימים שחרגת.
           </span>
         </div>
       )}
@@ -227,7 +231,7 @@ export default function Journal() {
             {day ? (
               <>
                 באותו יום: <b className="num text-ink">{day.count}</b> {day.count === 1 ? 'עסקה' : 'עסקאות'},{' '}
-                <b className={`num ${day.net > 0 ? 'text-win' : day.net < 0 ? 'text-loss' : ''}`}>{formatMoney(day.net)}</b>
+                <b className={`num ${day.net > 0 ? 'text-win' : day.net < 0 ? 'text-loss' : ''}`}>{formatPnl(day.net)}</b>
               </>
             ) : (
               'אין עסקאות רשומות ביום הזה.'
@@ -358,7 +362,7 @@ export default function Journal() {
                         {e.mood && <span className={`tag ${moodTag(e.mood)}`}>{e.mood}</span>}
                         {d && (
                           <span className={`num mr-auto text-[13px] font-semibold ${d.net > 0 ? 'text-win' : d.net < 0 ? 'text-loss' : 'text-muted'}`}>
-                            {formatMoney(d.net)}
+                            {formatPnl(d.net)}
                           </span>
                         )}
                       </span>

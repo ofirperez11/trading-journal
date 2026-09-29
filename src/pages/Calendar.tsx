@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, X, Sparkles, CalendarDays } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
-import { formatMoney, cleanSymbol, formatR } from '../lib/trades'
+import { cleanSymbol, formatR } from '../lib/trades'
+import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { PageTitle } from '../components/PageTitle'
-import { compactMoney } from '../components/charts'
+import { compactMoney, compactPoints } from '../components/charts'
 import type { Trade } from '../types'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -46,7 +47,10 @@ interface DayAgg {
 }
 
 export default function Calendar() {
-  const { trades, loading } = useTrades()
+  const { trades: rawTrades, loading } = useTrades()
+  const unit = useUnit()
+  // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
+  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
   const navigate = useNavigate()
 
   // Group trades by day (YYYY-MM-DD).
@@ -199,7 +203,7 @@ export default function Calendar() {
         <dl className="mr-auto flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
           <div className="flex items-baseline gap-1.5">
             <dt className="text-muted">החודש</dt>
-            <dd className={`num text-lg font-bold ${signCls(monthStats.net)}`}>{monthStats.count ? formatMoney(monthStats.net) : '—'}</dd>
+            <dd className={`num text-lg font-bold ${signCls(monthStats.net)}`}>{monthStats.count ? formatPnl(monthStats.net) : '—'}</dd>
           </div>
           <div className="flex items-baseline gap-1.5">
             <dt className="text-muted">עסקאות</dt>
@@ -260,7 +264,7 @@ export default function Calendar() {
                   <button
                     key={key}
                     onClick={() => setSelected(key)}
-                    aria-label={`${d.getDate()} ${MONTHS_HE[d.getMonth()]}${a ? `, ${formatMoney(a.net)}, ${a.count} עסקאות` : ''}`}
+                    aria-label={`${d.getDate()} ${MONTHS_HE[d.getMonth()]}${a ? `, ${formatPnl(a.net)}, ${a.count} עסקאות` : ''}`}
                     className={`group relative flex h-[68px] flex-col border-r border-border p-1.5 text-left transition-colors [&:nth-child(7)]:border-r-0 sm:h-[104px] sm:p-2 sm:[&:nth-child(7)]:border-r ${
                       oc ? cellTint[oc][big ? 1 : 0] : inMonth ? 'bg-bg hover:bg-[#f7f6f3]' : 'bg-[#fbfbfa] hover:bg-[#f7f6f3]'
                     }`}
@@ -279,8 +283,8 @@ export default function Calendar() {
                     {a && oc && (
                       <span className="mt-auto flex flex-col gap-0.5">
                         <span className={`num text-[11px] font-bold sm:text-[15px] ${netText[oc]}`}>
-                          <span className="sm:hidden">{a.net > 0 ? '+' : ''}{compactMoney(a.net)}</span>
-                          <span className="hidden sm:inline">{formatMoney(a.net)}</span>
+                          <span className="sm:hidden">{a.net > 0 ? '+' : ''}{unit === 'pts' ? compactPoints(a.net) : compactMoney(a.net)}</span>
+                          <span className="hidden sm:inline">{formatPnl(a.net)}</span>
                         </span>
                         <span dir="rtl" className={`hidden text-left text-[11px] sm:block ${netText[oc]} opacity-75`}>
                           {a.count === 1 ? 'עסקה אחת' : `${a.count} עסקאות`} · <span className="num">{Math.round(a.rSum * 10) / 10}R</span>
@@ -294,7 +298,7 @@ export default function Calendar() {
               <div dir="rtl" className="hidden flex-col justify-center gap-1 border-l border-border bg-surface px-3 sm:flex">
                 {wk.count > 0 ? (
                   <>
-                    <span className={`num text-[15px] font-bold ${signCls(wk.net)}`}>{formatMoney(wk.net)}</span>
+                    <span className={`num text-[15px] font-bold ${signCls(wk.net)}`}>{formatPnl(wk.net)}</span>
                     <span className={`num text-[12px] font-semibold ${signCls(wk.rSum)}`}>
                       {wk.rSum > 0 ? '+' : ''}
                       {Math.round(wk.rSum * 10) / 10}R
@@ -365,7 +369,7 @@ function DayPanel({
             <h2 className="text-xl">{heading}</h2>
             {trades.length > 0 && (
               <div className="mt-1 flex items-center gap-2 text-sm">
-                <span className={`tag num !font-semibold ${net > 0 ? 'tag-green' : net < 0 ? 'tag-red' : ''}`}>{formatMoney(net)}</span>
+                <span className={`tag num !font-semibold ${net > 0 ? 'tag-green' : net < 0 ? 'tag-red' : ''}`}>{formatPnl(net)}</span>
                 <span className="text-muted">{trades.length === 1 ? 'עסקה אחת' : `${trades.length} עסקאות`}</span>
               </div>
             )}
@@ -394,7 +398,7 @@ function DayPanel({
                     <span className={`tag ${t.side === 'LONG' ? 'tag-blue' : 'tag-purple'}`}>{t.side === 'LONG' ? 'לונג' : 'שורט'}</span>
                     {t.lookback && <span className="tag num" dir="ltr">{t.lookback}</span>}
                     <span className="mr-auto text-left">
-                      <span className={`num block font-bold ${tone}`}>{formatMoney(t.return_amount)}</span>
+                      <span className={`num block font-bold ${tone}`}>{formatPnl(t.return_amount)}</span>
                       <span className="num block text-[11px] text-muted">{formatR(t.r_multiple)}</span>
                     </span>
                   </button>

@@ -16,11 +16,11 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
+import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { useTrades } from '../lib/useTrades'
 import {
   computeStats,
   buildEquityCurve,
-  formatMoney,
   formatPct,
   formatR,
   cleanSymbol,
@@ -54,7 +54,10 @@ type View = 'table' | 'gallery' | 'board'
 export default function Dashboard() {
   const { user } = useAuth()
   const { active } = useJournals()
-  const { trades, loading } = useTrades()
+  const { trades: rawTrades, loading } = useTrades()
+  const unit = useUnit()
+  // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
+  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
   const name =
     (user?.user_metadata?.display_name as string | undefined) ?? user?.email?.split('@')[0] ?? 'Trader'
 
@@ -144,7 +147,7 @@ export default function Dashboard() {
           <span className="tag mr-auto">P&amp;L מצטבר · {stats.totalTrades} עסקאות</span>
         </div>
         <div className="panel p-4">
-          <EquityCurve data={equity} height={260} format={(n) => formatMoney(n)} draw />
+          <EquityCurve data={equity} height={260} format={(n) => formatPnl(n)} draw />
         </div>
       </section>
 
@@ -252,12 +255,13 @@ function QuickActions() {
 }
 
 function Kpis({ stats }: { stats: ReturnType<typeof computeStats> }) {
+  const unit = useUnit()
   const cards = [
     {
       label: 'Net P&L',
-      ico: '$',
+      ico: unit === 'pts' ? 'נק' : '$',
       tag: 'tag-green',
-      value: <CountUp value={stats.netPnl} format={(n) => formatMoney(n)} />,
+      value: <CountUp value={stats.netPnl} format={(n) => formatPnl(n)} />,
       cls: stats.netPnl >= 0 ? 'text-win' : 'text-loss',
       sub: `${stats.totalTrades} עסקאות`,
     },
@@ -280,7 +284,7 @@ function Kpis({ stats }: { stats: ReturnType<typeof computeStats> }) {
       ico: '×',
       tag: 'tag-yellow',
       value: stats.avgWinLossRatio ? stats.avgWinLossRatio.toFixed(2) : '—',
-      sub: `${formatMoney(stats.avgWin)} / ${formatMoney(-stats.avgLoss)}`,
+      sub: `${formatPnl(stats.avgWin)} / ${formatPnl(-stats.avgLoss)}`,
     },
   ]
   return (
@@ -447,7 +451,7 @@ function MonthCalendar({ trades, initial }: { trades: Trade[]; initial: string }
         </button>
         <span className="mr-auto text-[13px] text-muted">החודש</span>
         <span className={`tag num font-semibold ${monthNet > 0 ? 'tag-green' : monthNet < 0 ? 'tag-red' : ''}`}>
-          {formatMoney(monthNet)}
+          {formatPnl(monthNet)}
         </span>
       </div>
       <div className="grid grid-cols-8 border-b border-border text-xs text-muted">
@@ -478,7 +482,7 @@ function MonthCalendar({ trades, initial }: { trades: Trade[]; initial: string }
                         <>
                           <span className="hidden text-[11px] sm:block">{c.agg.count} עסקאות</span>
                           <span className="num text-right text-[12px] font-semibold sm:text-[13px]">
-                            {formatMoney(c.agg.net)}
+                            {formatPnl(c.agg.net)}
                           </span>
                         </>
                       )}
@@ -492,7 +496,7 @@ function MonthCalendar({ trades, initial }: { trades: Trade[]; initial: string }
                 <>
                   <span className="hidden text-[11px] text-muted sm:block">{row.count} עסקאות</span>
                   <span className={`num text-right text-[12px] font-semibold sm:text-[13px] ${pnlText[toneOf(row.net)]}`}>
-                    {formatMoney(row.net)}
+                    {formatPnl(row.net)}
                   </span>
                 </>
               )}
@@ -533,8 +537,8 @@ function Insight({ trades, stats }: { trades: Trade[]; stats: ReturnType<typeof 
         <b>{WEEKDAYS_HE[worst.d]}</b> החלשים ({formatPct(worst.wr)}).
         {stats.avgWinLossRatio && stats.avgWinLossRatio > 1 && (
           <>
-            {' '}עסקה מנצחת ממוצעת (<span className="num">{formatMoney(stats.avgWin, false)}</span>) גדולה פי{' '}
-            {stats.avgWinLossRatio.toFixed(1)} ממפסידה (<span className="num">{formatMoney(stats.avgLoss, false)}</span>).
+            {' '}עסקה מנצחת ממוצעת (<span className="num">{formatPnl(stats.avgWin, false)}</span>) גדולה פי{' '}
+            {stats.avgWinLossRatio.toFixed(1)} ממפסידה (<span className="num">{formatPnl(stats.avgLoss, false)}</span>).
           </>
         )}
       </span>
@@ -620,7 +624,7 @@ function RecentTrades({ trades }: { trades: Trade[] }) {
                         <span className={`tag tag-${tone === 'gray' ? 'gray' : tone}`}>{resultLabel[tone]}</span>
                       </td>
                       <td className="num px-2 text-right text-[#5f5e5b]">{formatR(t.r_multiple)}</td>
-                      <td className={`num px-2 text-right font-semibold ${pnlText[tone]}`}>{formatMoney(t.return_amount)}</td>
+                      <td className={`num px-2 text-right font-semibold ${pnlText[tone]}`}>{formatPnl(t.return_amount)}</td>
                       <td className="num px-2 text-right text-[#5f5e5b]">{t.qty}</td>
                     </tr>
                   )
@@ -653,7 +657,7 @@ function RecentTrades({ trades }: { trades: Trade[] }) {
                       <span className="font-semibold">
                         {cleanSymbol(t.symbol)} · <span className="num">{shortDate(t.date).slice(0, 5)}</span>
                       </span>
-                      <span className={`num font-bold ${pnlText[tone]}`}>{formatMoney(t.return_amount)}</span>
+                      <span className={`num font-bold ${pnlText[tone]}`}>{formatPnl(t.return_amount)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <span className={`tag ${t.side === 'LONG' ? 'tag-blue' : 'tag-purple'}`}>
@@ -688,7 +692,7 @@ function RecentTrades({ trades }: { trades: Trade[] }) {
                       <span>
                         <b>{cleanSymbol(t.symbol)}</b> <span className="num text-muted">{shortDate(t.date).slice(0, 5)}</span>
                       </span>
-                      <span className={`num font-semibold ${pnlText[tone]}`}>{formatMoney(t.return_amount)}</span>
+                      <span className={`num font-semibold ${pnlText[tone]}`}>{formatPnl(t.return_amount)}</span>
                     </Link>
                   ))}
                 </div>

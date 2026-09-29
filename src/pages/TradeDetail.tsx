@@ -31,7 +31,8 @@ import {
 } from 'lucide-react'
 import { useTrade, useTradeActions } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
-import { formatMoney, imageUrl, formatR, formatTradeDateTime, cleanSymbol } from '../lib/trades'
+import { imageUrl, formatR, formatTradeDateTime, cleanSymbol } from '../lib/trades'
+import { formatPnl, pointsOf, useUnit } from '../lib/unit'
 import { lookbackColor } from '../lib/lookback'
 import { dayKindOf } from '../lib/dayKind'
 import { BIAS_FULL_LABEL } from '../lib/bias'
@@ -62,6 +63,7 @@ function Prop({ icon: Icon, label, children }: { icon: typeof Calendar; label: s
 export default function TradeDetail() {
   const { id } = useParams()
   const { trade, loading } = useTrade(id)
+  const unit = useUnit()
   const { deleteTrade, addTrade } = useTradeActions()
   const { journals } = useJournals()
   const navigate = useNavigate()
@@ -111,7 +113,7 @@ export default function TradeDetail() {
     )
   }
 
-  const pnl = trade.return_amount
+  const pnl = unit === 'pts' ? pointsOf(trade) : trade.return_amount
   const tone = pnl > 0 ? 'win' : pnl < 0 ? 'loss' : 'muted'
   const exits = trade.exits ?? (trade.exit != null ? [trade.exit] : [])
   const isPartial = exits.length > 1
@@ -213,7 +215,7 @@ export default function TradeDetail() {
         </div>
         <div className="text-left">
           <div className={`text-[40px] font-bold leading-none text-${tone}`} dir="ltr">
-            <CountUp value={pnl} format={(n) => formatMoney(n)} durationMs={900} />
+            <CountUp value={pnl} format={(n) => formatPnl(n)} durationMs={900} />
           </div>
           <div className="num mt-1 text-sm font-semibold text-muted">{formatR(trade.r_multiple)}</div>
         </div>

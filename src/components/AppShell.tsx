@@ -145,8 +145,8 @@ export default function AppShell() {
   )
 
   const crumb = pageLabel(location.pathname)
-  // Data-heavy pages (wide tables / grids) get a wider page column.
-  const wide = ['/app/trades', '/app/summary', '/app/calendar'].includes(location.pathname)
+  // Data-heavy pages (wide tables / grids / chart dashboards) get a wider page column.
+  const wide = ['/app', '/app/trades', '/app/analytics', '/app/summary', '/app/calendar'].includes(location.pathname)
 
   return (
     <div className="min-h-full lg:pr-[248px]">

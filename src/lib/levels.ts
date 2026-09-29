@@ -67,6 +67,8 @@ export const reachedInWindow = (l: PineLevel) => (l.reach ? l.reach.minutes != n
 
 /** Is the level on the trade's side — where the trade goes to profit? */
 export const ahead = (t: Trade, l: PineLevel) => (t.side === 'LONG') === l.above
+/** A liquidity level (Buy Side 5m / Sell Side 5m) rather than a target (Td / Tny / T23). */
+export const isLiquidityLevel = (l: PineLevel) => /\bside\b/i.test(l.name)
 
 const risk = (t: Trade) => (t.stoploss == null ? 0 : Math.abs(t.entry - t.stoploss))
 /** The level's distance in R of the trade's stop, or null without a stop. */

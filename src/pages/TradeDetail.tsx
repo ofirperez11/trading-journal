@@ -41,7 +41,7 @@ import { lookbackColor } from '../lib/lookback'
 import { dayKindOf } from '../lib/dayKind'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { CHART_MOVE_LABEL, CHART_MOVE_TFS } from '../lib/chartMove'
-import { ahead, isTarget, reachedBy } from '../lib/levels'
+import { ahead, isLiquidityLevel, isTarget, reachedBy } from '../lib/levels'
 import { PriceMap } from '../components/PriceMap'
 import { CountUp } from '../components/CountUp'
 import type { Account, Zone, Liquidity } from '../types'
@@ -412,47 +412,58 @@ export default function TradeDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {trade.pine_levels.map((l) => {
-                      const on = ahead(trade, l)
-                      const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
-                      // Older reports have no time — fall back to MFE / chart move for targets.
-                      const old = !l.reach && on && isTarget(trade, l) ? reachedBy(trade, l) : null
-                      return (
-                        <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
-                          <td dir="ltr" className="text-right">{l.name}</td>
-                          <td className="num text-left">{l.price.toFixed(2)}</td>
-                          <td className="num text-left">
-                            {l.points.toFixed(2)}
-                            {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
-                          </td>
-                          <td className="text-[13px]">
-                            {!on ? (
-                              <span className="text-muted">נגד העסקה</span>
-                            ) : !isTarget(trade, l) ? (
-                              <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
-                            ) : (
-                              <span className="text-win">יעד</span>
-                            )}
-                          </td>
-                          <td className="text-[13px]">
-                            {l.reach ? (
-                              l.reach.minutes != null ? (
-                                <span>
-                                  אחרי <span className="num">{l.reach.minutes}</span> דק׳
-                                  {l.reach.at && <span className="num text-muted"> ({l.reach.at})</span>}
-                                </span>
+                    {/* Against the trade: liquidity isn't shown at all; a target shows only that the entry was already past it. */}
+                    {trade.pine_levels
+                      .filter((l) => ahead(trade, l) || !isLiquidityLevel(l))
+                      .map((l) => {
+                        const on = ahead(trade, l)
+                        if (!on) {
+                          return (
+                            <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                              <td dir="ltr" className="text-right">{l.name}</td>
+                              <td colSpan={4} className="text-[13px] text-muted">
+                                {trade.side === 'SHORT' ? 'נכנסנו מתחת' : 'נכנסנו מעל'}
+                              </td>
+                            </tr>
+                          )
+                        }
+                        const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
+                        // Older reports have no time — fall back to MFE / chart move for targets.
+                        const old = !l.reach && isTarget(trade, l) ? reachedBy(trade, l) : null
+                        return (
+                          <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                            <td dir="ltr" className="text-right">{l.name}</td>
+                            <td className="num text-left">{l.price.toFixed(2)}</td>
+                            <td className="num text-left">
+                              {l.points.toFixed(2)}
+                              {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
+                            </td>
+                            <td className="text-[13px]">
+                              {!isTarget(trade, l) ? (
+                                <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
                               ) : (
-                                <span className="text-muted">לא הגיע</span>
-                              )
-                            ) : old ? (
-                              <span className="text-muted">{old === 'trade' ? 'בעסקה' : 'עד סוף היום'}</span>
-                            ) : (
-                              <span className="text-faint">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                                <span className="text-win">יעד</span>
+                              )}
+                            </td>
+                            <td className="text-[13px]">
+                              {l.reach ? (
+                                l.reach.minutes != null ? (
+                                  <span>
+                                    אחרי <span className="num">{l.reach.minutes}</span> דק׳
+                                    {l.reach.at && <span className="num text-muted"> ({l.reach.at})</span>}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted">לא הגיע</span>
+                                )
+                              ) : old ? (
+                                <span className="text-muted">{old === 'trade' ? 'בעסקה' : 'עד סוף היום'}</span>
+                              ) : (
+                                <span className="text-faint">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                   </tbody>
                 </table>
               </div>

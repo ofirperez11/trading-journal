@@ -161,7 +161,8 @@ export function parseBias(base: string): Bias | null {
   if (m) return `6-3_${w(m[1])}${w(m[2])}` as Bias
   m = base.match(/3H \(([^)]+)\) \+ 90 ?(?:דק|m) \(([^)]+)\)/)
   if (m) return `3b90_${w(m[1])}${w(m[2])}` as Bias
-  m = base.match(/3H \(([^)]+)\) \+ (?:פתיל 90|wick 90)/i)
+  // "wick 90" / "90m wick" (no brackets) = the 90 wick only.
+  m = base.match(/3H \(([^)]+)\) \+ (?:פתיל 90|wick 90|90 ?(?:דק|m) (?:פתיל|wick))/i)
   if (m) return `3w90_${w(m[1])}` as Bias
   m = base.match(/6H \(([^)]+)\) \+ 90 ?(?:דק|m) \(([^)]+)\)/)
   if (m) return `6b90_${w(m[1])}${w(m[2])}` as Bias

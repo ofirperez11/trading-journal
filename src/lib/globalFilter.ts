@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import type { Trade } from '../types'
-import { FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, readFacets, readRanges } from './facets'
+import { EXCLUDE, FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, readFacets, readRanges } from './facets'
 import { firstTradesOnly, useFirstTradeOnly } from './firstTrade'
 
 // The global filter: one selection (facets + number ranges + the first-trade
@@ -74,6 +74,13 @@ export function useGlobalFilter(trades: Trade[] = NONE) {
         for (const f of FACETS) p.delete(f.key)
         for (const f of RANGE_FACETS) p.delete(f.key)
         for (const pick of picks) p.set(pick.key, pick.v)
+      }),
+    /** Replace the whole selection with "without" these values (a "מסנן חכם" step). */
+    exclude: (drops: { key: string; v: string }[]) =>
+      edit((p) => {
+        for (const f of FACETS) p.delete(f.key)
+        for (const f of RANGE_FACETS) p.delete(f.key)
+        for (const d of drops) p.set(d.key, [...csv(p.get(d.key)), EXCLUDE + d.v].join(','))
       }),
     clear: () =>
       edit((p) => {

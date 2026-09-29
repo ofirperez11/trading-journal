@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { SlidersHorizontal, Trophy, X } from 'lucide-react'
+import { SlidersHorizontal, Trophy, Wand2, X } from 'lucide-react'
 import type { Trade } from '../types'
-import { FACETS, RANGE_FACETS, rangeStops } from '../lib/facets'
+import { EXCLUDE, FACETS, RANGE_FACETS, isExclusion, rangeStops } from '../lib/facets'
 import { useGlobalFilter } from '../lib/globalFilter'
 import { MIN_TRADES, bestFilters } from '../lib/bestFilters'
+import { MIN_DROP, MIN_LEFT, smartSteps } from '../lib/smartFilter'
 import { firstTradesOnly } from '../lib/firstTrade'
 import { formatR } from '../lib/trades'
 import { FirstTradeToggle } from './FirstTradeToggle'
@@ -48,6 +49,7 @@ export function GlobalFilterPanel({ trades, children }: { trades: Trade[]; child
       <p className="text-[12px] text-muted sm:col-span-2">הסינון חל על כל העמודים: דשבורד, עסקאות, אנליטיקה ולוח שנה.</p>
       <FirstTradeToggle on={g.firstOnly} onChange={g.setFirstOnly} />
       <BestFilters trades={trades} />
+      <SmartFilter trades={trades} />
       {children}
       {FACETS.map((f) => {
         const opts = f.options(trades)
@@ -57,9 +59,16 @@ export function GlobalFilterPanel({ trades, children }: { trades: Trade[]; child
             <div className="mb-2 text-xs font-semibold text-muted">{f.label}</div>
             <div className="flex flex-wrap gap-1.5">
               {opts.map((o) => (
-                <button key={o.v} onClick={() => g.toggleFacet(f.key, o.v)} aria-pressed={g.facetSel[f.key].has(o.v)} className={chip(g.facetSel[f.key].has(o.v))}>
-                  {o.label}
-                </button>
+                g.facetSel[f.key].has(EXCLUDE + o.v) ? (
+                  // Excluded ("without"): a click brings it back.
+                  <button key={o.v} onClick={() => g.toggleFacet(f.key, EXCLUDE + o.v)} title="מוחרג — לחיצה מחזירה" className="tag tag-red cursor-pointer !px-2.5 !py-0.5 !text-[13px] line-through">
+                    {o.label}
+                  </button>
+                ) : (
+                  <button key={o.v} onClick={() => g.toggleFacet(f.key, o.v)} aria-pressed={g.facetSel[f.key].has(o.v)} className={chip(g.facetSel[f.key].has(o.v))}>
+                    {o.label}
+                  </button>
+                )
               ))}
             </div>
           </div>
@@ -87,7 +96,9 @@ export function GlobalFilterChips({ trades }: { trades: Trade[] }) {
       const opts = f.options(trades)
       return [...g.facetSel[f.key]].map((v) => ({
         id: `${f.key}:${v}`,
-        label: `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}`,
+        label: isExclusion(v)
+          ? `${f.label}: בלי ${opts.find((o) => o.v === v.slice(EXCLUDE.length))?.label ?? v.slice(EXCLUDE.length)}`
+          : `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}`,
         remove: () => g.toggleFacet(f.key, v),
       }))
     }),
@@ -166,6 +177,55 @@ function BestFilters({ trades }: { trades: Trade[] }) {
                     <span className="num shrink-0 text-[12px] text-muted">
                       {b.count} עסקאות{b.avgR != null ? ` · ${formatR(Math.round(b.avgR * 100) / 100)}` : ''}
                     </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** "מסנן חכם": drop, step by step, whatever lowers the win rate the most; the user picks where to stop. */
+function SmartFilter({ trades }: { trades: Trade[] }) {
+  const g = useGlobalFilter()
+  const [open, setOpen] = useState(false)
+  // From every trade (the first-trade rule still applies) — not from the current selection.
+  const steps = useMemo(() => (open ? smartSteps(g.firstOnly ? firstTradesOnly(trades) : trades) : []), [open, trades, g.firstOnly])
+  return (
+    <div className="sm:col-span-2">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors ${
+          open ? 'border-accent/40 bg-accent/[0.07] font-semibold text-accent' : 'border-border hover:bg-surface'
+        }`}
+      >
+        <Wand2 className="h-4 w-4" />
+        מסנן חכם · הכי הרבה עסקאות
+      </button>
+      {open && (
+        <div className="mt-2 rounded-md border border-border bg-bg p-2">
+          <p className="px-1 pb-1.5 text-[12px] text-muted">
+            בכל שלב יורד הדבר שהכי מוריד את אחוז ההצלחה, ועסקאות בלי סימון נשארות. בחר איפה לעצור: עוד שלבים = אחוז גבוה יותר, פחות
+            עסקאות. יורדות רק קבוצות של {MIN_DROP} עסקאות לפחות, ונשארות תמיד {MIN_LEFT} לפחות.
+          </p>
+          {steps.length <= 1 ? (
+            <p className="px-1 py-2 text-sm text-muted">אין מה להוריד שמשפר את אחוז ההצלחה.</p>
+          ) : (
+            <ol className="flex flex-col gap-1">
+              {steps.map((st, i) => (
+                <li key={i}>
+                  <button
+                    onClick={() => (i === 0 ? g.clear() : g.exclude(st.drops))}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-right text-sm transition-colors hover:bg-surface"
+                  >
+                    <span className="num w-4 shrink-0 text-faint">{i}</span>
+                    <span className="min-w-0 flex-1 truncate">{st.dropped ? `+ ${st.dropped.label}` : 'כל העסקאות'}</span>
+                    <span className={`num shrink-0 font-semibold ${st.winRate >= 0.5 ? 'text-win' : 'text-loss'}`}>{Math.round(st.winRate * 100)}%</span>
+                    <span className="num shrink-0 text-[12px] text-muted">{st.trades} עסקאות</span>
                   </button>
                 </li>
               ))}

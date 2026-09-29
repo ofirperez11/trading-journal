@@ -116,8 +116,21 @@ export function readFacets(params: URLSearchParams, facets: Facet[] = FACETS): R
   return Object.fromEntries(facets.map((f) => [f.key, new Set(csv(params.get(f.key)))]))
 }
 /** Does the trade pass every facet that has a selection? */
+// A value written "!v" means "without v": an exclusion keeps every other trade —
+// including ones that have no value in that facet (e.g. no zone tagged) — so it
+// narrows far less than picking the values to keep.
+export const EXCLUDE = '!'
+export const isExclusion = (v: string) => v.startsWith(EXCLUDE)
+
 export function passesFacets(t: Trade, sel: Record<string, Set<string>>, facets: Facet[] = FACETS): boolean {
-  return facets.every((f) => !sel[f.key]?.size || sel[f.key].has(f.of(t) ?? ''))
+  return facets.every((f) => {
+    const s = sel[f.key]
+    if (!s?.size) return true
+    const v = f.of(t) ?? ''
+    if (s.has(EXCLUDE + v)) return false
+    const kept = [...s].filter((x) => !isExclusion(x))
+    return !kept.length || kept.includes(v)
+  })
 }
 
 // Number ranges — sliders in the filter menus, not chips: "lbsize=1.5-3", "mfe=4-12".

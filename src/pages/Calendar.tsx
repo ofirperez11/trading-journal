@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Plus, X, Sparkles, CalendarDays } from 'luci
 import { useTrades } from '../lib/useTrades'
 import { cleanSymbol, formatR } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
+import { useGlobalFilter } from '../lib/globalFilter'
+import { GlobalFilterBar } from '../components/GlobalFilter'
 import { PageTitle } from '../components/PageTitle'
 import { compactMoney, compactPoints } from '../components/charts'
 import type { Trade } from '../types'
@@ -50,7 +52,9 @@ export default function Calendar() {
   const { trades: rawTrades, loading } = useTrades()
   const unit = useUnit()
   // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
-  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
+  const allTrades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
+  // The global filter (shared with the other pages) decides which trades the calendar shows.
+  const { filtered: trades } = useGlobalFilter(allTrades)
   const navigate = useNavigate()
 
   // Group trades by day (YYYY-MM-DD).
@@ -71,7 +75,7 @@ export default function Calendar() {
 
   const years = useMemo(() => {
     const set = new Set<number>()
-    for (const t of trades) set.add(Number(t.date.slice(0, 4)))
+    for (const t of allTrades) set.add(Number(t.date.slice(0, 4)))
     // Always offer a range of past years (and next year) so an empty journal can
     // still navigate back — e.g. to start a 2024/2025 backtest.
     const now = new Date().getFullYear()
@@ -83,7 +87,7 @@ export default function Calendar() {
   // unless the user has navigated to another month.
   const latest = useMemo(() => {
     let mx = ''
-    for (const t of trades) if (t.date > mx) mx = t.date
+    for (const t of allTrades) if (t.date > mx) mx = t.date
     const d = mx ? new Date(mx) : new Date()
     return { year: d.getFullYear(), month: d.getMonth() }
   }, [trades])
@@ -167,6 +171,7 @@ export default function Calendar() {
         title="לוח שנה"
         subtitle="כל יום מסחר במבט אחד. לחץ על יום כדי לראות את העסקאות או להוסיף עסקה."
       />
+      <GlobalFilterBar trades={allTrades} className="mt-4" />
 
       {/* Month controls + month summary */}
       <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">

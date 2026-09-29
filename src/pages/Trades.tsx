@@ -4,7 +4,6 @@ import {
   Search,
   Plus,
   Sparkles,
-  SlidersHorizontal,
   X,
   Download,
   BookOpen,
@@ -20,10 +19,9 @@ import { useJournals } from '../lib/journals'
 import { formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { downloadCsv } from '../lib/csv'
-import { FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, rangeStops, readFacets, readRanges } from '../lib/facets'
-import { RangeFilter } from '../components/RangeFilter'
-import { FirstTradeToggle } from '../components/FirstTradeToggle'
-import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
+import { csv } from '../lib/facets'
+import { useGlobalFilter } from '../lib/globalFilter'
+import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
@@ -35,8 +33,6 @@ const MONTHS_HE = [
 ]
 const STATUS_LABEL: Record<TradeStatus, string> = { WIN: 'Win', LOSS: 'Loss', WASH: 'BE' }
 const STATUS_TAG: Record<TradeStatus, string> = { WIN: 'tag-green', LOSS: 'tag-red', WASH: '' }
-// The shared analytics facets, minus side/result which have their own groups here.
-const EXTRA_FACETS = FACETS.filter((f) => f.key !== 'side' && f.key !== 'result')
 const LIQ_LABEL: Record<string, string> = { buyside: 'Buyside', sellside: 'Sellside', none: 'לא נלקחה' }
 const LIQ_TAG: Record<string, string> = { buyside: 'tag-blue', sellside: 'tag-orange', none: '' }
 const ZONE_LABEL: Record<string, string> = { premium: 'Premium', deadzone: 'Deadzone', discount: 'Discount' }
@@ -59,21 +55,17 @@ export default function Trades() {
   const { active } = useJournals()
   const [showFilters, setShowFilters] = useState(false)
 
-  // Filters (and the view) live in the URL so returning from a trade restores the exact view.
+  // This page's own filters (and the view) live in the URL so returning from a
+  // trade restores the exact view; the shared filters are the global filter.
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
   const view: View = searchParams.get('view') === 'gallery' ? 'gallery' : 'table'
   const grouped = searchParams.get('group') !== 'none'
   const symbolSel = useMemo(() => new Set(csv(searchParams.get('sym'))), [searchParams])
-  const statusSel = useMemo(() => new Set(csv(searchParams.get('status')) as TradeStatus[]), [searchParams])
-  const sideSel = useMemo(() => new Set(csv(searchParams.get('side')) as TradeSide[]), [searchParams])
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
   const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
-  const facetSel = useMemo(() => readFacets(searchParams, EXTRA_FACETS), [searchParams])
-  const ranges = useMemo(() => readRanges(searchParams), [searchParams])
-  // The strategy rule runs on every trade first, so other filters can't change which one was first.
-  const [firstOnly, setFirstOnly] = useFirstTradeOnly()
-  const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
+  const global = useGlobalFilter(trades)
+  const taken = global.filtered
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -96,10 +88,7 @@ export default function Trades() {
     : months.filter((m) => m.startsWith(years[0] ?? ''))
   const multiYear = new Set(monthsForYear.map((m) => m.slice(0, 4))).size > 1
 
-  const activeCount =
-    symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size +
-    EXTRA_FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) +
-    activeRanges(ranges)
+  const localCount = symbolSel.size + monthSel.size + yearSel.size
   const qs = searchParams.toString() // current filters, for the trade's "back" target
   const backState = { backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }
 
@@ -108,12 +97,8 @@ export default function Trades() {
       taken
         .filter((t) => {
           if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
-          if (statusSel.size && !statusSel.has(t.status)) return false
-          if (sideSel.size && !sideSel.has(t.side)) return false
           if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
           if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
-          if (!passesFacets(t, facetSel, EXTRA_FACETS)) return false
-          if (!passesRanges(t, ranges)) return false
           if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
           return true
         })
@@ -121,7 +106,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [taken, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, ranges, query])
+  }, [taken, symbolSel, yearSel, monthSel, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -150,13 +135,10 @@ export default function Trades() {
   function clearAll() {
     setParams((p) => {
       p.delete('sym')
-      p.delete('status')
-      p.delete('side')
       p.delete('years')
       p.delete('months')
-      for (const f of EXTRA_FACETS) p.delete(f.key)
-      for (const f of RANGE_FACETS) p.delete(f.key)
     })
+    global.clear()
   }
 
   // Export the currently-visible (filtered) rows to CSV.
@@ -189,22 +171,11 @@ export default function Trades() {
     return <div className="flex h-64 items-center justify-center text-muted">טוען עסקאות…</div>
   }
 
-  // Active filters as removable chips.
+  // This page's active filters as removable chips (the global ones follow them).
   const chips: { key: string; val: string; label: string }[] = [
     ...[...symbolSel].map((v) => ({ key: 'sym', val: v, label: v })),
-    ...[...statusSel].map((v) => ({ key: 'status', val: v, label: STATUS_LABEL[v] })),
-    ...[...sideSel].map((v) => ({ key: 'side', val: v, label: sideLabel(v) })),
     ...[...yearSel].sort().map((v) => ({ key: 'years', val: v, label: v })),
     ...[...monthSel].sort().map((v) => ({ key: 'months', val: v, label: monthTitle(v) })),
-    ...EXTRA_FACETS.flatMap((f) => {
-      const opts = f.options(trades)
-      return [...facetSel[f.key]].map((v) => ({ key: f.key, val: v, label: `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}` }))
-    }),
-    // Removing it goes through toggleParam, which clears the whole "min-max" value.
-    ...RANGE_FACETS.flatMap((f) => {
-      const r = ranges[f.key]
-      return r ? [{ key: f.key, val: `${r[0]}-${r[1]}`, label: `${f.label}: ${r[0]}–${r[1]} נק׳` }] : []
-    }),
   ]
 
   const facet = (on: boolean) =>
@@ -286,22 +257,7 @@ export default function Trades() {
               קיבוץ לפי חודש
             </button>
           )}
-          <button
-            onClick={() => setShowFilters((s) => !s)}
-            aria-expanded={showFilters}
-            className={`flex h-8 items-center gap-1.5 rounded-md px-2 text-sm transition-colors ${
-              activeCount > 0 ? 'text-accent' : 'text-muted hover:bg-surface'
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            סינון
-            {activeCount > 0 && <span className="num rounded bg-accent px-1.5 text-xs font-bold text-white">{activeCount}</span>}
-          </button>
-          {firstOnly && (
-            <button onClick={() => setShowFilters(true)} className="tag tag-blue shrink-0 !py-0.5 !text-[12px] !font-semibold" title="רק עסקה ראשונה בכל הזדמנות">
-              ראשונה בלבד
-            </button>
-          )}
+          <GlobalFilterButton open={showFilters} onToggle={() => setShowFilters((s) => !s)} extraCount={localCount} />
           <label className="relative flex items-center">
             <Search className="pointer-events-none absolute right-2 h-4 w-4 text-muted" />
             <input
@@ -316,7 +272,7 @@ export default function Trades() {
       </div>
 
       {/* Active filter chips */}
-      {chips.length > 0 && (
+      {chips.length + global.activeCount > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 py-2.5">
           {chips.map((c) => (
             <button
@@ -329,68 +285,38 @@ export default function Trades() {
               <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
             </button>
           ))}
+          <GlobalFilterChips trades={trades} />
           <button onClick={clearAll} className="px-1 text-[13px] text-muted hover:text-loss">
             נקה הכל
           </button>
         </div>
       )}
 
-      {/* Filter panel */}
+      {/* Filter panel: the global filter + this page's symbol / year / month */}
       {showFilters && (
-        <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] mt-3 grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
-          <FirstTradeToggle on={firstOnly} onChange={setFirstOnly} />
-          <FacetGroup label="סימבול">
-            {symbols.map((s) => (
-              <button key={s} className={facet(symbolSel.has(s))} onClick={() => toggleParam('sym', s)}>{s}</button>
-            ))}
-          </FacetGroup>
-          <FacetGroup label="תוצאה">
-            {(['WIN', 'LOSS', 'WASH'] as TradeStatus[]).map((s) => (
-              <button key={s} className={facet(statusSel.has(s))} onClick={() => toggleParam('status', s)}>{STATUS_LABEL[s]}</button>
-            ))}
-          </FacetGroup>
-          <FacetGroup label="כיוון">
-            {(['LONG', 'SHORT'] as TradeSide[]).map((s) => (
-              <button key={s} className={facet(sideSel.has(s))} onClick={() => toggleParam('side', s)}>{sideLabel(s)}</button>
-            ))}
-          </FacetGroup>
-          {EXTRA_FACETS.map((f) => {
-            const opts = f.options(trades)
-            if (!opts.length) return null
-            return (
-              <FacetGroup key={f.key} label={f.label}>
-                {opts.map((o) => (
-                  <button key={o.v} className={facet(facetSel[f.key].has(o.v))} onClick={() => toggleParam(f.key, o.v)}>
-                    {o.label}
+        <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] mt-3">
+          <GlobalFilterPanel trades={trades}>
+            <FacetGroup label="סימבול (עמוד זה)">
+              {symbols.map((s) => (
+                <button key={s} className={facet(symbolSel.has(s))} onClick={() => toggleParam('sym', s)}>{s}</button>
+              ))}
+            </FacetGroup>
+            <FacetGroup label="שנה (עמוד זה)">
+              {years.map((y) => (
+                <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>
+              ))}
+            </FacetGroup>
+            <div className="sm:col-span-2">
+              <FacetGroup label="חודש (עמוד זה)">
+                {monthsForYear.map((m) => (
+                  <button key={m} className={facet(monthSel.has(m))} onClick={() => toggleParam('months', m)}>
+                    {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
+                    {multiYear ? <span className="num"> {m.slice(2, 4)}</span> : ''}
                   </button>
                 ))}
               </FacetGroup>
-            )
-          })}
-          {RANGE_FACETS.map((f) => (
-            <RangeFilter
-              key={f.key}
-              label={f.label}
-              sizes={rangeStops(trades, f)}
-              value={ranges[f.key]}
-              onChange={(r) => setParams((p) => (r ? p.set(f.key, `${r[0]}-${r[1]}`) : p.delete(f.key)))}
-            />
-          ))}
-          <FacetGroup label="שנה">
-            {years.map((y) => (
-              <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>
-            ))}
-          </FacetGroup>
-          <div className="sm:col-span-2">
-            <FacetGroup label="חודש">
-              {monthsForYear.map((m) => (
-                <button key={m} className={facet(monthSel.has(m))} onClick={() => toggleParam('months', m)}>
-                  {MONTHS_HE[Number(m.slice(5, 7)) - 1]}
-                  {multiYear ? <span className="num"> {m.slice(2, 4)}</span> : ''}
-                </button>
-              ))}
-            </FacetGroup>
-          </div>
+            </div>
+          </GlobalFilterPanel>
         </div>
       )}
 

@@ -1,17 +1,14 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X, SlidersHorizontal } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
 import { computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
-import { FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, rangeStops, readFacets, readRanges } from '../lib/facets'
-import { RangeFilter } from '../components/RangeFilter'
-import { FirstTradeToggle } from '../components/FirstTradeToggle'
-import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
+import { useGlobalFilter } from '../lib/globalFilter'
+import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
 import { LineChart, Columns, BarRows, SplitBar, CHART, useInView, type Row } from '../components/charts'
@@ -196,38 +193,8 @@ export default function Analytics() {
   const [custYear, setCustYear] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
-  // Filter menu selections live in the URL (back/refresh keep the view).
-  const [searchParams, setSearchParams] = useSearchParams()
-  const facetSel = useMemo(() => readFacets(searchParams), [searchParams])
-  const ranges = useMemo(() => readRanges(searchParams), [searchParams])
-  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) + activeRanges(ranges)
-  // The strategy rule runs on every trade first, so other filters can't change which one was first.
-  const [firstOnly, setFirstOnly] = useFirstTradeOnly()
-  const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
-  const scoped = useMemo(
-    () => taken.filter((t) => passesFacets(t, facetSel) && passesRanges(t, ranges)),
-    [taken, facetSel, ranges],
-  )
-  function setValueRange(key: string, r: [number, number] | null) {
-    const next = new URLSearchParams(searchParams)
-    if (r) next.set(key, `${r[0]}-${r[1]}`)
-    else next.delete(key)
-    setSearchParams(next, { replace: true })
-  }
-  function toggleFacet(key: string, v: string) {
-    const next = new URLSearchParams(searchParams)
-    const cur = new Set(csv(next.get(key)))
-    cur.has(v) ? cur.delete(v) : cur.add(v)
-    if (cur.size) next.set(key, [...cur].join(','))
-    else next.delete(key)
-    setSearchParams(next, { replace: true })
-  }
-  function clearFacets() {
-    const next = new URLSearchParams(searchParams)
-    for (const f of FACETS) next.delete(f.key)
-    for (const f of RANGE_FACETS) next.delete(f.key)
-    setSearchParams(next, { replace: true })
-  }
+  // The global filter (all pages) — then this page's own date range below.
+  const { filtered: scoped, activeCount } = useGlobalFilter(trades)
 
   const usingCustom = customMonths.size > 0
   const years = useMemo(
@@ -311,22 +278,7 @@ export default function Analytics() {
             <X className="h-4 w-4" />
           </button>
         )}
-        <button
-          onClick={() => setShowFilters((s) => !s)}
-          aria-expanded={showFilters}
-          className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm transition-colors ${
-            activeCount > 0 ? 'border-accent/40 bg-accent/[0.07] font-semibold text-accent' : 'border-border hover:bg-surface'
-          }`}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          <span className="hidden sm:inline">סינון</span>
-          {activeCount > 0 && <span className="num rounded bg-accent px-1.5 text-xs font-bold text-white">{activeCount}</span>}
-        </button>
-        {firstOnly && (
-          <button onClick={() => setShowFilters(true)} className="tag tag-blue shrink-0 !py-0.5 !text-[12px] !font-semibold" title="רק עסקה ראשונה בכל הזדמנות">
-            ראשונה בלבד
-          </button>
-        )}
+        <GlobalFilterButton open={showFilters} onToggle={() => setShowFilters((s) => !s)} />
         <span className="mr-auto hidden text-[13px] text-muted sm:inline">
           <span className="num font-semibold text-ink">{filtered.length}</span> עסקאות
           {prev && ' · מול התקופה הקודמת'}
@@ -355,45 +307,14 @@ export default function Analytics() {
           </div>
         </div>
       )}
+      {activeCount > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-2">
+          <GlobalFilterChips trades={trades} />
+        </div>
+      )}
       {showFilters && (
         <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] max-h-[60vh] overflow-y-auto pb-1 pt-3">
-          <div className="grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
-            <FirstTradeToggle on={firstOnly} onChange={setFirstOnly} />
-            {FACETS.map((f) => {
-              const opts = f.options(trades)
-              if (!opts.length) return null
-              return (
-                <div key={f.key}>
-                  <div className="mb-2 text-xs font-semibold text-muted">{f.label}</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {opts.map((o) => {
-                      const on = facetSel[f.key].has(o.v)
-                      return (
-                        <button
-                          key={o.v}
-                          onClick={() => toggleFacet(f.key, o.v)}
-                          aria-pressed={on}
-                          className={`tag cursor-pointer !px-2.5 !py-0.5 !text-[13px] transition-colors ${on ? '!bg-ink !text-white' : 'hover:!bg-[#d9d8d5]'}`}
-                        >
-                          {o.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-            {RANGE_FACETS.map((f) => (
-              <RangeFilter key={f.key} label={f.label} sizes={rangeStops(trades, f)} value={ranges[f.key]} onChange={(r) => setValueRange(f.key, r)} />
-            ))}
-            {activeCount > 0 && (
-              <div className="sm:col-span-2">
-                <button onClick={clearFacets} className="text-[13px] text-muted hover:text-loss">
-                  נקה סינון
-                </button>
-              </div>
-            )}
-          </div>
+          <GlobalFilterPanel trades={trades} />
         </div>
       )}
     </div>

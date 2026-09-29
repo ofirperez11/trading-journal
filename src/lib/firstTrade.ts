@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import type { Trade } from '../types'
 import { cleanSymbol } from './trades'
 import { SESSION_TIMES, sessionOf } from './lookback'
@@ -46,24 +46,31 @@ export function firstTradesOnly(trades: Trade[]): Trade[] {
   return trades.filter((t) => keep.has(t.id))
 }
 
-// The switch is a standing preference: once on it stays on (this browser) until turned off.
+// The switch is a standing preference: once on it stays on (this browser) until
+// turned off. Shared live, so every filter bar and page agrees.
 const KEY = 'tj_first_trade_only'
-export function useFirstTradeOnly(): [boolean, (on: boolean) => void] {
-  const [on, setOn] = useState(() => {
-    try {
-      return localStorage.getItem(KEY) === '1'
-    } catch {
-      return false
-    }
-  })
-  function set(next: boolean) {
-    setOn(next)
-    try {
-      if (next) localStorage.setItem(KEY, '1')
-      else localStorage.removeItem(KEY)
-    } catch {
-      /* storage blocked — the switch still works for this visit */
-    }
+const listeners = new Set<() => void>()
+let current = (() => {
+  try {
+    return localStorage.getItem(KEY) === '1'
+  } catch {
+    return false
   }
-  return [on, set]
+})()
+function setFirstTradeOnly(next: boolean) {
+  current = next
+  try {
+    if (next) localStorage.setItem(KEY, '1')
+    else localStorage.removeItem(KEY)
+  } catch {
+    /* storage blocked — the switch still works for this visit */
+  }
+  listeners.forEach((l) => l())
+}
+function subscribe(l: () => void) {
+  listeners.add(l)
+  return () => listeners.delete(l)
+}
+export function useFirstTradeOnly(): [boolean, (on: boolean) => void] {
+  return [useSyncExternalStore(subscribe, () => current), setFirstTradeOnly]
 }

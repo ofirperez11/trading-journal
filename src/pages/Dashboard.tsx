@@ -17,6 +17,8 @@ import {
 import { useAuth } from '../lib/auth'
 import { useJournals } from '../lib/journals'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
+import { useGlobalFilter } from '../lib/globalFilter'
+import { GlobalFilterBar } from '../components/GlobalFilter'
 import { useTrades } from '../lib/useTrades'
 import {
   computeStats,
@@ -57,7 +59,9 @@ export default function Dashboard() {
   const { trades: rawTrades, loading } = useTrades()
   const unit = useUnit()
   // Every P&L on this page in the chosen unit ($ / points) — display only, never saved.
-  const trades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
+  const allTrades = useMemo(() => inUnit(rawTrades, unit), [rawTrades, unit])
+  // The global filter (shared with the other pages) decides which trades the overview covers.
+  const { filtered: trades } = useGlobalFilter(allTrades)
   const name =
     (user?.user_metadata?.display_name as string | undefined) ?? user?.email?.split('@')[0] ?? 'Trader'
 
@@ -70,7 +74,7 @@ export default function Dashboard() {
     return <div className="flex h-64 items-center justify-center text-muted">טוען את העסקאות שלך…</div>
   }
 
-  if (trades.length === 0) {
+  if (allTrades.length === 0) {
     return (
       <div className="space-y-6">
         <PageHeader title={active.name} subtitle={`שלום, ${name}`} />
@@ -82,6 +86,19 @@ export default function Dashboard() {
           </span>
         </div>
         <QuickActions />
+      </div>
+    )
+  }
+
+  if (trades.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={active.name} subtitle={`שלום, ${name}`} />
+        <GlobalFilterBar trades={allTrades} />
+        <div className="callout">
+          <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-[#cb912f]" />
+          <span>אין עסקאות שתואמות לסינון. נסה להסיר חלק מהסינונים.</span>
+        </div>
       </div>
     )
   }
@@ -123,6 +140,7 @@ export default function Dashboard() {
       />
 
       <LinkBar />
+      <GlobalFilterBar trades={allTrades} className="mt-5" />
 
       <div className="mt-7 grid gap-7 lg:grid-cols-[270px_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">

@@ -185,11 +185,29 @@ function parseZone(raw: string): Zone | null {
   return null
 }
 
+// Some ways of copying from Pine Logs join a report's lines with spaces. Every
+// report line starts with an RLM mark, so lines are split there too; if the
+// marks were lost as well, a line break goes back before each known label
+// (longest first, so "גודל Lookback:" isn't cut at "Lookback:").
+const LINE_BREAK = /[\r\n\u2028\u2029\u200f]+/
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const LINE_START = new RegExp(
+  `(^|\\s)(📝|⚠|MFE / MAE|מהלך גרף|ביאס \\(|\\d+\\s*דק['׳]?\\s*:|${[...KNOWN_LABELS]
+    .sort((a, b) => b.length - a.length)
+    .map((l) => escapeRe(l) + ':')
+    .join('|')})`,
+  'g',
+)
+function reportLines(raw: string): string[] {
+  const chunk = raw.replace(/\s+(?=\[\d{4}-\d{2}-\d{2}T)/g, '\n') // the next report's Pine Logs timestamp
+  const clean = (ls: string[]) => ls.map((l) => l.replace(BIDI_MARKS, '').trim().replace(/^"+/, '').trim()).filter(Boolean)
+  const lines = clean(chunk.split(LINE_BREAK))
+  if (lines.length >= 6) return lines
+  return clean(chunk.replace(BIDI_MARKS, '').replace(LINE_START, '$1\n$2').split('\n'))
+}
+
 function parseOne(chunk: string): PineTrade | null {
-  const lines = chunk
-    .split(/\r?\n/)
-    .map((l) => l.replace(BIDI_MARKS, '').trim().replace(/^"+/, '').trim())
-    .filter(Boolean)
+  const lines = reportLines(chunk)
   const header = lines.find((l) => l.startsWith('📝'))
   if (!header) return null
   const hm = header.match(/📝\s*(LONG|SHORT)\s+(\d{1,2}:\d{2})/)

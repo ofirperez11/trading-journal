@@ -13,7 +13,8 @@ import { BIASES, BIAS_FULL_LABEL } from '../lib/bias'
 import type { Bias, Liquidity, Trade, Zone } from '../types'
 
 const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 50, MNQ: 2, MES: 5, YM: 5, MYM: 0.5 }
-const QTY_KEY = 'pine-import-qty'
+const RISK_KEY = 'pine-import-risk'
+const DEFAULT_RISK = '300'
 
 const RESULT_TAG: Record<PineTrade['result'], { label: string; cls: string }> = {
   target: { label: 'טרגט', cls: 'tag-green' },
@@ -136,12 +137,27 @@ const num = (v: string) => {
   return v.trim() !== '' && Number.isFinite(n) ? n : null
 }
 
-function readQty(): string {
+function readRisk(): string {
   try {
-    return localStorage.getItem(QTY_KEY) || '1'
+    return localStorage.getItem(RISK_KEY) || DEFAULT_RISK
   } catch {
-    return '1'
+    return DEFAULT_RISK
   }
+}
+
+/** Contracts for a $ risk at this stop: as close as it gets without going over, at least 1. */
+function qtyForRisk(t: PineTrade, stop: number | null, risk: number | null): string {
+  const pts = stop == null ? null : Math.abs(t.entry - stop)
+  const pv = POINT_VALUE[t.symbol]
+  if (!pts || !pv || !risk || risk <= 0) return '1'
+  return String(Math.max(1, Math.floor(risk / (pts * pv) + 1e-9)))
+}
+/** The row's $ risk: stop distance × point value × contracts. */
+function rowRisk(r: Row): number | null {
+  const stop = num(r.stop)
+  const qty = num(r.qty)
+  const pv = POINT_VALUE[r.t.symbol]
+  return stop == null || qty == null || !pv ? null : Math.abs(r.t.entry - stop) * pv * qty
 }
 
 export default function PineImport() {
@@ -155,7 +171,7 @@ export default function PineImport() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [defQty, setDefQty] = useState(readQty)
+  const [risk, setRisk] = useState(readRisk)
 
   const existingByKey = useMemo(() => {
     const m = new Map<string, Trade>()
@@ -190,7 +206,7 @@ export default function PineImport() {
           stop: str(t.stop),
           target: str(t.target),
           exit: str(t.exit),
-          qty: existing ? String(existing.qty) : defQty, // compare like with like
+          qty: existing ? String(existing.qty) : qtyForRisk(t, t.stop, num(risk)), // compare like with like
           lookback: t.lookback ? formatLookback({ base: t.lookback, piece: pieceIn(t.lookbackRaw), tf: timeframeIn(t.lookbackRaw) }) : '',
           bias: t.bias,
           zone: t.zone,
@@ -229,21 +245,30 @@ export default function PineImport() {
     }
   }
 
-  // Remember the default contract size between imports.
+  // Remember the risk per trade between imports.
   useEffect(() => {
     try {
-      localStorage.setItem(QTY_KEY, defQty)
+      localStorage.setItem(RISK_KEY, risk)
     } catch {
       /* private mode — keep the in-memory value */
     }
-  }, [defQty])
+  }, [risk])
 
   function patch(i: number, p: Partial<Row>) {
-    setRows((rs) => rs && rs.map((r, j) => (j === i ? { ...r, ...p } : r)))
+    setRows(
+      (rs) =>
+        rs &&
+        rs.map((r, j) => {
+          if (j !== i) return r
+          const next = { ...r, ...p }
+          // A new stop re-sizes a new trade (an existing one keeps its contracts).
+          return 'stop' in p && !r.existing ? { ...next, qty: qtyForRisk(r.t, num(next.stop), num(risk)) } : next
+        }),
+    )
   }
-  function applyQtyToAll(q: string) {
-    setDefQty(q)
-    setRows((rs) => rs && rs.map((r) => (r.existing ? r : { ...r, qty: q })))
+  function applyRiskToAll(v: string) {
+    setRisk(v)
+    setRows((rs) => rs && rs.map((r) => (r.existing ? r : { ...r, qty: qtyForRisk(r.t, num(r.stop), num(v)) })))
   }
 
   function calcRow(r: Row) {
@@ -395,18 +420,18 @@ export default function PineImport() {
         <div className="mt-6 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-muted">חוזים לעסקה</span>
+              <span className="text-muted">סיכון לעסקה ($)</span>
               <input
                 type="number"
                 min={1}
-                step={1}
+                step={10}
                 dir="ltr"
-                className="input !h-9 w-20"
-                value={defQty}
-                onChange={(e) => applyQtyToAll(e.target.value)}
+                className="input !h-9 w-24"
+                value={risk}
+                onChange={(e) => applyRiskToAll(e.target.value)}
               />
             </label>
-            <span className="text-[13px] text-faint">האינדיקטור לא יודע כמה חוזים — הרווח בדולרים מחושב לפי המספר הזה.</span>
+            <span className="text-[13px] text-faint">כמות החוזים מחושבת לכל עסקה לפי גודל הסטופ — הכי קרוב לסכום הזה בלי לעבור אותו (לפחות חוזה אחד).</span>
             <div className="flex-1" />
             <button
               onClick={() => {
@@ -481,8 +506,11 @@ export default function PineImport() {
                   <Info label="מילוי" value={r.t.fillTime ?? '—'} ltr />
                   <Info label="אזור" value={r.zone ? ZONE_LABEL[r.zone] : '—'} />
                   <Info label="סוג יום" value={r.t.dayKind || '—'} />
-                  <div className="col-span-2 sm:col-span-4">
+                  <div className="col-span-2">
                     <Info label="ביאס" value={r.bias ? BIAS_FULL_LABEL[r.bias] : '—'} />
+                  </div>
+                  <div className="col-span-2">
+                    <Info label="חוזים" value={`${r.qty}${rowRisk(r) != null ? ` · סיכון $${Math.round(rowRisk(r)!).toLocaleString('en-US')}` : ''}`} />
                   </div>
                 </div>
 

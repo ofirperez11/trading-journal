@@ -74,6 +74,7 @@ const KNOWN_LABELS = [
   'תוצאה בלי ברייק-איבן',
   'נזילות שנלקחה',
   'אזור (Dealing Range)',
+  'אזור (P&D)', // the same line, newer indicator wording
   'ביאס (HTF 6H/3H)',
   'מהלך גרף (לפי סגירת נר)',
   'MFE / MAE', // matched as a prefix — the label carries a note in parentheses
@@ -182,7 +183,7 @@ function parseLiquidity(raw: string, side: TradeSide): { liquidity: Liquidity | 
 function parseZone(raw: string): Zone | null {
   if (/Premium/i.test(raw)) return 'premium'
   if (/Discount/i.test(raw)) return 'discount'
-  if (/Equilibrium/i.test(raw)) return 'deadzone'
+  if (/Equilibrium|Dead ?Zone/i.test(raw)) return 'deadzone'
   return null
 }
 
@@ -281,7 +282,7 @@ function parseOne(chunk: string): PineTrade | null {
   const liqRaw = field(lines, 'נזילות שנלקחה')
   const { liquidity, guessed } = parseLiquidity(liqRaw, side)
 
-  const zoneRaw = field(lines, 'אזור (Dealing Range)')
+  const zoneRaw = field(lines, 'אזור (Dealing Range)') || field(lines, 'אזור (P&D)')
   const zone = parseZone(zoneRaw)
 
   const rawSymbol = field(lines, 'סימבול')

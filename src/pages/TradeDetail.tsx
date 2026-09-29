@@ -400,73 +400,71 @@ export default function TradeDetail() {
                 <Flag className="h-4 w-4 text-faint" /> יעדים
                 <span className="text-[13px] font-normal text-muted">מרחק וזמן מהכניסה</span>
               </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-sm">
-                  <thead>
-                    <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
-                      <th>רמה</th>
-                      <th className="!text-left">מחיר</th>
-                      <th className="!text-left">מרחק</th>
-                      <th>צד</th>
-                      <th>הגיע</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Against the trade: liquidity isn't shown at all; a target shows only that the entry was already past it. */}
-                    {trade.pine_levels
-                      .filter((l) => ahead(trade, l) || !isLiquidityLevel(l))
-                      .map((l) => {
-                        const on = ahead(trade, l)
-                        if (!on) {
-                          return (
-                            <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
-                              <td dir="ltr" className="text-right">{l.name}</td>
-                              <td colSpan={4} className="text-[13px] text-muted">
-                                {trade.side === 'SHORT' ? 'נכנסנו מתחת' : 'נכנסנו מעל'}
-                              </td>
-                            </tr>
-                          )
-                        }
-                        const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
-                        // Older reports have no time — fall back to MFE / chart move for targets.
-                        const old = !l.reach && isTarget(trade, l) ? reachedBy(trade, l) : null
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                    <th>רמה</th>
+                    <th className="!text-left">מחיר</th>
+                    <th className="!text-left">מרחק</th>
+                    <th>צד</th>
+                    <th>הגיע</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Against the trade: liquidity isn't shown at all; a target shows only that the entry was already past it. */}
+                  {trade.pine_levels
+                    .filter((l) => ahead(trade, l) || !isLiquidityLevel(l))
+                    .map((l) => {
+                      const on = ahead(trade, l)
+                      if (!on) {
                         return (
                           <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
                             <td dir="ltr" className="text-right">{l.name}</td>
-                            <td className="num text-left">{l.price.toFixed(2)}</td>
-                            <td className="num text-left">
-                              {l.points.toFixed(2)}
-                              {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
-                            </td>
-                            <td className="text-[13px]">
-                              {!isTarget(trade, l) ? (
-                                <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
-                              ) : (
-                                <span className="text-win">יעד</span>
-                              )}
-                            </td>
-                            <td className="text-[13px]">
-                              {l.reach ? (
-                                l.reach.minutes != null ? (
-                                  <span>
-                                    אחרי <span className="num">{l.reach.minutes}</span> דק׳
-                                    {l.reach.at && <span className="num text-muted"> ({l.reach.at})</span>}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted">לא הגיע</span>
-                                )
-                              ) : old ? (
-                                <span className="text-muted">{old === 'trade' ? 'בעסקה' : 'עד סוף היום'}</span>
-                              ) : (
-                                <span className="text-faint">—</span>
-                              )}
+                            <td colSpan={4} className="text-[13px] text-muted">
+                              {trade.side === 'SHORT' ? 'נכנסנו מתחת' : 'נכנסנו מעל'}
                             </td>
                           </tr>
                         )
-                      })}
-                  </tbody>
-                </table>
-              </div>
+                      }
+                      const risk = trade.stoploss == null ? 0 : Math.abs(trade.entry - trade.stoploss)
+                      // Older reports have no time — fall back to MFE / chart move for targets.
+                      const old = !l.reach && isTarget(trade, l) ? reachedBy(trade, l) : null
+                      return (
+                        <tr key={l.name} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                          <td dir="ltr" className="text-right">{l.name}</td>
+                          <td className="num whitespace-nowrap text-left">{l.price.toFixed(2)}</td>
+                          <td className="num whitespace-nowrap text-left">
+                            {l.points.toFixed(2)}
+                            {risk > 0 && <span className="text-muted"> · {(l.points / risk).toFixed(1)}R</span>}
+                          </td>
+                          <td className="text-[13px]">
+                            {!isTarget(trade, l) ? (
+                              <span className="text-muted">בכיוון העסקה · פחות מ-1:3</span>
+                            ) : (
+                              <span className="text-win">יעד</span>
+                            )}
+                          </td>
+                          <td className="text-[13px]">
+                            {l.reach ? (
+                              l.reach.minutes != null ? (
+                                <span>
+                                  אחרי <span className="num">{l.reach.minutes}</span> דק׳
+                                  {l.reach.at && <span className="num text-muted"> ({l.reach.at})</span>}
+                                </span>
+                              ) : (
+                                <span className="text-muted">לא הגיע</span>
+                              )
+                            ) : old ? (
+                              <span className="text-muted">{old === 'trade' ? 'בעסקה' : 'עד סוף היום'}</span>
+                            ) : (
+                              <span className="text-faint">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
             </div>
           )}
 

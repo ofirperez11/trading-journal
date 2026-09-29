@@ -329,60 +329,74 @@ function Breakeven({ trades }: { trades: Parameters<typeof breakevenStats>[0] })
   )
 }
 
-/** Days without a trade, counted over every Mon–Fri between the first and the last trade. */
+/** Days without a trade, counted over every Mon–Fri between the first and the last trade. Closed until opened. */
 function NoTradeDays({ trades }: { trades: Parameters<typeof tradeDays>[0] }) {
   const d = useMemo(() => tradeDays(trades), [trades])
+  const [open, setOpen] = useState(false)
   if (!d) return null
   const pctOfDays = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : '—')
   const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
   return (
     <Block
-      className="mt-3"
+      className="mt-12"
       title="ימים בלי עסקה"
       desc="כל יום ב׳–ו׳ בין העסקה הראשונה לאחרונה נחשב יום מסחר (מניחים שהבאק-טסט עבר על כל יום; חגים ייספרו כימים בלי עסקה), ומתוכם — באילו הייתה עסקה. עוזר לדעת כמה הזדמנויות לצפות בחודש ובאילו ימים בשבוע הן נדירות. מתעדכן לפי הסינון והתקופה."
-      hint={<span className="tag num">{d.tradingDays} ימי מסחר</span>}
+      hint={
+        <button
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-[13px] text-muted transition-colors hover:bg-surface hover:text-ink"
+        >
+          <span className="num">{d.without.length}</span> ימים בלי עסקה
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      }
     >
-      <p className="text-[14px]">
-        עסקה ב-<b className="num">{d.withTrade}</b> מתוך <b className="num">{d.tradingDays}</b> ימים (<b className="num">{pctOfDays(d.withTrade, d.tradingDays)}</b>) ·{' '}
-        <b className="num">{d.without.length}</b> ימים בלי עסקה · בממוצע <b className="num">{d.perMonth.toFixed(1)}</b> ימים עם עסקה בחודש.
-      </p>
-      <p className="mt-1 text-[13px] text-muted">
-        {d.bySession.map((s, i) => (
-          <span key={s.session}>
-            {i > 0 && ' · '}הזדמנות <span className="num">{s.session}</span>: <b className="num text-ink">{s.days}</b> ימים
-          </span>
-        ))}
-      </p>
-      <table className="mt-3 w-full text-sm">
-        <thead>
-          <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
-            <th>יום</th>
-            <th className="!text-left">ימי מסחר</th>
-            <th className="!text-left">עם עסקה</th>
-            <th className="!text-left">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {d.byWeekday.map((w) => (
-            <tr key={w.label} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
-              <td>{w.label}</td>
-              <td className="num text-left">{w.days}</td>
-              <td className="num text-left">{w.withTrade}</td>
-              <td className="num text-left">{pctOfDays(w.withTrade, w.days)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {d.without.length > 0 && (
-        <div className="mt-3">
-          <div className="mb-1.5 text-[12px] text-muted">הימים האחרונים בלי עסקה</div>
-          <div className="flex flex-wrap gap-1.5">
-            {d.without.slice(0, 12).map((iso) => (
-              <span key={iso} className="tag num !text-[12px]">{dm(iso)}</span>
+      {open && (
+        <>
+          <p className="text-[14px]">
+            עסקה ב-<b className="num">{d.withTrade}</b> מתוך <b className="num">{d.tradingDays}</b> ימים (<b className="num">{pctOfDays(d.withTrade, d.tradingDays)}</b>) ·{' '}
+            <b className="num">{d.without.length}</b> ימים בלי עסקה · בממוצע <b className="num">{d.perMonth.toFixed(1)}</b> ימים עם עסקה בחודש.
+          </p>
+          <p className="mt-1 text-[13px] text-muted">
+            {d.bySession.map((s, i) => (
+              <span key={s.session}>
+                {i > 0 && ' · '}הזדמנות <span className="num">{s.session}</span>: <b className="num text-ink">{s.days}</b> ימים
+              </span>
             ))}
-            {d.without.length > 12 && <span className="text-[12px] text-faint">ועוד {d.without.length - 12}</span>}
-          </div>
-        </div>
+          </p>
+          <table className="mt-3 w-full text-sm">
+            <thead>
+              <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                <th>יום</th>
+                <th className="!text-left">ימי מסחר</th>
+                <th className="!text-left">עם עסקה</th>
+                <th className="!text-left">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.byWeekday.map((w) => (
+                <tr key={w.label} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                  <td>{w.label}</td>
+                  <td className="num text-left">{w.days}</td>
+                  <td className="num text-left">{w.withTrade}</td>
+                  <td className="num text-left">{pctOfDays(w.withTrade, w.days)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {d.without.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-1.5 text-[12px] text-muted">הימים האחרונים בלי עסקה</div>
+              <div className="flex flex-wrap gap-1.5">
+                {d.without.slice(0, 12).map((iso) => (
+                  <span key={iso} className="tag num !text-[12px]">{dm(iso)}</span>
+                ))}
+                {d.without.length > 12 && <span className="text-[12px] text-faint">ועוד {d.without.length - 12}</span>}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </Block>
   )
@@ -803,7 +817,6 @@ export default function Analytics() {
             <EmptyNote text="עדיין לא סומן שבוע בחודש בעסקאות. בחרו שבוע באזור ההקשר בטופס העסקה, או ייבאו מ-Pine Logs." />
           )}
         </Block>
-        <NoTradeDays trades={filtered} />
       </Section>
 
       {/* ---- 4. What works ---- */}
@@ -1083,6 +1096,9 @@ export default function Analytics() {
           })}
         </div>
       </Section>
+
+      {/* ---- Days without a trade: last, collapsed ---- */}
+      <NoTradeDays trades={filtered} />
     </div>
   )
 }

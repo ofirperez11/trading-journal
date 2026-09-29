@@ -7,7 +7,8 @@ import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
 import { computeStats, formatMoney, formatPct } from '../lib/trades'
-import { FACETS, csv, passesFacets, readFacets } from '../lib/facets'
+import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
+import { SizeRangeFilter } from '../components/SizeRangeFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
 import { LineChart, Columns, BarRows, SplitBar, CHART, useInView, type Row } from '../components/charts'
@@ -192,8 +193,18 @@ export default function Analytics() {
   // Filter menu selections live in the URL (back/refresh keep the view).
   const [searchParams, setSearchParams] = useSearchParams()
   const facetSel = useMemo(() => readFacets(searchParams), [searchParams])
-  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0)
-  const scoped = useMemo(() => trades.filter((t) => passesFacets(t, facetSel)), [trades, facetSel])
+  const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
+  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) + (sizeRange ? 1 : 0)
+  const scoped = useMemo(
+    () => trades.filter((t) => passesFacets(t, facetSel) && passesSizeRange(t, sizeRange)),
+    [trades, facetSel, sizeRange],
+  )
+  function setSizeRange(r: [number, number] | null) {
+    const next = new URLSearchParams(searchParams)
+    if (r) next.set(SIZE_PARAM, `${r[0]}-${r[1]}`)
+    else next.delete(SIZE_PARAM)
+    setSearchParams(next, { replace: true })
+  }
   function toggleFacet(key: string, v: string) {
     const next = new URLSearchParams(searchParams)
     const cur = new Set(csv(next.get(key)))
@@ -205,6 +216,7 @@ export default function Analytics() {
   function clearFacets() {
     const next = new URLSearchParams(searchParams)
     for (const f of FACETS) next.delete(f.key)
+    next.delete(SIZE_PARAM)
     setSearchParams(next, { replace: true })
   }
 
@@ -356,6 +368,7 @@ export default function Analytics() {
                 </div>
               )
             })}
+            <SizeRangeFilter sizes={lookbackSizes(trades)} value={sizeRange} onChange={setSizeRange} />
             {activeCount > 0 && (
               <div className="sm:col-span-2">
                 <button onClick={clearFacets} className="text-[13px] text-muted hover:text-loss">

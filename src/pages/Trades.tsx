@@ -19,7 +19,8 @@ import { useTrades } from '../lib/useTrades'
 import { useJournals } from '../lib/journals'
 import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { downloadCsv } from '../lib/csv'
-import { FACETS, csv, passesFacets, readFacets } from '../lib/facets'
+import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
+import { SizeRangeFilter } from '../components/SizeRangeFilter'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
@@ -63,6 +64,7 @@ export default function Trades() {
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
   const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
   const facetSel = useMemo(() => readFacets(searchParams, EXTRA_FACETS), [searchParams])
+  const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -87,7 +89,8 @@ export default function Trades() {
 
   const activeCount =
     symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size +
-    EXTRA_FACETS.reduce((n, f) => n + facetSel[f.key].size, 0)
+    EXTRA_FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) +
+    (sizeRange ? 1 : 0)
   const qs = searchParams.toString() // current filters, for the trade's "back" target
   const backState = { backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }
 
@@ -101,6 +104,7 @@ export default function Trades() {
           if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
           if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
           if (!passesFacets(t, facetSel, EXTRA_FACETS)) return false
+          if (!passesSizeRange(t, sizeRange)) return false
           if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
           return true
         })
@@ -108,7 +112,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, query])
+  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, sizeRange, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -142,6 +146,7 @@ export default function Trades() {
       p.delete('years')
       p.delete('months')
       for (const f of EXTRA_FACETS) p.delete(f.key)
+      p.delete(SIZE_PARAM)
     })
   }
 
@@ -186,6 +191,10 @@ export default function Trades() {
       const opts = f.options(trades)
       return [...facetSel[f.key]].map((v) => ({ key: f.key, val: v, label: `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}` }))
     }),
+    // Removing it goes through toggleParam, which clears the whole "min-max" value.
+    ...(sizeRange
+      ? [{ key: SIZE_PARAM, val: `${sizeRange[0]}-${sizeRange[1]}`, label: `גודל Lookback: ${sizeRange[0]}–${sizeRange[1]} נק׳` }]
+      : []),
   ]
 
   const facet = (on: boolean) =>
@@ -342,6 +351,11 @@ export default function Trades() {
               </FacetGroup>
             )
           })}
+          <SizeRangeFilter
+            sizes={lookbackSizes(trades)}
+            value={sizeRange}
+            onChange={(r) => setParams((p) => (r ? p.set(SIZE_PARAM, `${r[0]}-${r[1]}`) : p.delete(SIZE_PARAM)))}
+          />
           <FacetGroup label="שנה">
             {years.map((y) => (
               <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>

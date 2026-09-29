@@ -119,3 +119,20 @@ export function readFacets(params: URLSearchParams, facets: Facet[] = FACETS): R
 export function passesFacets(t: Trade, sel: Record<string, Set<string>>, facets: Facet[] = FACETS): boolean {
   return facets.every((f) => !sel[f.key]?.size || sel[f.key].has(f.of(t) ?? ''))
 }
+
+// Lookback size range — a slider in the filter menus, not chips: "lbsize=1.5-3".
+export const SIZE_PARAM = 'lbsize'
+/** Every lookback size in the journal, ascending — the slider's stops. */
+export function lookbackSizes(trades: Trade[]): number[] {
+  return [...new Set(trades.map((t) => t.lookback_size).filter((v) => v != null))].sort((a, b) => a - b)
+}
+export function readSizeRange(params: URLSearchParams): [number, number] | null {
+  const [a, b] = (params.get(SIZE_PARAM) ?? '').split('-').map(Number)
+  return Number.isFinite(a) && Number.isFinite(b) && params.has(SIZE_PARAM) ? [Math.min(a, b), Math.max(a, b)] : null
+}
+/** With a range set, only trades whose lookback size is inside it pass. */
+export function passesSizeRange(t: Trade, range: [number, number] | null): boolean {
+  if (!range) return true
+  const v = t.lookback_size
+  return v != null && v >= range[0] - 1e-9 && v <= range[1] + 1e-9
+}

@@ -28,6 +28,10 @@ export interface PineTrade {
   lookback: string | null // a marker from LOOKBACKS, e.g. '19:30' / 'פתיל 90'
   lookbackRaw: string
   lookbackSize: number | null // "גודל Lookback: 3.50 נק'" — points
+  // "MFE / MAE (במהלך העסקה, לפי פתיל): בעד 17.25 · נגד 15.00 · נגד עד השיא 8.75" — points
+  mfe: number | null
+  mae: number | null
+  maeToPeak: number | null
   bias: Bias | null
   baseRaw: string
   liquidity: Liquidity | null
@@ -69,7 +73,19 @@ const KNOWN_LABELS = [
   'אזור (Dealing Range)',
   'ביאס (HTF 6H/3H)',
   'מהלך גרף (לפי סגירת נר)',
+  'MFE / MAE', // matched as a prefix — the label carries a note in parentheses
 ]
+/** The "MFE / MAE (…): בעד 17.25 · נגד 15.00 · נגד עד השיא 8.75" line → points. */
+function excursions(lines: string[]): { mfe: number | null; mae: number | null; maeToPeak: number | null } {
+  const line = lines.find((l) => l.startsWith('MFE / MAE'))
+  const value = line ? line.slice(line.indexOf(':') + 1) : ''
+  return {
+    mfe: toNum(value.match(/בעד\s*(-?[\d.,]+)/)?.[1]),
+    mae: toNum(value.match(/נגד(?!\s*עד)\s*(-?[\d.,]+)/)?.[1]),
+    maeToPeak: toNum(value.match(/נגד עד השיא\s*(-?[\d.,]+)/)?.[1]),
+  }
+}
+
 function extraLines(lines: string[]): string[] {
   return lines.filter(
     (l) =>
@@ -77,7 +93,7 @@ function extraLines(lines: string[]): string[] {
       !l.startsWith('📝') && // the header
       !/^\[\d{4}-\d{2}-\d{2}T/.test(l) && // Pine Logs timestamp
       !/^\d+\s*דק/.test(l) && // "מהלך גרף" rows
-      !KNOWN_LABELS.some((k) => l.startsWith(k + ':')),
+      !KNOWN_LABELS.some((k) => l.startsWith(k + ':') || (k === 'MFE / MAE' && l.startsWith(k))),
   )
 }
 // Invisible direction marks (RLM/LRM, embeddings, isolates) that Pine Logs puts
@@ -260,6 +276,7 @@ function parseOne(chunk: string): PineTrade | null {
     lookback,
     lookbackRaw,
     lookbackSize: toNum(field(lines, 'גודל Lookback').match(/-?[\d.,]+/)?.[0]),
+    ...excursions(lines),
     bias,
     baseRaw,
     liquidity,

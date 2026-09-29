@@ -62,6 +62,9 @@ export interface Trade {
   confidence: number | null // 0-5
   lookback: string | null // entry-model time marker, e.g. '16:30' / '5:00'
   lookback_size: number | null // lookback size in points (Pine import or manual)
+  mfe: number | null // max favorable excursion during the trade, points (Pine)
+  mae: number | null // max adverse excursion during the trade, points (Pine)
+  mae_to_peak: number | null // adverse move before the MFE peak, points (Pine)
   liquidity: Liquidity | null // which side's liquidity was taken
   week_of_month: number | null // week of the month, 1–5
   zone: Zone | null // dealing-range position at entry

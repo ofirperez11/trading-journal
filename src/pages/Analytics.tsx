@@ -8,8 +8,8 @@ import { CHART_MOVE_LABEL } from '../lib/chartMove'
 import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
 import { computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
-import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
-import { SizeRangeFilter } from '../components/SizeRangeFilter'
+import { FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, rangeStops, readFacets, readRanges } from '../lib/facets'
+import { RangeFilter } from '../components/RangeFilter'
 import { FirstTradeToggle } from '../components/FirstTradeToggle'
 import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
 import { CountUp } from '../components/CountUp'
@@ -199,19 +199,19 @@ export default function Analytics() {
   // Filter menu selections live in the URL (back/refresh keep the view).
   const [searchParams, setSearchParams] = useSearchParams()
   const facetSel = useMemo(() => readFacets(searchParams), [searchParams])
-  const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
-  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) + (sizeRange ? 1 : 0)
+  const ranges = useMemo(() => readRanges(searchParams), [searchParams])
+  const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) + activeRanges(ranges)
   // The strategy rule runs on every trade first, so other filters can't change which one was first.
   const [firstOnly, setFirstOnly] = useFirstTradeOnly()
   const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
   const scoped = useMemo(
-    () => taken.filter((t) => passesFacets(t, facetSel) && passesSizeRange(t, sizeRange)),
-    [taken, facetSel, sizeRange],
+    () => taken.filter((t) => passesFacets(t, facetSel) && passesRanges(t, ranges)),
+    [taken, facetSel, ranges],
   )
-  function setSizeRange(r: [number, number] | null) {
+  function setValueRange(key: string, r: [number, number] | null) {
     const next = new URLSearchParams(searchParams)
-    if (r) next.set(SIZE_PARAM, `${r[0]}-${r[1]}`)
-    else next.delete(SIZE_PARAM)
+    if (r) next.set(key, `${r[0]}-${r[1]}`)
+    else next.delete(key)
     setSearchParams(next, { replace: true })
   }
   function toggleFacet(key: string, v: string) {
@@ -225,7 +225,7 @@ export default function Analytics() {
   function clearFacets() {
     const next = new URLSearchParams(searchParams)
     for (const f of FACETS) next.delete(f.key)
-    next.delete(SIZE_PARAM)
+    for (const f of RANGE_FACETS) next.delete(f.key)
     setSearchParams(next, { replace: true })
   }
 
@@ -383,7 +383,9 @@ export default function Analytics() {
                 </div>
               )
             })}
-            <SizeRangeFilter sizes={lookbackSizes(trades)} value={sizeRange} onChange={setSizeRange} />
+            {RANGE_FACETS.map((f) => (
+              <RangeFilter key={f.key} label={f.label} sizes={rangeStops(trades, f)} value={ranges[f.key]} onChange={(r) => setValueRange(f.key, r)} />
+            ))}
             {activeCount > 0 && (
               <div className="sm:col-span-2">
                 <button onClick={clearFacets} className="text-[13px] text-muted hover:text-loss">
@@ -839,6 +841,57 @@ export default function Analytics() {
             <EmptyNote text="עדיין אין עסקאות עם נתון מהלך גרף. הוא נשמר אוטומטית בעסקאות שמיובאות מ-Pine Logs." />
           )}
         </Block>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {a.excursions.map((x) => {
+            const n = (v: number | null | undefined) => (v == null ? '—' : v.toFixed(2))
+            return (
+              <Block
+                key={x.asset}
+                title={`${x.asset} · MFE / MAE`}
+                desc={`במהלך העסקה (לפי פתיל, מ-Pine Logs), ב-${x.asset} (כולל M${x.asset}): MFE = כמה המחיר הלך בעדך לכל היותר, MAE = כמה הלך נגדך לכל היותר, "נגד עד השיא" = כמה הלך נגדך לפני שהגיע ל-MFE. ממוצעים בנקודות, מנצחות מול מפסידות. יעילות יציאה = כמה אחוז מה-MFE לקחת בפועל במנצחות. MAE מול סטופ = עד כמה המנצחות התקרבו לסטופ.`}
+                hint={<span className="tag">ממוצע בנקודות</span>}
+              >
+                {x.win || x.loss ? (
+                  <>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="h-8 border-b border-border text-right text-[13px] text-muted [&>th]:px-1.5 [&>th]:font-normal">
+                          <th />
+                          <th className="!text-left !font-semibold text-win">מנצחות</th>
+                          <th className="!text-left !font-semibold text-loss">מפסידות</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(
+                          [
+                            ['MFE · בעד', 'mfe'],
+                            ['MAE · נגד', 'mae'],
+                            ['נגד עד השיא', 'maeToPeak'],
+                          ] as const
+                        ).map(([label, k]) => (
+                          <tr key={k} className="h-9 border-b border-[#f1f0ed] [&>td]:px-1.5">
+                            <td className="font-medium">{label}</td>
+                            <td className="num text-left">{n(x.win?.[k])}</td>
+                            <td className="num text-left">{n(x.loss?.[k])}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="mt-3 text-[13px] text-muted">
+                      יעילות יציאה: <b className="num text-ink">{x.captured == null ? '—' : `${Math.round(x.captured)}%`}</b> מה-MFE · MAE
+                      מול סטופ במנצחות: <b className="num text-ink">{x.maeOfStop == null ? '—' : `${Math.round(x.maeOfStop)}%`}</b>
+                    </p>
+                    <p className="mt-1 text-[12px] text-faint">
+                      מבוסס על <span className="num">{x.win?.count ?? 0}</span> מנצחות ו-<span className="num">{x.loss?.count ?? 0}</span> מפסידות.
+                    </p>
+                  </>
+                ) : (
+                  <EmptyNote text={`עדיין אין עסקאות ${x.asset} עם MFE / MAE. הוא נשמר אוטומטית מהשורה "MFE / MAE" בדוח של Pine Logs.`} />
+                )}
+              </Block>
+            )
+          })}
+        </div>
       </Section>
 
       {/* ---- 5. Risk & stops ---- */}

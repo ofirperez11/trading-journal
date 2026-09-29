@@ -76,6 +76,9 @@ create table if not exists public.trades (
   confidence smallint,         -- 0-5
   lookback text,               -- entry-model time marker (e.g. '16:30')
   lookback_size numeric,       -- lookback size in points (Pine import or manual)
+  mfe numeric,                 -- max favorable excursion during the trade, points (Pine)
+  mae numeric,                 -- max adverse excursion during the trade, points (Pine)
+  mae_to_peak numeric,         -- adverse move before the MFE peak, points (Pine)
   peak_price numeric,          -- deprecated (MFE) — kept for historical data, no longer written
   liquidity text,              -- ICT: which side's liquidity was taken ('buyside' | 'sellside' | 'none')
   week_of_month smallint,      -- week of the month (1-5), from the Pine report or picked in the form

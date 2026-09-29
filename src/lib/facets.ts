@@ -120,19 +120,37 @@ export function passesFacets(t: Trade, sel: Record<string, Set<string>>, facets:
   return facets.every((f) => !sel[f.key]?.size || sel[f.key].has(f.of(t) ?? ''))
 }
 
-// Lookback size range — a slider in the filter menus, not chips: "lbsize=1.5-3".
-export const SIZE_PARAM = 'lbsize'
-/** Every lookback size in the journal, ascending — the slider's stops. */
-export function lookbackSizes(trades: Trade[]): number[] {
-  return [...new Set(trades.map((t) => t.lookback_size).filter((v) => v != null))].sort((a, b) => a - b)
+// Number ranges — sliders in the filter menus, not chips: "lbsize=1.5-3", "mfe=4-12".
+export interface RangeFacet {
+  key: string // URL param
+  label: string
+  of: (t: Trade) => number | null
 }
-export function readSizeRange(params: URLSearchParams): [number, number] | null {
-  const [a, b] = (params.get(SIZE_PARAM) ?? '').split('-').map(Number)
-  return Number.isFinite(a) && Number.isFinite(b) && params.has(SIZE_PARAM) ? [Math.min(a, b), Math.max(a, b)] : null
+export const RANGE_FACETS: RangeFacet[] = [
+  { key: 'lbsize', label: 'גודל Lookback', of: (t) => t.lookback_size },
+  { key: 'mfe', label: 'MFE', of: (t) => t.mfe },
+  { key: 'mae', label: 'MAE', of: (t) => t.mae },
+]
+/** Every value of the facet in the journal, ascending — the slider's stops. */
+export function rangeStops(trades: Trade[], f: RangeFacet): number[] {
+  return [...new Set(trades.map(f.of).filter((v) => v != null))].sort((a, b) => a - b)
 }
-/** With a range set, only trades whose lookback size is inside it pass. */
-export function passesSizeRange(t: Trade, range: [number, number] | null): boolean {
-  if (!range) return true
-  const v = t.lookback_size
-  return v != null && v >= range[0] - 1e-9 && v <= range[1] + 1e-9
+export function readRanges(params: URLSearchParams): Record<string, [number, number] | null> {
+  return Object.fromEntries(
+    RANGE_FACETS.map((f) => {
+      const [a, b] = (params.get(f.key) ?? '').split('-').map(Number)
+      const ok = params.has(f.key) && Number.isFinite(a) && Number.isFinite(b)
+      return [f.key, ok ? [Math.min(a, b), Math.max(a, b)] : null]
+    }),
+  )
 }
+/** With a range set, only trades whose value is inside it pass. */
+export function passesRanges(t: Trade, ranges: Record<string, [number, number] | null>): boolean {
+  return RANGE_FACETS.every((f) => {
+    const r = ranges[f.key]
+    if (!r) return true
+    const v = f.of(t)
+    return v != null && v >= r[0] - 1e-9 && v <= r[1] + 1e-9
+  })
+}
+export const activeRanges = (ranges: Record<string, [number, number] | null>) => Object.values(ranges).filter(Boolean).length

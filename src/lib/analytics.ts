@@ -55,6 +55,22 @@ export interface ChartMoveRow {
   loss: MoveAvg | null
 }
 
+/** Average MFE / MAE / adverse-before-peak (points) of one group of trades. */
+export interface ExcursionAvg {
+  mfe: number | null
+  mae: number | null
+  maeToPeak: number | null
+  count: number
+}
+/** MFE / MAE for one index (micro + mini together) — trades imported with the data only. */
+export interface ExcursionStats {
+  asset: 'NQ' | 'ES'
+  win: ExcursionAvg | null
+  loss: ExcursionAvg | null
+  captured: number | null // winners: avg % of the MFE actually taken at the exit
+  maeOfStop: number | null // winners: avg MAE as % of the stop distance — how close they came to the stop
+}
+
 export interface Analytics extends Stats {
   stopByAsset: Record<string, AssetStopStats>
   expectancy: number // avg P&L per trade
@@ -77,6 +93,7 @@ export interface Analytics extends Stats {
   byDayKind: Bucket[] // win rate by day kind (Main / Semi / ATH) — tagged trades only
   byBias: Bucket[] // win rate by HTF bias pair — tagged trades only
   chartMove: ChartMoveRow[] // avg for/against per timeframe, winners vs losers — trades with data only
+  excursions: ExcursionStats[] // MFE / MAE per index, winners vs losers — trades with data only
   // day-level
   tradingDays: number
   winningDays: number
@@ -377,6 +394,30 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     (r) => r.win || r.loss,
   )
 
+  // MFE / MAE, NQ and ES apart (their point scales differ).
+  const mean = (xs: (number | null)[]) => {
+    const v = xs.filter((x) => x != null)
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+  }
+  const excAvg = (ts: Trade[]): ExcursionAvg | null =>
+    ts.length
+      ? { mfe: mean(ts.map((t) => t.mfe)), mae: mean(ts.map((t) => t.mae)), maeToPeak: mean(ts.map((t) => t.mae_to_peak)), count: ts.length }
+      : null
+  const excursions: ExcursionStats[] = (['NQ', 'ES'] as const).map((asset) => {
+    const ts = trades.filter((t) => (t.mfe != null || t.mae != null) && cleanSymbol(t.symbol).endsWith(asset))
+    const wins = ts.filter((t) => t.return_amount > 0)
+    const taken = (t: Trade) => (t.exit == null ? null : (t.exit - t.entry) * (t.side === 'LONG' ? 1 : -1))
+    return {
+      asset,
+      win: excAvg(wins),
+      loss: excAvg(ts.filter((t) => t.return_amount < 0)),
+      captured: mean(wins.map((t) => (t.mfe && taken(t) != null ? (taken(t)! / t.mfe) * 100 : null))),
+      maeOfStop: mean(
+        wins.map((t) => (t.mae != null && t.stoploss != null && t.entry !== t.stoploss ? (t.mae / Math.abs(t.entry - t.stoploss)) * 100 : null)),
+      ),
+    }
+  })
+
   return {
     ...stats,
     stopByAsset,
@@ -400,6 +441,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byDayKind,
     byBias,
     chartMove,
+    excursions,
     tradingDays,
     winningDays,
     losingDays,

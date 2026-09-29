@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   Timer,
   Ruler,
+  Gauge,
   Droplets,
   Layers,
   Sigma,
@@ -287,6 +288,27 @@ export default function TradeDetail() {
           </Prop>
           <Prop icon={Ruler} label="גודל Lookback">
             {trade.lookback_size != null ? <span className="num">{trade.lookback_size} נק׳</span> : <Empty />}
+          </Prop>
+          <Prop icon={Gauge} label="MFE / MAE">
+            {trade.mfe != null || trade.mae != null ? (
+              <span className="text-sm">
+                <span className="text-win">
+                  בעד <span className="num">{trade.mfe ?? '—'}</span>
+                </span>
+                {' · '}
+                <span className="text-loss">
+                  נגד <span className="num">{trade.mae ?? '—'}</span>
+                </span>
+                {trade.mae_to_peak != null && (
+                  <span className="text-muted">
+                    {' · '}נגד עד השיא <span className="num">{trade.mae_to_peak}</span>
+                  </span>
+                )}{' '}
+                נק׳
+              </span>
+            ) : (
+              <Empty />
+            )}
           </Prop>
           <Prop icon={Droplets} label="נזילות">
             {trade.liquidity ? <span className={`tag ${LIQ_TAG[trade.liquidity]}`}>{LIQ_LABEL[trade.liquidity]}</span> : <Empty />}

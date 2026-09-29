@@ -20,8 +20,8 @@ import { useJournals } from '../lib/journals'
 import { formatR, cleanSymbol, imageUrl, computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { downloadCsv } from '../lib/csv'
-import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
-import { SizeRangeFilter } from '../components/SizeRangeFilter'
+import { FACETS, RANGE_FACETS, activeRanges, csv, passesFacets, passesRanges, rangeStops, readFacets, readRanges } from '../lib/facets'
+import { RangeFilter } from '../components/RangeFilter'
 import { FirstTradeToggle } from '../components/FirstTradeToggle'
 import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
 import { lookbackColor } from '../lib/lookback'
@@ -70,7 +70,7 @@ export default function Trades() {
   const monthSel = useMemo(() => new Set(csv(searchParams.get('months'))), [searchParams])
   const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
   const facetSel = useMemo(() => readFacets(searchParams, EXTRA_FACETS), [searchParams])
-  const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
+  const ranges = useMemo(() => readRanges(searchParams), [searchParams])
   // The strategy rule runs on every trade first, so other filters can't change which one was first.
   const [firstOnly, setFirstOnly] = useFirstTradeOnly()
   const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
@@ -99,7 +99,7 @@ export default function Trades() {
   const activeCount =
     symbolSel.size + statusSel.size + sideSel.size + monthSel.size + yearSel.size +
     EXTRA_FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) +
-    (sizeRange ? 1 : 0)
+    activeRanges(ranges)
   const qs = searchParams.toString() // current filters, for the trade's "back" target
   const backState = { backTo: qs ? `/app/trades?${qs}` : '/app/trades', backLabel: 'חזרה לעסקאות' }
 
@@ -113,7 +113,7 @@ export default function Trades() {
           if (yearSel.size && !yearSel.has(t.date.slice(0, 4))) return false
           if (monthSel.size && !monthSel.has(t.date.slice(0, 7))) return false
           if (!passesFacets(t, facetSel, EXTRA_FACETS)) return false
-          if (!passesSizeRange(t, sizeRange)) return false
+          if (!passesRanges(t, ranges)) return false
           if (query && !t.symbol.toLowerCase().includes(query.toLowerCase())) return false
           return true
         })
@@ -121,7 +121,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [taken, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, sizeRange, query])
+  }, [taken, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, ranges, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -155,7 +155,7 @@ export default function Trades() {
       p.delete('years')
       p.delete('months')
       for (const f of EXTRA_FACETS) p.delete(f.key)
-      p.delete(SIZE_PARAM)
+      for (const f of RANGE_FACETS) p.delete(f.key)
     })
   }
 
@@ -201,9 +201,10 @@ export default function Trades() {
       return [...facetSel[f.key]].map((v) => ({ key: f.key, val: v, label: `${f.label}: ${opts.find((o) => o.v === v)?.label ?? v}` }))
     }),
     // Removing it goes through toggleParam, which clears the whole "min-max" value.
-    ...(sizeRange
-      ? [{ key: SIZE_PARAM, val: `${sizeRange[0]}-${sizeRange[1]}`, label: `גודל Lookback: ${sizeRange[0]}–${sizeRange[1]} נק׳` }]
-      : []),
+    ...RANGE_FACETS.flatMap((f) => {
+      const r = ranges[f.key]
+      return r ? [{ key: f.key, val: `${r[0]}-${r[1]}`, label: `${f.label}: ${r[0]}–${r[1]} נק׳` }] : []
+    }),
   ]
 
   const facet = (on: boolean) =>
@@ -366,11 +367,15 @@ export default function Trades() {
               </FacetGroup>
             )
           })}
-          <SizeRangeFilter
-            sizes={lookbackSizes(trades)}
-            value={sizeRange}
-            onChange={(r) => setParams((p) => (r ? p.set(SIZE_PARAM, `${r[0]}-${r[1]}`) : p.delete(SIZE_PARAM)))}
-          />
+          {RANGE_FACETS.map((f) => (
+            <RangeFilter
+              key={f.key}
+              label={f.label}
+              sizes={rangeStops(trades, f)}
+              value={ranges[f.key]}
+              onChange={(r) => setParams((p) => (r ? p.set(f.key, `${r[0]}-${r[1]}`) : p.delete(f.key)))}
+            />
+          ))}
           <FacetGroup label="שנה">
             {years.map((y) => (
               <button key={y} className={`num ${facet(yearSel.has(y))}`} onClick={() => toggleParam('years', y)}>{y}</button>

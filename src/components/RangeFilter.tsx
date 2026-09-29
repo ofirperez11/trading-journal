@@ -1,5 +1,6 @@
-// Two-handle slider over the lookback sizes that exist in the journal (like a
-// volume control). Each handle snaps to a real size; the full span = no filter.
+// Two-handle slider over the values that exist in the journal (like a volume
+// control) — lookback size, MFE, MAE. Each handle snaps to a real value; the
+// full span = no filter.
 
 const THUMB =
   'pointer-events-none absolute inset-x-0 top-0 h-5 w-full appearance-none bg-transparent ' +
@@ -10,11 +11,13 @@ const THUMB =
   '[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full ' +
   '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-accent'
 
-export function SizeRangeFilter({
+export function RangeFilter({
+  label,
   sizes,
   value,
   onChange,
 }: {
+  label: string
   sizes: number[] // ascending, distinct
   value: [number, number] | null
   onChange: (range: [number, number] | null) => void
@@ -34,7 +37,7 @@ export function SizeRangeFilter({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted">
-        <span>גודל Lookback</span>
+        <span>{label}</span>
         <span className="num text-ink" dir="ltr">
           {sizes[lo]} – {sizes[hi]} נק׳
         </span>
@@ -48,7 +51,7 @@ export function SizeRangeFilter({
           max={last}
           step={1}
           value={lo}
-          aria-label="גודל Lookback מינימלי"
+          aria-label={`${label} מינימלי`}
           onChange={(e) => set(Math.min(Number(e.target.value), hi), hi)}
           className={THUMB}
         />
@@ -58,7 +61,7 @@ export function SizeRangeFilter({
           max={last}
           step={1}
           value={hi}
-          aria-label="גודל Lookback מקסימלי"
+          aria-label={`${label} מקסימלי`}
           onChange={(e) => set(lo, Math.max(Number(e.target.value), lo))}
           className={THUMB}
         />

@@ -21,6 +21,8 @@ import { formatMoney, formatR, cleanSymbol, imageUrl, computeStats, formatPct } 
 import { downloadCsv } from '../lib/csv'
 import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
 import { SizeRangeFilter } from '../components/SizeRangeFilter'
+import { FirstTradeToggle } from '../components/FirstTradeToggle'
+import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
 import { lookbackColor } from '../lib/lookback'
 import { BIAS_FULL_LABEL } from '../lib/bias'
 import { PageTitle } from '../components/PageTitle'
@@ -65,6 +67,9 @@ export default function Trades() {
   const yearSel = useMemo(() => new Set(csv(searchParams.get('years'))), [searchParams])
   const facetSel = useMemo(() => readFacets(searchParams, EXTRA_FACETS), [searchParams])
   const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
+  // The strategy rule runs on every trade first, so other filters can't change which one was first.
+  const [firstOnly, setFirstOnly] = useFirstTradeOnly()
+  const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
 
   const setParams = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams)
@@ -96,7 +101,7 @@ export default function Trades() {
 
   const rows = useMemo(() => {
     return (
-      trades
+      taken
         .filter((t) => {
           if (symbolSel.size && !symbolSel.has(cleanSymbol(t.symbol))) return false
           if (statusSel.size && !statusSel.has(t.status)) return false
@@ -112,7 +117,7 @@ export default function Trades() {
         // matches the displayed date exactly.
         .sort((a, b) => b.date.localeCompare(a.date))
     )
-  }, [trades, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, sizeRange, query])
+  }, [taken, symbolSel, statusSel, sideSel, yearSel, monthSel, facetSel, sizeRange, query])
 
   // Summary of what's on screen — the filter answers a question, this is the answer.
   const summary = useMemo(() => {
@@ -287,6 +292,11 @@ export default function Trades() {
             סינון
             {activeCount > 0 && <span className="num rounded bg-accent px-1.5 text-xs font-bold text-white">{activeCount}</span>}
           </button>
+          {firstOnly && (
+            <button onClick={() => setShowFilters(true)} className="tag tag-blue shrink-0 !py-0.5 !text-[12px] !font-semibold" title="רק עסקה ראשונה בכל הזדמנות">
+              ראשונה בלבד
+            </button>
+          )}
           <label className="relative flex items-center">
             <Search className="pointer-events-none absolute right-2 h-4 w-4 text-muted" />
             <input
@@ -323,6 +333,7 @@ export default function Trades() {
       {/* Filter panel */}
       {showFilters && (
         <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] mt-3 grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
+          <FirstTradeToggle on={firstOnly} onChange={setFirstOnly} />
           <FacetGroup label="סימבול">
             {symbols.map((s) => (
               <button key={s} className={facet(symbolSel.has(s))} onClick={() => toggleParam('sym', s)}>{s}</button>

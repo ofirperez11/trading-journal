@@ -9,6 +9,8 @@ import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analy
 import { computeStats, formatMoney, formatPct } from '../lib/trades'
 import { FACETS, SIZE_PARAM, csv, lookbackSizes, passesFacets, passesSizeRange, readFacets, readSizeRange } from '../lib/facets'
 import { SizeRangeFilter } from '../components/SizeRangeFilter'
+import { FirstTradeToggle } from '../components/FirstTradeToggle'
+import { firstTradesOnly, useFirstTradeOnly } from '../lib/firstTrade'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
 import { LineChart, Columns, BarRows, SplitBar, CHART, useInView, type Row } from '../components/charts'
@@ -195,9 +197,12 @@ export default function Analytics() {
   const facetSel = useMemo(() => readFacets(searchParams), [searchParams])
   const sizeRange = useMemo(() => readSizeRange(searchParams), [searchParams])
   const activeCount = FACETS.reduce((n, f) => n + facetSel[f.key].size, 0) + (sizeRange ? 1 : 0)
+  // The strategy rule runs on every trade first, so other filters can't change which one was first.
+  const [firstOnly, setFirstOnly] = useFirstTradeOnly()
+  const taken = useMemo(() => (firstOnly ? firstTradesOnly(trades) : trades), [trades, firstOnly])
   const scoped = useMemo(
-    () => trades.filter((t) => passesFacets(t, facetSel) && passesSizeRange(t, sizeRange)),
-    [trades, facetSel, sizeRange],
+    () => taken.filter((t) => passesFacets(t, facetSel) && passesSizeRange(t, sizeRange)),
+    [taken, facetSel, sizeRange],
   )
   function setSizeRange(r: [number, number] | null) {
     const next = new URLSearchParams(searchParams)
@@ -313,6 +318,11 @@ export default function Analytics() {
           <span className="hidden sm:inline">סינון</span>
           {activeCount > 0 && <span className="num rounded bg-accent px-1.5 text-xs font-bold text-white">{activeCount}</span>}
         </button>
+        {firstOnly && (
+          <button onClick={() => setShowFilters(true)} className="tag tag-blue shrink-0 !py-0.5 !text-[12px] !font-semibold" title="רק עסקה ראשונה בכל הזדמנות">
+            ראשונה בלבד
+          </button>
+        )}
         <span className="mr-auto hidden text-[13px] text-muted sm:inline">
           <span className="num font-semibold text-ink">{filtered.length}</span> עסקאות
           {prev && ' · מול התקופה הקודמת'}
@@ -344,6 +354,7 @@ export default function Analytics() {
       {showFilters && (
         <div className="animate-[fade-up_.3s_var(--ease-out-expo)_both] max-h-[60vh] overflow-y-auto pb-1 pt-3">
           <div className="grid gap-4 rounded-lg border border-border bg-surface/60 p-4 sm:grid-cols-2">
+            <FirstTradeToggle on={firstOnly} onChange={setFirstOnly} />
             {FACETS.map((f) => {
               const opts = f.options(trades)
               if (!opts.length) return null

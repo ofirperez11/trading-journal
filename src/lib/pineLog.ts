@@ -59,7 +59,8 @@ const SEP = /═{5,}/
 // Report lines the journal reads into trade fields (or summarises in the notes).
 // Any other "label: value" line — e.g. a new line the indicator starts writing —
 // is copied to the notes as is, so new data is never lost.
-// "נזילות שנשרפה לפני הכניסה (15 דק'): Sell Side: כן (שפל לונדון)" — the liquidity
+// "נזילות שנשרפה לפני הכניסה (15 דק'): Sell Side: כן (שפל לונדון)" or, newer,
+// "נזילות שנשרפה לפני הכניסה (סווינג): Buy Side · 15m: כן (25782.00 · 15:00) · 30m: לא" — the liquidity
 // line of newer reports (swept in the 15 minutes before the entry); the tail varies.
 const LIQ_BURNED = 'נזילות שנשרפה'
 // Labels matched as a prefix — they carry a note in parentheses.
@@ -191,10 +192,20 @@ export function parseBias(base: string): Bias | null {
   return null
 }
 
+/** Was that side's liquidity taken? "Sell Side: כן (…)", or per swing timeframe
+ * "Buy Side · 15m: כן (…) · 30m: לא" — taken when 15m or 30m says כן. */
+function sideTaken(raw: string, side: 'Buy Side' | 'Sell Side'): boolean {
+  const i = raw.indexOf(side)
+  if (i < 0) return false
+  const next = raw.indexOf(side === 'Buy Side' ? 'Sell Side' : 'Buy Side', i + side.length)
+  const part = raw.slice(i + side.length, next < 0 ? undefined : next)
+  return /^\s*:\s*כן/.test(part) || /\b(?:15|30)m\s*:\s*כן/.test(part)
+}
+
 function parseLiquidity(raw: string, side: TradeSide): { liquidity: Liquidity | null; guessed: boolean } {
   if (!raw) return { liquidity: null, guessed: false }
-  const sell = /Sell Side:\s*כן/.test(raw)
-  const buy = /Buy Side:\s*כן/.test(raw)
+  const sell = sideTaken(raw, 'Sell Side')
+  const buy = sideTaken(raw, 'Buy Side')
   if (sell && buy) return { liquidity: side === 'LONG' ? 'sellside' : 'buyside', guessed: true }
   if (sell) return { liquidity: 'sellside', guessed: false }
   if (buy) return { liquidity: 'buyside', guessed: false }
@@ -375,7 +386,8 @@ const inParens = (s: string) =>
 export function pineNotes(t: PineTrade): string {
   const rows = [
     'יובא מ-Pine Logs (full auto NOD indicator)',
-    inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
+    // The swing wording's detail is per timeframe — kept whole; otherwise just what's in brackets.
+    /\b(?:15|30)m\s*:/.test(t.liqRaw) ? `נזילות: ${t.liqRaw}` : inParens(t.liqRaw) ? `נזילות: ${inParens(t.liqRaw)}` : '',
     inParens(t.zoneRaw) ? `מיקום בטווח: ${inParens(t.zoneRaw)}` : '',
     t.htfRaw ? `ביאס HTF: ${t.htfRaw}` : '',
     ...t.extras,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, X, Sparkles, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Sparkles, CalendarDays, ClipboardPaste } from 'lucide-react'
 import { useTrades } from '../lib/useTrades'
 import { cleanSymbol, formatR } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
@@ -330,6 +330,7 @@ export default function Calendar() {
           onOpenTrade={(id) => navigate(`/app/trades/${id}`, { state: backState })}
           onAddTrade={() => navigate(`/app/trades/new?date=${selected}`, { state: backState })}
           onAddImage={() => navigate(`/app/trades/from-image?date=${selected}`, { state: backState })}
+          onAddPine={() => navigate('/app/trades/from-pine', { state: backState })}
         />
       )}
     </div>
@@ -344,6 +345,7 @@ function DayPanel({
   onOpenTrade,
   onAddTrade,
   onAddImage,
+  onAddPine,
 }: {
   dateKey: string
   trades: Trade[]
@@ -351,6 +353,7 @@ function DayPanel({
   onOpenTrade: (id: string) => void
   onAddTrade: () => void
   onAddImage: () => void
+  onAddPine: () => void
 }) {
   const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date))
   const net = trades.reduce((s, t) => s + t.return_amount, 0)
@@ -413,11 +416,14 @@ function DayPanel({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t border-border p-4">
-          <button onClick={onAddTrade} className="btn-ghost !py-2">
+        <div className="grid grid-cols-3 gap-2 border-t border-border p-4">
+          <button onClick={onAddTrade} className="btn-ghost whitespace-nowrap !px-2 !py-2">
             <Plus className="h-4 w-4" /> עסקה חדשה
           </button>
-          <button onClick={onAddImage} className="btn-primary !py-2">
+          <button onClick={onAddPine} className="btn-ghost whitespace-nowrap !px-2 !py-2">
+            <ClipboardPaste className="h-4 w-4" /> מ-Pine
+          </button>
+          <button onClick={onAddImage} className="btn-primary whitespace-nowrap !px-2 !py-2">
             <Sparkles className="h-4 w-4" /> מתמונה
           </button>
         </div>

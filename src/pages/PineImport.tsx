@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, ClipboardPaste, Upload, Check, AlertTriangle, Pencil, RotateCcw } from 'lucide-react'
 import { PageTitle } from '../components/PageTitle'
 import { useAuth } from '../lib/auth'
@@ -166,6 +166,9 @@ export default function PineImport() {
   const { trades } = useTrades()
   const { addTrades, updateTrade } = useTradeActions()
   const navigate = useNavigate()
+  // Opened from the calendar (or elsewhere with state.backTo): go back there.
+  const backState = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? null
+  const backTo = backState?.backTo ?? '/app/trades'
 
   const [text, setText] = useState('')
   const [rows, setRows] = useState<Row[] | null>(null)
@@ -347,7 +350,7 @@ export default function PineImport() {
     if (bad) return setError(`חסר מחיר כניסה בעסקה של ${bad.t.day}`)
     if (toAdd.length) addTrades(buildTrades(toAdd))
     for (const r of toUpdate) updateTrade(r.existing!.id, updateFor(r)!.patch)
-    navigate('/app/trades')
+    navigate(backTo)
   }
 
   const choice = (on: boolean) =>
@@ -357,8 +360,8 @@ export default function PineImport() {
 
   return (
     <div className={rows ? 'pb-24 lg:pb-0' : ''}>
-      <Link to="/app/trades" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-        <ArrowRight className="h-4 w-4" /> חזרה לעסקאות
+      <Link to={backTo} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+        <ArrowRight className="h-4 w-4" /> {backState?.backLabel ?? 'חזרה לעסקאות'}
       </Link>
       <div className="mt-5">
         <PageTitle

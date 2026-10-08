@@ -37,10 +37,11 @@ export interface AnalyticsExportMeta {
 
 export function exportAnalyticsCsv(a: Analytics, trades: Trade[], meta: AnalyticsExportMeta): void {
   const pnl = meta.unit === 'pts' ? 'P&L (נק׳)' : 'P&L ($)'
-  const today = new Date().toISOString().slice(0, 10)
+  const now = new Date() // local date — toISOString() is UTC and reads as yesterday after midnight in Israel
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   const rows: Rows = [
-    ...table('סיכום', ['', ''], [
+    ...table('סיכום', ['מדד', 'ערך'], [
       ['יומן', meta.journal],
       ['תקופה', meta.range],
       ['סינונים פעילים', meta.filters],

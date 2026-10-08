@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, TrendingUp, Lightbulb, X } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, Download, TrendingUp, Lightbulb, X } from 'lucide-react'
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
@@ -12,6 +12,7 @@ import { MIN_WHATIF, whatIfGrid } from '../lib/whatIf'
 import { breakevenStats } from '../lib/breakeven'
 import { tradeDays } from '../lib/tradeDays'
 import { levelStats } from '../lib/levels'
+import { exportAnalyticsCsv } from '../lib/analyticsExport'
 import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
@@ -620,7 +621,21 @@ export default function Analytics() {
 
   const header = (
     <>
-      <PageTitle icon={TrendingUp} color="#9065b0" title="אנליטיקה" subtitle={`ניתוח מעמיק · ${active.name}`} />
+      <PageTitle
+        icon={TrendingUp}
+        color="#9065b0"
+        title="אנליטיקה"
+        subtitle={`ניתוח מעמיק · ${active.name}`}
+        actions={
+          <button
+            onClick={() => exportAnalyticsCsv(a, filtered, { journal: active.name, range: currentLabel, filters: activeCount, unit })}
+            disabled={filtered.length === 0}
+            className="btn-ghost"
+          >
+            <Download className="h-4 w-4" /> ייצוא
+          </button>
+        }
+      />
       {filterBar}
     </>
   )

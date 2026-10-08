@@ -39,7 +39,10 @@ export function useInView<T extends Element>(): [React.RefObject<T>, boolean] {
           io.disconnect()
         }
       },
-      { threshold: 0.2 },
+      // Reveal once the element's edge is a little inside the viewport. A ratio
+      // threshold (e.g. 0.2) never fires for an element taller than 5 screens —
+      // a long analytics section stayed invisible, leaving a blank gap.
+      { threshold: 0, rootMargin: '0px 0px -10% 0px' },
     )
     io.observe(ref.current)
     return () => io.disconnect()

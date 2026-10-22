@@ -731,7 +731,7 @@ export default function Analytics() {
             ].map((r) => (
               <div key={r.k}>
                 <div className="text-[11px] text-muted">{r.k}</div>
-                <div className={`num text-[15px] font-semibold ${r.c}`}>{a.totalTrades ? formatPct(r.v / a.totalTrades) : '—'}</div>
+                <div className={`num text-right text-[15px] font-semibold ${r.c}`}>{a.totalTrades ? formatPct(r.v / a.totalTrades) : '—'}</div>
               </div>
             ))}
           </div>

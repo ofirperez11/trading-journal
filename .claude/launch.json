@@ -4,20 +4,8 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
+      "runtimeArgs": ["run", "dev"],
       "port": 5173
-    },
-    {
-      "name": "fresh-clone",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "cd /private/tmp/claude-501/-Users-ofirperez11-Desktop-trading-journal/eb060226-8cc7-4678-ace9-30586ba0f6ce/scratchpad/fresh && npx vite --port 5191 --strictPort"
-      ],
-      "port": 5191
     }
   ]
 }

@@ -4,7 +4,7 @@ import { ArrowUpRight, ArrowDownRight, CalendarRange, ChevronDown, Download, Tre
 import { useJournals } from '../lib/journals'
 import { useTrades } from '../lib/useTrades'
 import { CHART_MOVE_LABEL } from '../lib/chartMove'
-import { computeAnalytics, filterTradesByRange, type Bucket } from '../lib/analytics'
+import { RATE_KINDS, bucketRate, computeAnalytics, filterTradesByRange, type Bucket, type RateKind } from '../lib/analytics'
 import { computeStats, formatPct } from '../lib/trades'
 import { formatPnl, inUnit, useUnit } from '../lib/unit'
 import { useGlobalFilter } from '../lib/globalFilter'
@@ -170,7 +170,7 @@ function Block({
 }) {
   return (
     <div className={`panel p-5 ${className}`}>
-      <div className="mb-4 flex items-center gap-1.5">
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <h3 className="text-[15px] font-semibold">{title}</h3>
         <InfoPopover text={desc} />
         {hint && <span className="mr-auto">{hint}</span>}
@@ -491,6 +491,8 @@ export default function Analytics() {
   const [showRange, setShowRange] = useState(false)
   const [custYear, setCustYear] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  // Which rate the win-rate charts show — one choice for all of them.
+  const [rateKind, setRateKind] = useState<RateKind>('win')
 
   // The global filter (all pages) — then this page's own date range below.
   const { filtered: scoped, activeCount } = useGlobalFilter(trades)
@@ -672,7 +674,35 @@ export default function Analytics() {
   const symbolRows: Row[] = a.bySymbol.map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות · ${pctOf(b)} הצלחה` }))
   const lookbackRows: Row[] = a.byLookback.map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות · ${pctOf(b)} הצלחה` }))
   const winRateRows = (bs: Bucket[]): Row[] =>
-    bs.map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות`, color: b.value >= 50 ? CHART.win : CHART.loss }))
+    bs.map((b) => {
+      const v = bucketRate(b, rateKind)
+      // Loss rate: lower is better. BE has no good / bad side.
+      const good = rateKind === 'loss' ? v <= 50 : v >= 50
+      return { label: b.label, value: v, sub: `${b.count} עסקאות`, color: rateKind === 'be' ? CHART.axis : good ? CHART.win : CHART.loss }
+    })
+  const rateTitle = RATE_KINDS.find((k) => k.v === rateKind)!.title
+  const rateBars = {
+    format: (v: number) => `${v}%`,
+    domain: [0, 100] as [number, number],
+    ...(rateKind === 'be' ? {} : { reference: 50, referenceLabel: '50%' }),
+  }
+  const rateSwitch = (
+    <div role="group" aria-label="איזה אחוז להציג" className="flex gap-0.5 rounded-md bg-[#f1f0ed] p-0.5">
+      {RATE_KINDS.map((k) => (
+        <button
+          key={k.v}
+          aria-pressed={rateKind === k.v}
+          onClick={() => setRateKind(k.v)}
+          title={k.v === 'win' ? 'מתוך העסקאות שהוכרעו (מנצחות + מפסידות)' : 'מתוך כל העסקאות'}
+          className={`h-6 whitespace-nowrap rounded px-1.5 text-[12px] transition-colors ${
+            rateKind === k.v ? 'bg-bg font-semibold text-ink shadow-[0_0_0_1px_#e3e2e0]' : 'text-muted hover:text-ink'
+          }`}
+        >
+          {k.label}
+        </button>
+      ))}
+    </div>
+  )
 
   const rDist = a.rDistribution
   const rTotal = rDist.reduce((s, b) => s + b.count, 0)
@@ -681,17 +711,31 @@ export default function Analytics() {
   const heroStats = [
     {
       label: 'אחוז הצלחה',
-      desc: 'כמה מהעסקאות (מתוך מנצחות + מפסידות) נסגרו ברווח. עסקאות ב-0 לא נספרות באחוז, אבל מופיעות בפס.',
+      desc: 'כמה מהעסקאות (מתוך מנצחות + מפסידות) נסגרו ברווח. עסקאות ב-0 לא נספרות באחוז, אבל מופיעות בפס. מתחת: אחוז ההפסד, אחוז ה-BE ואחוז ההצלחה+BE (לא הפסדתי) — מתוך כל העסקאות.',
       value: <CountUp value={a.winRate} format={formatPct} />,
       delta: prev ? <Delta value={(a.winRate - prev.winRate) * 100} suffix="%" /> : null,
       body: (
-        <SplitBar
-          parts={[
-            { label: 'זכיות', value: a.wins, color: CHART.win },
-            { label: 'הפסדים', value: a.losses, color: CHART.loss },
-            { label: 'תיקו', value: a.washes, color: CHART.neutral },
-          ]}
-        />
+        <>
+          <SplitBar
+            parts={[
+              { label: 'זכיות', value: a.wins, color: CHART.win },
+              { label: 'הפסדים', value: a.losses, color: CHART.loss },
+              { label: 'תיקו', value: a.washes, color: CHART.neutral },
+            ]}
+          />
+          <div className="mt-3 grid grid-cols-3 gap-1 border-t border-[#f1f0ed] pt-2.5">
+            {[
+              { k: 'הפסד', v: a.losses, c: 'text-loss' },
+              { k: 'BE', v: a.washes, c: '' },
+              { k: 'הצלחה+BE', v: a.wins + a.washes, c: 'text-win' },
+            ].map((r) => (
+              <div key={r.k}>
+                <div className="text-[11px] text-muted">{r.k}</div>
+                <div className={`num text-[15px] font-semibold ${r.c}`}>{a.totalTrades ? formatPct(r.v / a.totalTrades) : '—'}</div>
+              </div>
+            ))}
+          </div>
+        </>
       ),
     },
     {
@@ -897,12 +941,12 @@ export default function Analytics() {
         </div>
         <Block
           className="mt-3"
-          title="אחוז הצלחה לפי שבוע בחודש"
+          title={`${rateTitle} לפי שבוע בחודש`}
           desc="אחוז ההצלחה בכל שבוע בחודש (שבוע 1 עד 5), לפי מה שסומן בעסקה או יובא מ-Pine Logs. נספרות רק עסקאות שיש בהן שבוע. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
-          hint={<span className="tag">אחוז הצלחה</span>}
+          hint={rateSwitch}
         >
           {a.byWeekOfMonth.length ? (
-            <BarRows rows={winRateRows(a.byWeekOfMonth)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+            <BarRows rows={winRateRows(a.byWeekOfMonth)} {...rateBars} />
           ) : (
             <EmptyNote text="עדיין לא סומן שבוע בחודש בעסקאות. בחרו שבוע באזור ההקשר בטופס העסקה, או ייבאו מ-Pine Logs." />
           )}
@@ -961,13 +1005,13 @@ export default function Analytics() {
           {a.lookbackSize.map((s) => (
             <Block
               key={s.asset}
-              title={`${s.asset} · אחוז הצלחה לפי גודל Lookback`}
+              title={`${s.asset} · ${rateTitle} לפי גודל Lookback`}
               desc={`אחוז ההצלחה ב-${s.asset} (כולל M${s.asset}) לפי גודל ה-Lookback בנקודות, בטווחים של 0–1, 1–2, 2–3 ו-3 ומעלה. מתחת: הגודל הממוצע בעסקאות מנצחות מול מפסידות. נספרות רק עסקאות שיש בהן גודל Lookback (מ-Pine Logs או שהוזן ידנית). הקו האפור = 50%.`}
-              hint={<span className="tag">אחוז הצלחה</span>}
+              hint={rateSwitch}
             >
               {s.buckets.length ? (
                 <>
-                  <BarRows rows={winRateRows(s.buckets)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" compact />
+                  <BarRows rows={winRateRows(s.buckets)} {...rateBars} compact />
                   <p className="mt-3 text-[13px] text-muted">
                     גודל ממוצע: מנצחות <b className="num text-win">{s.avgWin != null ? s.avgWin.toFixed(2) : '—'}</b> נק׳ · מפסידות{' '}
                     <b className="num text-loss">{s.avgLoss != null ? s.avgLoss.toFixed(2) : '—'}</b> נק׳
@@ -981,23 +1025,23 @@ export default function Analytics() {
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <Block
-            title="לפי לקיחת נזילות"
+            title={`${rateTitle} לפי לקיחת נזילות`}
             desc="אחוז ההצלחה לפי מה שסומן בשדה הנזילות: Buyside, Sellside או 'לא נלקחה'. נספרות רק עסקאות שסימנתם בהן נזילות; עסקאות ללא סימון לא נכנסות לחישוב. הקו האפור = 50%."
-            hint={<span className="tag">אחוז הצלחה</span>}
+            hint={rateSwitch}
           >
             {a.byLiquidity.length ? (
-              <BarRows rows={winRateRows(a.byLiquidity)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+              <BarRows rows={winRateRows(a.byLiquidity)} {...rateBars} />
             ) : (
               <EmptyNote text="עדיין לא תויג שדה הנזילות בעסקאות. סמנו Buyside / Sellside / לא נלקחה בעסקאות כדי לראות את ההשוואה." />
             )}
           </Block>
           <Block
-            title="אחוז הצלחה לפי אזור וכיוון"
+            title={`${rateTitle} לפי אזור וכיוון`}
             desc="מתוך העסקאות שבהן סומן אזור בלבד: אחוז ההצלחה של לונג ב-Premium / Deadzone / Discount, מול שורט בכל אזור. הקו האפור = 50%. עוזר לזהות מאיזה אזור וכיוון אתם הכי מדויקים (למשל לונג מ-Discount מול שורט מ-Premium)."
-            hint={<span className="tag">אחוז הצלחה</span>}
+            hint={rateSwitch}
           >
             {a.byZone.length ? (
-              <BarRows rows={winRateRows(a.byZone)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+              <BarRows rows={winRateRows(a.byZone)} {...rateBars} />
             ) : (
               <EmptyNote text="עדיין לא תויג שדה האזור בעסקאות. סמנו Premium / Deadzone / Discount בעסקאות כדי לראות את הפילוח לפי כיוון." />
             )}
@@ -1005,24 +1049,24 @@ export default function Analytics() {
         </div>
         <Block
           className="mt-3"
-          title="אחוז הצלחה לפי סוג יום"
+          title={`${rateTitle} לפי סוג יום`}
           desc="אחוז ההצלחה לפי סוג היום: Main, Semi או ATH. נקבע מ-Pine Logs או נבחר בטופס העסקה, מעל ההערות. נספרות רק עסקאות שיש בהן סוג יום. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%."
-          hint={<span className="tag">אחוז הצלחה</span>}
+          hint={rateSwitch}
         >
           {a.byDayKind.length ? (
-            <BarRows rows={winRateRows(a.byDayKind)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+            <BarRows rows={winRateRows(a.byDayKind)} {...rateBars} />
           ) : (
             <EmptyNote text="עדיין אין עסקאות עם סוג יום. בחרו Main / Semi / ATH מעל ההערות בטופס העסקה, או ייבאו מ-Pine Logs." />
           )}
         </Block>
         <Block
           className="mt-3"
-          title="אחוז הצלחה לפי ביאס"
+          title={`${rateTitle} לפי ביאס`}
           desc="אחוז ההצלחה לפי זוג ה-HTF (הביאס) שסומן בעסקה. נספרות רק עסקאות שסימנתם בהן ביאס. הפס = אחוז ההצלחה, ומתחת לשם מספר העסקאות. הקו האפור = 50%. עוזר לזהות אילו זוגות ביאס הכי מדויקים ומאילו כדאי להיזהר."
-          hint={<span className="tag">אחוז הצלחה</span>}
+          hint={rateSwitch}
         >
           {a.byBias.length ? (
-            <BarRows rows={winRateRows(a.byBias)} format={(v) => `${v}%`} domain={[0, 100]} reference={50} referenceLabel="50%" />
+            <BarRows rows={winRateRows(a.byBias)} {...rateBars} />
           ) : (
             <EmptyNote text="עדיין לא תויג שדה הביאס בעסקאות. סמנו ביאס בעסקאות כדי לראות את הפילוח." />
           )}

@@ -1,5 +1,5 @@
 import type { Trade } from '../types'
-import type { Analytics, Bucket } from './analytics'
+import { RATE_KINDS, bucketRate, type Analytics, type Bucket } from './analytics'
 import { BIAS_FULL_LABEL } from './bias'
 import { CHART_MOVE_LABEL } from './chartMove'
 import { dayKindOf } from './dayKind'
@@ -24,9 +24,13 @@ function table(title: string, head: string[], body: Rows): Rows {
 /** P&L breakdown (month, weekday, hour, asset, side). */
 const pnlTable = (title: string, b: Bucket[], pnl: string) =>
   table(title, ['', pnl, 'עסקאות', 'אחוז הצלחה'], b.filter((x) => x.count).map((x) => [x.label, r2(x.value), x.count, pct(x.winRate)]))
-/** Win-rate breakdown (liquidity, zone, bias…) — `value` is the win rate in %. */
+/** Win-rate breakdown (liquidity, zone, bias…) — every rate kind, as on the page's switch. */
 const winTable = (title: string, b: Bucket[]) =>
-  table(title, ['', 'אחוז הצלחה', 'עסקאות'], b.map((x) => [x.label, `${x.value}%`, x.count]))
+  table(
+    title,
+    ['', ...RATE_KINDS.map((k) => k.title), 'עסקאות'],
+    b.map((x) => [x.label, ...RATE_KINDS.map((k) => `${bucketRate(x, k.v)}%`), x.count]),
+  )
 
 export interface AnalyticsExportMeta {
   journal: string
@@ -49,7 +53,10 @@ export function exportAnalyticsCsv(a: Analytics, trades: Trade[], meta: Analytic
       ['תאריך ייצוא', today],
       ['עסקאות', a.totalTrades],
       ['זכיות / הפסדים / תיקו', `${a.wins} / ${a.losses} / ${a.washes}`],
-      ['אחוז הצלחה', pct(a.winRate)],
+      ['אחוז הצלחה (מתוך מנצחות + מפסידות)', pct(a.winRate)],
+      ['אחוז הפסד (מתוך כל העסקאות)', a.totalTrades ? pct(a.losses / a.totalTrades) : null],
+      ['אחוז BE (מתוך כל העסקאות)', a.totalTrades ? pct(a.washes / a.totalTrades) : null],
+      ['אחוז הצלחה+BE (מתוך כל העסקאות)', a.totalTrades ? pct((a.wins + a.washes) / a.totalTrades) : null],
       [`רווח נקי ${pnl}`, r2(a.netPnl)],
       ['רווח גולמי', r2(a.grossProfit)],
       ['הפסד גולמי', r2(a.grossLoss)],

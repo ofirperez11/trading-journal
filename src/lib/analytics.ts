@@ -14,6 +14,29 @@ export interface Bucket {
   count: number
   winRate?: number
   tone?: 'win' | 'loss' | 'accent'
+  wins?: number // win-rate buckets: the counts behind `value`
+  losses?: number
+}
+
+/** Which rate a win-rate chart shows. */
+export type RateKind = 'win' | 'loss' | 'be' | 'winbe'
+export const RATE_KINDS: { v: RateKind; label: string; title: string }[] = [
+  { v: 'win', label: 'הצלחה', title: 'אחוז הצלחה' },
+  { v: 'loss', label: 'הפסד', title: 'אחוז הפסד' },
+  { v: 'be', label: 'BE', title: 'אחוז BE' },
+  { v: 'winbe', label: 'הצלחה+BE', title: 'אחוז הצלחה+BE' },
+]
+
+/**
+ * A win-rate bucket's rate, in %. Win rate stays as always — of the decided
+ * trades (wins + losses). Loss / BE / win+BE are of all the bucket's trades,
+ * so loss + BE + wins make 100% and win+BE = "didn't lose".
+ */
+export function bucketRate(b: Bucket, kind: RateKind): number {
+  if (kind === 'win' || b.wins == null || b.losses == null || !b.count) return b.value
+  const be = b.count - b.wins - b.losses
+  const n = kind === 'loss' ? b.losses : kind === 'be' ? be : b.wins + be
+  return Math.round((n / b.count) * 100)
 }
 
 export interface StopStat {
@@ -329,7 +352,14 @@ export function computeAnalytics(trades: Trade[]): Analytics {
       .map((o) => {
         const e = g.get(o.v)!
         const wr = e.wins + e.losses > 0 ? e.wins / (e.wins + e.losses) : 0
-        return { label: o.label, value: Math.round(wr * 100), count: e.count, tone: (wr >= 0.5 ? 'win' : 'loss') as 'win' | 'loss' }
+        return {
+          label: o.label,
+          value: Math.round(wr * 100),
+          count: e.count,
+          tone: (wr >= 0.5 ? 'win' : 'loss') as 'win' | 'loss',
+          wins: e.wins,
+          losses: e.losses,
+        }
       })
   }
 

@@ -3,6 +3,7 @@ import { computeStats, cleanSymbol, type Stats } from './trades'
 import { DAY_KINDS, dayKindOf } from './dayKind'
 import { BIASES, BIAS_FULL_LABEL } from './bias'
 import { CHART_MOVE_TFS } from './chartMove'
+import { SESSION_TIMES, parseLookback, sessionOf, type SessionTime } from './lookback'
 
 // ---------------------------------------------------------------------------
 // Deeper breakdowns for the analytics page, built on top of computeStats.
@@ -109,6 +110,7 @@ export interface Analytics extends Stats {
   byMonth: Bucket[]
   rDistribution: Bucket[]
   byLookback: Bucket[] // performance per entry-model (lookback)
+  byLookbackBase: Record<SessionTime, Bucket[]> // the same per bare marker (no wick / body / timeframe), per session
   lookbackSize: LookbackSizeStats[] // win rate by lookback size range, NQ and ES separately
   byLiquidity: Bucket[] // win rate by liquidity taken — tagged trades only
   byWeekOfMonth: Bucket[] // win rate by week of the month (1–5) — tagged trades only
@@ -312,28 +314,37 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   }
 
   // Performance per entry-model (lookback) — bar = avg R, sublabel = win rate.
-  const lb = new Map<string, { count: number; wins: number; losses: number; rSum: number }>()
-  for (const t of trades) {
-    if (!t.lookback) continue
-    const g = lb.get(t.lookback) ?? { count: 0, wins: 0, losses: 0, rSum: 0 }
-    g.count++
-    if (t.return_amount > 0) g.wins++
-    else if (t.return_amount < 0) g.losses++
-    g.rSum += t.r_multiple ?? (t.return_amount < 0 ? -1 : 0)
-    lb.set(t.lookback, g)
+  // Detailed: every variant on its own ("פתיל 17:00 · 30 דקות"). Base: just the
+  // marker ("17:00"), per session (16:30 / 17:00) — wick / body / timeframe merged.
+  function lookbackBuckets(ts: Trade[], keyOf: (lb: string) => string): Bucket[] {
+    const lb = new Map<string, { count: number; wins: number; losses: number; rSum: number }>()
+    for (const t of ts) {
+      if (!t.lookback) continue
+      const k = keyOf(t.lookback)
+      const g = lb.get(k) ?? { count: 0, wins: 0, losses: 0, rSum: 0 }
+      g.count++
+      if (t.return_amount > 0) g.wins++
+      else if (t.return_amount < 0) g.losses++
+      g.rSum += t.r_multiple ?? (t.return_amount < 0 ? -1 : 0)
+      lb.set(k, g)
+    }
+    return [...lb.entries()]
+      .map(([label, g]) => {
+        const avgR = g.count ? g.rSum / g.count : 0
+        return {
+          label,
+          value: Math.round(avgR * 100) / 100,
+          count: g.count,
+          winRate: g.wins + g.losses > 0 ? g.wins / (g.wins + g.losses) : undefined,
+          tone: (avgR >= 0 ? 'win' : 'loss') as 'win' | 'loss',
+        }
+      })
+      .sort((a, b) => b.value - a.value)
   }
-  const byLookback: Bucket[] = [...lb.entries()]
-    .map(([label, g]) => {
-      const avgR = g.count ? g.rSum / g.count : 0
-      return {
-        label,
-        value: Math.round(avgR * 100) / 100,
-        count: g.count,
-        winRate: g.wins + g.losses > 0 ? g.wins / (g.wins + g.losses) : undefined,
-        tone: (avgR >= 0 ? 'win' : 'loss') as 'win' | 'loss',
-      }
-    })
-    .sort((a, b) => b.value - a.value)
+  const byLookback = lookbackBuckets(trades, (lb) => lb)
+  const byLookbackBase = Object.fromEntries(
+    SESSION_TIMES.map((s) => [s, lookbackBuckets(trades.filter((t) => sessionOf(t) === s), (lb) => parseLookback(lb).base)]),
+  ) as Record<SessionTime, Bucket[]>
 
   // Win-rate buckets by a categorical key (bar length = win rate %).
   function winRateBuckets(key: (t: Trade) => string | null, order: { v: string; label: string }[], from: Trade[] = trades): Bucket[] {
@@ -464,6 +475,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
     byMonth,
     rDistribution,
     byLookback,
+    byLookbackBase,
     lookbackSize,
     byLiquidity,
     byWeekOfMonth,

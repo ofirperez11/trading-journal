@@ -13,6 +13,7 @@ import { breakevenStats } from '../lib/breakeven'
 import { tradeDays } from '../lib/tradeDays'
 import { levelStats } from '../lib/levels'
 import { exportAnalyticsCsv } from '../lib/analyticsExport'
+import { SESSION_TIMES, type SessionTime } from '../lib/lookback'
 import { GlobalFilterButton, GlobalFilterChips, GlobalFilterPanel } from '../components/GlobalFilter'
 import { CountUp } from '../components/CountUp'
 import { PageTitle } from '../components/PageTitle'
@@ -493,6 +494,8 @@ export default function Analytics() {
   const [showFilters, setShowFilters] = useState(false)
   // Which rate the win-rate charts show — one choice for all of them.
   const [rateKind, setRateKind] = useState<RateKind>('win')
+  // The bare-lookback table shows one session's markers at a time.
+  const [lbSession, setLbSession] = useState<SessionTime>('16:30')
 
   // The global filter (all pages) — then this page's own date range below.
   const { filtered: scoped, activeCount } = useGlobalFilter(trades)
@@ -673,6 +676,7 @@ export default function Analytics() {
     : null
   const symbolRows: Row[] = a.bySymbol.map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות · ${pctOf(b)} הצלחה` }))
   const lookbackRows: Row[] = a.byLookback.map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות · ${pctOf(b)} הצלחה` }))
+  const lookbackBaseRows: Row[] = a.byLookbackBase[lbSession].map((b) => ({ label: b.label, value: b.value, sub: `${b.count} עסקאות · ${pctOf(b)} הצלחה` }))
   const winRateRows = (bs: Bucket[]): Row[] =>
     bs.map((b) => {
       const v = bucketRate(b, rateKind)
@@ -991,7 +995,7 @@ export default function Analytics() {
         </div>
         <Block
           className="mt-3"
-          title="לפי מודל כניסה (Lookback)"
+          title="לפי מודל כניסה (Lookback) · מפורט"
           desc="ביצועי כל מודל כניסה שתייגתם: הפס = תוחלת ב-R לעסקה, ומתחת לשם: מספר העסקאות ואחוז ההצלחה. מודל עם R שלילי (אדום) או אחוז הצלחה נמוך הוא מודל חלש: כדאי להימנע ממנו או להוריד בו מינוף. מתמלא ככל שתעדכנו את שדה ה-Lookback בעסקאות."
           hint={<span className="tag">תוחלת ב-R</span>}
         >
@@ -999,6 +1003,33 @@ export default function Analytics() {
             <BarRows rows={lookbackRows} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}R`} />
           ) : (
             <EmptyNote text="עדיין לא תויגו מודלי כניסה. עדכנו את שדה ה-Lookback בעסקאות כדי לראות אילו מודלים חזקים ואילו חלשים." />
+          )}
+        </Block>
+        <Block
+          className="mt-3"
+          title={`לפי Lookback · נטו · ${lbSession}`}
+          desc={`אותו ניתוח, אבל לפי ה-Lookback עצמו בלבד: פתיל / גוף / גאפ וטיים פריים (15 / 30 דקות) מאוחדים, כך ש"פתיל 17:00 · 30 דקות" ו"גוף 17:00" נספרים יחד כ-17:00. בוחרים את ההזדמנות — הלוקבקים של 16:30 או של 17:00. הפס = תוחלת ב-R לעסקה, ומתחת לשם: מספר העסקאות ואחוז ההצלחה.`}
+          hint={
+            <div role="group" aria-label="הזדמנות" className="flex gap-0.5 rounded-md bg-[#f1f0ed] p-0.5">
+              {SESSION_TIMES.map((s) => (
+                <button
+                  key={s}
+                  aria-pressed={lbSession === s}
+                  onClick={() => setLbSession(s)}
+                  className={`num h-6 rounded px-2 text-[12px] transition-colors ${
+                    lbSession === s ? 'bg-bg font-semibold text-ink shadow-[0_0_0_1px_#e3e2e0]' : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {lookbackBaseRows.length ? (
+            <BarRows rows={lookbackBaseRows} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}R`} />
+          ) : (
+            <EmptyNote text={`עדיין אין עסקאות עם Lookback בהזדמנות של ${lbSession}.`} />
           )}
         </Block>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">

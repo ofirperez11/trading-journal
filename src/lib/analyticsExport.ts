@@ -80,7 +80,10 @@ export function exportAnalyticsCsv(a: Analytics, trades: Trade[], meta: Analytic
     ...pnlTable('P&L לפי שעת כניסה', a.byHour, pnl),
     ...pnlTable('לפי נכס', a.bySymbol, pnl),
     ...pnlTable('לונג מול שורט', a.bySide, pnl),
-    ...table('לפי מודל כניסה (Lookback)', ['', 'R ממוצע', 'עסקאות', 'אחוז הצלחה'], a.byLookback.map((x) => [x.label, r2(x.value), x.count, pct(x.winRate)])),
+    ...table('לפי מודל כניסה (Lookback) · מפורט', ['', 'R ממוצע', 'עסקאות', 'אחוז הצלחה'], a.byLookback.map((x) => [x.label, r2(x.value), x.count, pct(x.winRate)])),
+    ...Object.entries(a.byLookbackBase).flatMap(([s, b]) =>
+      table(`לפי Lookback · נטו · ${s}`, ['', 'R ממוצע', 'עסקאות', 'אחוז הצלחה'], b.map((x) => [x.label, r2(x.value), x.count, pct(x.winRate)])),
+    ),
     ...a.lookbackSize.flatMap((s) => winTable(`${s.asset} · אחוז הצלחה לפי גודל Lookback`, s.buckets)),
     ...winTable('אחוז הצלחה לפי שבוע בחודש', a.byWeekOfMonth),
     ...winTable('לפי לקיחת נזילות', a.byLiquidity),
